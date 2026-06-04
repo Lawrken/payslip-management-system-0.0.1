@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { getHomePath } from "@/lib/auth"
+import { getHomePath } from "@/lib/auth-helpers"
 import { getSession } from "@/lib/session"
 
 export default async function LoginPage() {

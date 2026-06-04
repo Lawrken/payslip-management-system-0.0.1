@@ -5,14 +5,12 @@ import {
   getHomePath,
   isDashboardRole,
   parseSession,
-} from "@/lib/auth"
+} from "@/lib/auth-helpers"
 import { SESSION_COOKIE_NAME } from "@/lib/session"
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
-  const session = parseSession(
-    request.cookies.get(SESSION_COOKIE_NAME)?.value
-  )
+  const session = parseSession(request.cookies.get(SESSION_COOKIE_NAME)?.value)
 
   const isLogin = pathname === "/login"
   const isDashboard = pathname.startsWith("/dashboard")

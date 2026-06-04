@@ -2,11 +2,8 @@
 
 import { redirect } from "next/navigation"
 
-import {
-  createSessionPayload,
-  getHomePath,
-  validateCredentials,
-} from "@/lib/auth"
+import { createSessionPayload, getHomePath } from "@/lib/auth-helpers"
+import { validateCredentials } from "@/lib/auth"
 import { setSession } from "@/lib/session"
 
 export type LoginState = {
@@ -24,7 +21,7 @@ export async function loginAction(
     return { error: "Employee ID and password are required." }
   }
 
-  const user = validateCredentials(employeeId, password)
+  const user = await validateCredentials(employeeId, password)
   if (!user) {
     return { error: "Invalid employee ID or password." }
   }
