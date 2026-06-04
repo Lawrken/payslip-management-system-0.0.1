@@ -3,8 +3,10 @@
 import {
   Activity01Icon,
   Calendar03Icon,
+  CheckListIcon,
   DashboardSquare01Icon,
   Invoice01Icon,
+  SquareLock01Icon,
   UserGroupIcon,
   UserMultipleIcon,
 } from "@hugeicons/core-free-icons"
@@ -33,8 +35,17 @@ const navItems = [
   { label: "Employees", href: "/dashboard/employees", icon: UserGroupIcon },
   { label: "Payrolls", href: "/dashboard/payrolls", icon: Calendar03Icon },
   { label: "Payslips", href: "/dashboard/payslips", icon: Invoice01Icon },
+  { label: "Review", href: "/dashboard/review", icon: CheckListIcon },
   { label: "Users", href: "/dashboard/users", icon: UserMultipleIcon },
   { label: "Logs", href: "/dashboard/logs", icon: Activity01Icon },
+] as const
+
+const accountItems = [
+  {
+    label: "Change Password",
+    href: "/dashboard/account/password",
+    icon: SquareLock01Icon,
+  },
 ] as const
 
 function isActivePath(pathname: string, href: string) {
@@ -58,6 +69,26 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActivePath(pathname, item.href)}
+                  >
+                    <Link href={item.href}>
+                      <HugeiconsIcon icon={item.icon} strokeWidth={2} />
+                      <span>{item.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>Account</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {accountItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     asChild
