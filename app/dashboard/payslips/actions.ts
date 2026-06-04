@@ -2,17 +2,18 @@
 
 import { revalidatePath } from "next/cache"
 
+import { createAuditLog } from "@/lib/audit-logs"
+import { requireDashboardSession } from "@/lib/authorization"
 import {
   addPayslip,
   deletePayslip,
-  sendPendingPayslips,
+  getPayslipById,
   updatePayslip,
 } from "@/lib/payslips"
 import {
   calculatePayslipTotals,
   parsePayslipInputsFromFormData,
 } from "@/lib/payroll-calculator"
-import type { PayslipStatus } from "@/lib/types"
 
 export type PayslipFormState = {
   error?: string
@@ -26,6 +27,11 @@ export async function addPayslipAction(
   _prevState: AddPayslipState,
   formData: FormData
 ): Promise<AddPayslipState> {
+  const session = await requireDashboardSession()
+  if ("error" in session) {
+    return session
+  }
+
   const payrollId = String(formData.get("payrollId") ?? "").trim()
   const employeeId = String(formData.get("employeeId") ?? "").trim()
 
@@ -40,7 +46,7 @@ export async function addPayslipAction(
 
   calculatePayslipTotals(parsedInputs)
 
-  const result = addPayslip({
+  const result = await addPayslip({
     payrollId,
     employeeId,
     inputs: parsedInputs,
@@ -50,7 +56,18 @@ export async function addPayslipAction(
     return { error: result.error }
   }
 
+  await createAuditLog({
+    actor: session,
+    action: "payslip.create",
+    targetType: "payslip",
+    targetId: result.id,
+    targetLabel: `${result.employeeName} (${result.employeeId})`,
+    details: "Created payslip.",
+  })
+
   revalidatePath("/dashboard/payslips")
+  revalidatePath("/dashboard/review")
+  revalidatePath("/dashboard/logs")
   return { success: true }
 }
 
@@ -58,19 +75,20 @@ export async function updatePayslipAction(
   _prevState: UpdatePayslipState,
   formData: FormData
 ): Promise<UpdatePayslipState> {
+  const session = await requireDashboardSession()
+  if ("error" in session) {
+    return session
+  }
+
   const id = String(formData.get("id") ?? "").trim()
   const payrollId = String(formData.get("payrollId") ?? "").trim()
   const employeeId = String(formData.get("employeeId") ?? "").trim()
-  const status = String(formData.get("status") ?? "").trim() as PayslipStatus
 
   if (!id) {
     return { error: "Payslip not found." }
   }
   if (!payrollId || !employeeId) {
     return { error: "Payroll period and employee are required." }
-  }
-  if (status !== "pending" && status !== "sent") {
-    return { error: "Invalid status." }
   }
 
   const parsedInputs = parsePayslipInputsFromFormData(formData)
@@ -80,11 +98,10 @@ export async function updatePayslipAction(
 
   calculatePayslipTotals(parsedInputs)
 
-  const result = updatePayslip({
+  const result = await updatePayslip({
     id,
     payrollId,
     employeeId,
-    status,
     inputs: parsedInputs,
   })
 
@@ -92,27 +109,47 @@ export async function updatePayslipAction(
     return { error: result.error }
   }
 
+  await createAuditLog({
+    actor: session,
+    action: "payslip.update",
+    targetType: "payslip",
+    targetId: result.id,
+    targetLabel: `${result.employeeName} (${result.employeeId})`,
+    details: `Updated payslip. Status is now ${result.status}.`,
+  })
+
   revalidatePath("/dashboard/payslips")
+  revalidatePath("/dashboard/review")
+  revalidatePath("/dashboard/logs")
   return { success: true }
 }
 
 export async function deletePayslipAction(id: string) {
-  const result = deletePayslip(id)
+  const session = await requireDashboardSession()
+  if ("error" in session) {
+    return session
+  }
+
+  const payslip = await getPayslipById(id)
+  const result = await deletePayslip(id)
 
   if ("error" in result) {
     return { error: result.error }
   }
 
+  await createAuditLog({
+    actor: session,
+    action: "payslip.delete",
+    targetType: "payslip",
+    targetId: id,
+    targetLabel: payslip
+      ? `${payslip.employeeName} (${payslip.employeeId})`
+      : "Deleted payslip",
+    details: "Deleted payslip.",
+  })
+
   revalidatePath("/dashboard/payslips")
+  revalidatePath("/dashboard/review")
+  revalidatePath("/dashboard/logs")
   return { success: true as const }
-}
-
-export async function bulkEmailAction(payrollId: string) {
-  const result = sendPendingPayslips(payrollId)
-  if ("error" in result) {
-    return { error: result.error }
-  }
-
-  revalidatePath("/dashboard/payslips")
-  return { success: true as const, count: result.count }
 }
