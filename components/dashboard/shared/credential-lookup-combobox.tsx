@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowDown01Icon, Cancel01Icon } from "@hugeicons/core-free-icons"
+import { ArrowDown01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import * as React from "react"
 
@@ -49,7 +49,7 @@ export function CredentialLookupCombobox({
   const selected = options.find((option) => option.employeeId === value)
 
   return (
-    <div className={cn("relative w-56 sm:w-64", className)}>
+    <div className={cn("w-56 sm:w-64", className)}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -62,7 +62,6 @@ export function CredentialLookupCombobox({
             disabled={disabled}
             className={cn(
               "h-9 w-full justify-between font-normal",
-              value && "pr-9",
               !selected && "text-muted-foreground"
             )}
           >
@@ -108,19 +107,6 @@ export function CredentialLookupCombobox({
           </Command>
         </PopoverContent>
       </Popover>
-      {value ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          className="absolute top-1/2 right-1 -translate-y-1/2 transition-none active:!-translate-y-1/2"
-          onClick={() => onChange("")}
-          aria-label="Clear selection"
-          disabled={disabled}
-        >
-          <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
-        </Button>
-      ) : null}
     </div>
   )
 }
