@@ -30,6 +30,7 @@ export function EmployeesTable({
         <TableRow>
           <TableHead>Employee Name</TableHead>
           <TableHead>Employee ID</TableHead>
+          <TableHead>Email</TableHead>
           <TableHead>TIN</TableHead>
           <TableHead>SSS NO.</TableHead>
           <TableHead>PHIC NO.</TableHead>
@@ -42,6 +43,7 @@ export function EmployeesTable({
           <TableRow key={employee.id}>
             <TableCell className="font-medium">{employee.name}</TableCell>
             <TableCell>{employee.employeeId}</TableCell>
+            <TableCell>{employee.email}</TableCell>
             <TableCell>{employee.tin}</TableCell>
             <TableCell>{employee.sssNo}</TableCell>
             <TableCell>{employee.phicNo}</TableCell>

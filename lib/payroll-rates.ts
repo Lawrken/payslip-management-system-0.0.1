@@ -33,8 +33,3 @@ export const PAYROLL_RATE_MULTIPLIERS: Record<PayrollRateKey, number> = {
   spclRd: 1.5,
   spclRdOver8: 1.95,
 }
-
-export function formatRatePercent(multiplier: number): string {
-  const percent = multiplier * 100
-  return Number.isInteger(percent) ? `${percent}%` : `${percent}%`
-}

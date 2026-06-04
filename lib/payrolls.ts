@@ -1,27 +1,31 @@
+import { eq } from "drizzle-orm"
+
+import { db } from "@/db"
+import { payrolls } from "@/db/schema"
 import {
   dateRangesOverlap,
   formatPayrollPeriodLabel,
   isValidDateRange,
 } from "@/lib/payroll-dates"
-import { countPayslipsByPayrollId } from "@/lib/payslips"
-import { seedPayrolls } from "@/lib/mock-payrolls"
+import { createPayslipsForPayroll } from "@/lib/payslips"
 import type { Payroll } from "@/lib/types"
 
-const payrolls: Payroll[] = [...seedPayrolls]
-
-export function getPayrolls(): Payroll[] {
-  return [...payrolls].sort((a, b) =>
-    b.payrollPeriodEnd.localeCompare(a.payrollPeriodEnd)
-  )
+export async function getPayrolls(): Promise<Payroll[]> {
+  return db.query.payrolls.findMany({
+    orderBy: (table, { desc }) => [desc(table.payrollPeriodEnd)],
+  })
 }
 
-export function getPayrollById(id: string): Payroll | undefined {
-  return payrolls.find((payroll) => payroll.id === id)
+export async function getPayrollById(id: string): Promise<Payroll | null> {
+  const payroll = await db.query.payrolls.findFirst({
+    where: eq(payrolls.id, id),
+  })
+  return payroll ?? null
 }
 
-export function getLatestPayroll(): Payroll | undefined {
-  const sorted = getPayrolls()
-  return sorted[0]
+export async function getLatestPayroll(): Promise<Payroll | null> {
+  const [payroll] = await getPayrolls()
+  return payroll ?? null
 }
 
 export type NewPayrollInput = Omit<Payroll, "id" | "payrollPeriodLabel"> & {
@@ -52,12 +56,13 @@ function validatePayrollDates(input: NewPayrollInput): { error: string } | null 
   return null
 }
 
-function hasOverlappingPayrollPeriod(
+async function hasOverlappingPayrollPeriod(
   start: string,
   end: string,
   excludeId?: string
-): boolean {
-  return payrolls.some(
+): Promise<boolean> {
+  const existingPayrolls = await getPayrolls()
+  return existingPayrolls.some(
     (payroll) =>
       payroll.id !== excludeId &&
       dateRangesOverlap(
@@ -69,10 +74,7 @@ function hasOverlappingPayrollPeriod(
   )
 }
 
-function buildPayroll(
-  id: string,
-  input: NewPayrollInput
-): Payroll {
+function buildPayroll(id: string, input: NewPayrollInput): Payroll {
   return {
     id,
     payrollPeriodLabel:
@@ -86,30 +88,37 @@ function buildPayroll(
   }
 }
 
-export function addPayroll(
+export async function addPayroll(
   input: NewPayrollInput
-): Payroll | { error: string } {
+): Promise<Payroll | { error: string }> {
   const validationError = validatePayrollDates(input)
   if (validationError) {
     return validationError
   }
 
   if (
-    hasOverlappingPayrollPeriod(input.payrollPeriodStart, input.payrollPeriodEnd)
+    await hasOverlappingPayrollPeriod(
+      input.payrollPeriodStart,
+      input.payrollPeriodEnd
+    )
   ) {
     return { error: "This payroll period overlaps an existing payroll period." }
   }
 
   const payroll = buildPayroll(crypto.randomUUID(), input)
-  payrolls.push(payroll)
+  await db.insert(payrolls).values({
+    ...payroll,
+    updatedAt: new Date(),
+  })
+  await createPayslipsForPayroll(payroll.id)
   return payroll
 }
 
-export function updatePayroll(
+export async function updatePayroll(
   input: UpdatePayrollInput
-): Payroll | { error: string } {
-  const index = payrolls.findIndex((payroll) => payroll.id === input.id)
-  if (index === -1) {
+): Promise<Payroll | { error: string }> {
+  const existing = await getPayrollById(input.id)
+  if (!existing) {
     return { error: "Payroll not found." }
   }
 
@@ -119,7 +128,7 @@ export function updatePayroll(
   }
 
   if (
-    hasOverlappingPayrollPeriod(
+    await hasOverlappingPayrollPeriod(
       input.payrollPeriodStart,
       input.payrollPeriodEnd,
       input.id
@@ -129,22 +138,21 @@ export function updatePayroll(
   }
 
   const updated = buildPayroll(input.id, input)
-  payrolls[index] = updated
+  await db
+    .update(payrolls)
+    .set({ ...updated, updatedAt: new Date() })
+    .where(eq(payrolls.id, input.id))
   return updated
 }
 
-export function deletePayroll(id: string): { success: true } | { error: string } {
-  const index = payrolls.findIndex((payroll) => payroll.id === id)
-  if (index === -1) {
+export async function deletePayroll(
+  id: string
+): Promise<{ success: true } | { error: string }> {
+  const existing = await getPayrollById(id)
+  if (!existing) {
     return { error: "Payroll not found." }
   }
 
-  if (countPayslipsByPayrollId(id) > 0) {
-    return {
-      error: "Cannot delete a payroll period that has payslips. Remove payslips first.",
-    }
-  }
-
-  payrolls.splice(index, 1)
+  await db.delete(payrolls).where(eq(payrolls.id, id))
   return { success: true }
 }

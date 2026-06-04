@@ -10,15 +10,17 @@ export default async function PayslipPage() {
   const session = await getSession()
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Your payslips</CardTitle>
-        <CardDescription>
-          {session
-            ? `Signed in as ${session.employeeId}. Payslip history will appear here.`
-            : "Payslip history will appear here."}
-        </CardDescription>
-      </CardHeader>
-    </Card>
+    <div className="flex flex-col gap-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Your payslips</CardTitle>
+          <CardDescription>
+            {session
+              ? `Signed in as ${session.employeeId}. Payslip history will appear here.`
+              : "Payslip history will appear here."}
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    </div>
   )
 }

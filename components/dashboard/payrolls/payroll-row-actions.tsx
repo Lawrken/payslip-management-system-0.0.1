@@ -63,8 +63,8 @@ export function PayrollRowActions({ payroll }: PayrollRowActionsProps) {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete payroll period?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will remove {payroll.payrollPeriodLabel}. Payrolls with
-                payslips cannot be deleted.
+                This will remove {payroll.payrollPeriodLabel} and all of its
+                payslips.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

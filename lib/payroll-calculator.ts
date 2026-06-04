@@ -1,4 +1,5 @@
 import {
+  ALL_PAYSLIP_FIELD_KEYS,
   DEDUCTION_FIELDS,
   NON_TAXABLE_FIELDS,
   PAY_DETAILS_FIELDS,
@@ -10,12 +11,6 @@ import {
   type PayrollRateKey,
 } from "@/lib/payroll-rates"
 import type { PayslipPayrollInputs, PayslipTotals } from "@/lib/types"
-
-const ALL_PAYSLIP_FIELD_KEYS = [
-  ...PAY_DETAILS_FIELDS,
-  ...DEDUCTION_FIELDS,
-  ...NON_TAXABLE_FIELDS,
-].map((field) => field.key)
 
 export function createEmptyPayslipInputs(): PayslipPayrollInputs {
   return ALL_PAYSLIP_FIELD_KEYS.reduce(

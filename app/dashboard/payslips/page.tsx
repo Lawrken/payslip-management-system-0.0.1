@@ -4,11 +4,15 @@ import { getLatestPayroll, getPayrolls } from "@/lib/payrolls"
 import { getPayslips } from "@/lib/payslips"
 import { Suspense } from "react"
 
-function PayslipsPageInner() {
-  const payslips = getPayslips()
-  const employees = getEmployees()
-  const payrolls = getPayrolls()
-  const latestPayroll = getLatestPayroll()
+export const dynamic = "force-dynamic"
+
+async function PayslipsPageInner() {
+  const [payslips, employees, payrolls, latestPayroll] = await Promise.all([
+    getPayslips(),
+    getEmployees(),
+    getPayrolls(),
+    getLatestPayroll(),
+  ])
 
   return (
     <PayslipsPageContent

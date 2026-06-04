@@ -48,21 +48,30 @@ export function AddEmployeeDialog({ children }: AddEmployeeDialogProps) {
       setState(result)
 
       if (result.success) {
-        setOpen(false)
         formRef.current?.reset()
         router.refresh()
+        setOpen(false)
       }
     })
   }
 
+  function handleOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen)
+    if (nextOpen) {
+      setState(initialState)
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Add Employee</DialogTitle>
           <DialogDescription>
-            Enter the employee details below. All fields are required.
+            A login account with an initial password is created automatically.
+            Download credentials from the Users page (.xlsx)—passwords are not
+            shown here.
           </DialogDescription>
         </DialogHeader>
         <form ref={formRef} onSubmit={handleSubmit}>
@@ -79,6 +88,10 @@ export function AddEmployeeDialog({ children }: AddEmployeeDialogProps) {
             <Field>
               <FieldLabel htmlFor="employeeId">Employee ID</FieldLabel>
               <Input id="employeeId" name="employeeId" required />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="email">Email</FieldLabel>
+              <Input id="email" name="email" type="email" autoComplete="email" required />
             </Field>
             <Field>
               <FieldLabel htmlFor="tin">TIN</FieldLabel>

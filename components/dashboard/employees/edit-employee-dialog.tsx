@@ -105,6 +105,17 @@ export function EditEmployeeDialog({
               />
             </Field>
             <Field>
+              <FieldLabel htmlFor={`edit-email-${employee.id}`}>Email</FieldLabel>
+              <Input
+                id={`edit-email-${employee.id}`}
+                name="email"
+                type="email"
+                autoComplete="email"
+                defaultValue={employee.email}
+                required
+              />
+            </Field>
+            <Field>
               <FieldLabel htmlFor={`edit-tin-${employee.id}`}>TIN</FieldLabel>
               <NumericInput
                 id={`edit-tin-${employee.id}`}
