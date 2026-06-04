@@ -60,9 +60,9 @@ export function BulkEmailDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Send bulk email?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will email all {approvedCount} approved payslip
-            {approvedCount === 1 ? "" : "s"} for this payroll period and mark
-            them as sent.
+            This will email all {approvedCount} payslip
+            {approvedCount === 1 ? "" : "s"} ready for email for this payroll
+            period and mark them as sent.
           </AlertDialogDescription>
         </AlertDialogHeader>
         {error ? (
@@ -70,7 +70,7 @@ export function BulkEmailDialog({
         ) : null}
         {!disabled && approvedCount < totalCount ? (
           <p className="text-sm text-muted-foreground">
-            {approvedCount} of {totalCount} payslips are approved.
+            {approvedCount} of {totalCount} payslips are ready for email.
           </p>
         ) : null}
         <AlertDialogFooter>

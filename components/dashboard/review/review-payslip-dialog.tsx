@@ -3,6 +3,7 @@
 import {
   ArrowLeft01Icon,
   ArrowRight01Icon,
+  Cancel01Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useRouter } from "next/navigation"
@@ -20,12 +21,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { formatPayslipStatus } from "@/lib/payslip-status"
-import { cn } from "@/lib/utils"
 import type { Employee, Payslip, PayslipPayrollInputs, Role } from "@/lib/types"
 
 function payslipHasData(inputs: PayslipPayrollInputs): boolean {
@@ -136,6 +136,9 @@ export function ReviewPayslipDialog({
       return
     }
 
+    const nextIndex = activeIndex + 1
+    const hasNextInQueue = nextIndex < payslips.length
+
     startTransition(async () => {
       const result =
         role === "admin"
@@ -147,7 +150,12 @@ export function ReviewPayslipDialog({
         return
       }
 
-      handleClose()
+      setError(null)
+      if (hasNextInQueue) {
+        onActiveIndexChange(nextIndex)
+      } else {
+        handleClose()
+      }
       router.refresh()
     })
   }
@@ -207,28 +215,14 @@ export function ReviewPayslipDialog({
       <DialogContent
         showCloseButton={false}
         closeOnOutsideClick={false}
-        closeOnEscape={false}
         className="flex max-h-[min(92vh,56rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl"
       >
-        <DialogHeader className="shrink-0 space-y-0 border-b px-6 py-4">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="flex flex-col gap-1">
-              <DialogTitle className="shrink-0">Review Payslip</DialogTitle>
-              <p className="text-sm text-muted-foreground">
-                {activePayslip.employeeName} · {activePayslip.employeeId}
-              </p>
-              <span
-                className={cn(
-                  "w-fit rounded-full px-2 py-0.5 text-xs font-medium",
-                  activePayslip.status === "returned"
-                    ? "bg-destructive/10 text-destructive"
-                    : "bg-muted text-muted-foreground"
-                )}
-              >
-                {formatPayslipStatus(activePayslip.status)}
-              </span>
-            </div>
-            <div className="flex min-w-0 items-end gap-1 lg:max-w-md lg:flex-1">
+        <DialogHeader className="shrink-0 gap-0 border-b px-6 py-4">
+          <DialogTitle className="sr-only">
+            Review payslip for {activePayslip.employeeName}
+          </DialogTitle>
+          <div className="flex items-center gap-3">
+            <div className="flex min-w-0 flex-1 items-center gap-1">
               <Button
                 type="button"
                 variant="outline"
@@ -245,6 +239,7 @@ export function ReviewPayslipDialog({
                 value={activePayslip.employeeId}
                 onChange={handleEmployeeChange}
                 disabled={isPending}
+                label=""
                 className="min-w-0 flex-1"
               />
               <Button
@@ -259,6 +254,18 @@ export function ReviewPayslipDialog({
                 <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} />
               </Button>
             </div>
+            <DialogClose asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                className="shrink-0"
+                disabled={isPending}
+              >
+                <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
+                <span className="sr-only">Close</span>
+              </Button>
+            </DialogClose>
           </div>
         </DialogHeader>
 
@@ -275,16 +282,20 @@ export function ReviewPayslipDialog({
             </p>
           ) : null}
 
-          <div className="flex flex-col gap-6">
-            <PayslipBreakdown inputs={activePayslip.inputs} />
-            <PayslipSummary totals={activePayslip.totals} variant="compact" />
-          </div>
+          <PayslipBreakdown inputs={activePayslip.inputs} />
         </div>
 
         <div className="shrink-0 border-t bg-popover px-6 py-4">
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <div
+            className={
+              hasActions
+                ? "flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
+                : "flex flex-col gap-4"
+            }
+          >
+            <PayslipSummary totals={activePayslip.totals} variant="inline" />
             {hasActions ? (
-              <>
+              <div className="flex shrink-0 flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <Button
                   type="button"
                   variant="outline"
@@ -297,27 +308,17 @@ export function ReviewPayslipDialog({
                   type="button"
                   onClick={handleApprove}
                   disabled={
-                    isPending ||
-                    !payslipHasData(activePayslip.inputs)
+                    isPending || !payslipHasData(activePayslip.inputs)
                   }
                 >
                   {isPending
                     ? "Saving…"
                     : role === "admin"
                       ? "Mark Checked"
-                      : "Approve"}
+                      : "Ready for email"}
                 </Button>
-              </>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleClose}
-                disabled={isPending}
-              >
-                Close
-              </Button>
-            )}
+              </div>
+            ) : null}
           </div>
         </div>
       </DialogContent>

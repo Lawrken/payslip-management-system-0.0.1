@@ -256,38 +256,36 @@ export function EditPayslipDialog({
         <DialogHeader className="shrink-0 space-y-0 border-b px-6 py-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <DialogTitle className="shrink-0">Edit Payslip</DialogTitle>
-            <div className="grid w-full gap-4 lg:max-w-xl">
-              <div className="flex min-w-0 items-end gap-1">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="shrink-0"
-                  onClick={goToPrev}
-                  disabled={!canGoPrev || isPending}
-                  aria-label="Previous payslip"
-                >
-                  <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} />
-                </Button>
-                <EmployeeCombobox
-                  employees={employees}
-                  value={employeeId}
-                  onChange={handleEmployeeChange}
-                  disabled={isPending}
-                  className="min-w-0 flex-1"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="shrink-0"
-                  onClick={goToNext}
-                  disabled={!canGoNext || isPending}
-                  aria-label="Next payslip"
-                >
-                  <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} />
-                </Button>
-              </div>
+            <div className="flex w-full min-w-0 overflow-hidden rounded-md border border-input shadow-xs dark:bg-input/30 lg:max-w-xl">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-9 shrink-0 rounded-none border-r border-input"
+                onClick={goToPrev}
+                disabled={!canGoPrev || isPending}
+                aria-label="Previous payslip"
+              >
+                <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} />
+              </Button>
+              <EmployeeCombobox
+                employees={employees}
+                value={employeeId}
+                onChange={handleEmployeeChange}
+                disabled={isPending}
+                label=""
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-9 shrink-0 rounded-none border-l border-input"
+                onClick={goToNext}
+                disabled={!canGoNext || isPending}
+                aria-label="Next payslip"
+              >
+                <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} />
+              </Button>
             </div>
           </div>
         </DialogHeader>

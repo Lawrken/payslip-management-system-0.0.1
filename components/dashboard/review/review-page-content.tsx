@@ -121,7 +121,7 @@ export function ReviewPageContent({
   const reviewEmptyMessage =
     role === "admin"
       ? "No payslips ready for review for this payroll period."
-      : "No checked payslips to approve for this payroll period."
+      : "No checked payslips ready for email for this payroll period."
 
   if (payrolls.length === 0) {
     return (
@@ -161,7 +161,7 @@ export function ReviewPageContent({
               </BulkEmailDialog>
               {!allApproved && totalCount > 0 ? (
                 <p className="text-xs text-muted-foreground">
-                  {approvedCount} of {totalCount} approved
+                  {approvedCount} of {totalCount} ready for email
                 </p>
               ) : null}
             </div>
