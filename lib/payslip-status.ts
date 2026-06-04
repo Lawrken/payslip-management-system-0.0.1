@@ -9,7 +9,7 @@ export function formatPayslipStatus(status: PayslipStatus): string {
     case "adminApproved":
       return "Checked"
     case "approved":
-      return "Approved"
+      return "Ready for email"
     case "returned":
       return "Returned"
     case "sent":
