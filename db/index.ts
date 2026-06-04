@@ -16,6 +16,11 @@ function getDatabaseUrl() {
 }
 
 type DrizzleDatabase = ReturnType<typeof drizzle<typeof schema>>
+export type Database = DrizzleDatabase
+export type DatabaseTransaction = Parameters<
+  Parameters<DrizzleDatabase["transaction"]>[0]
+>[0]
+export type DatabaseClient = Database | DatabaseTransaction
 
 let cachedDb: DrizzleDatabase | undefined
 

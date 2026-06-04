@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
+import { db } from "@/db"
 import { createAuditLog } from "@/lib/audit-logs"
 import { requireDashboardSession } from "@/lib/authorization"
 import {
@@ -61,23 +62,34 @@ export async function createUserAction(
     return { error: "Only superadmins can create admin and superadmin users." }
   }
 
-  const result = await createUserAccount({
-    employeeId,
-    role: roleValue,
-    createdByEmployeeId: session.employeeId,
+  const result = await db.transaction(async (tx) => {
+    const user = await createUserAccount({
+      employeeId,
+      role: roleValue,
+      createdByEmployeeId: session.employeeId,
+      client: tx,
+    })
+
+    if ("error" in user) {
+      return { error: user.error }
+    }
+
+    await createAuditLog({
+      actor: session,
+      action: "user.create",
+      targetType: "user",
+      targetId: user.employeeId,
+      targetLabel: `${user.employeeId} (${user.role})`,
+      details: "Created user account; initial password queued for credential export.",
+      client: tx,
+    })
+
+    return { success: true as const, employeeId: user.employeeId }
   })
+
   if ("error" in result) {
     return { error: result.error }
   }
-
-  await createAuditLog({
-    actor: session,
-    action: "user.create",
-    targetType: "user",
-    targetId: result.employeeId,
-    targetLabel: `${result.employeeId} (${result.role})`,
-    details: "Created user account; initial password queued for credential export.",
-  })
 
   revalidatePath("/dashboard/users")
   revalidatePath("/dashboard/logs")
@@ -105,19 +117,28 @@ export async function resetUserPasswordAction(
     return { error: "Only superadmins can reset admin and superadmin users." }
   }
 
-  const result = await resetUserPassword(employeeId)
+  const result = await db.transaction(async (tx) => {
+    const reset = await resetUserPassword(employeeId, tx)
+    if ("error" in reset) {
+      return { error: reset.error }
+    }
+
+    await createAuditLog({
+      actor: session,
+      action: "user.password_reset",
+      targetType: "user",
+      targetId: reset.employeeId,
+      targetLabel: `${reset.employeeId} (${reset.role})`,
+      details: "Restored login to the initial password from credential export.",
+      client: tx,
+    })
+
+    return { success: true as const, employeeId: reset.employeeId }
+  })
+
   if ("error" in result) {
     return { error: result.error }
   }
-
-  await createAuditLog({
-    actor: session,
-    action: "user.password_reset",
-    targetType: "user",
-    targetId: result.employeeId,
-    targetLabel: `${result.employeeId} (${result.role})`,
-    details: "Restored login to the initial password from credential export.",
-  })
 
   revalidatePath("/dashboard/users")
   revalidatePath("/dashboard/logs")
@@ -147,19 +168,28 @@ export async function deleteUserAction(
     return { error: "Only superadmins can delete admin and superadmin users." }
   }
 
-  const result = await deleteUserAccount(employeeId)
+  const result = await db.transaction(async (tx) => {
+    const deleted = await deleteUserAccount(employeeId, tx)
+    if ("error" in deleted) {
+      return { error: deleted.error }
+    }
+
+    await createAuditLog({
+      actor: session,
+      action: "user.delete",
+      targetType: "user",
+      targetId: deleted.employeeId,
+      targetLabel: `${deleted.employeeId} (${deleted.role})`,
+      details: "Deleted user account.",
+      client: tx,
+    })
+
+    return { success: true as const }
+  })
+
   if ("error" in result) {
     return { error: result.error }
   }
-
-  await createAuditLog({
-    actor: session,
-    action: "user.delete",
-    targetType: "user",
-    targetId: result.employeeId,
-    targetLabel: `${result.employeeId} (${result.role})`,
-    details: "Deleted user account.",
-  })
 
   revalidatePath("/dashboard/users")
   revalidatePath("/dashboard/logs")
@@ -187,13 +217,16 @@ export async function viewInitialCredentialByEmployeeIdAction(
     return { error: credential.error }
   }
 
-  await createAuditLog({
-    actor: session,
-    action: "credential.view",
-    targetType: "credential_exports",
-    targetId: option.employeeId,
-    targetLabel: option.employeeId,
-    details: "Viewed initial credential via lookup.",
+  await db.transaction(async (tx) => {
+    await createAuditLog({
+      actor: session,
+      action: "credential.view",
+      targetType: "credential_exports",
+      targetId: option.employeeId,
+      targetLabel: option.employeeId,
+      details: "Viewed initial credential via lookup.",
+      client: tx,
+    })
   })
 
   return {

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
+import { db } from "@/db"
 import {
   addPayroll,
   deletePayroll,
@@ -39,20 +40,29 @@ export async function addPayrollAction(
   }
 
   const fields = parsePayrollFormData(formData)
-  const result = await addPayroll(fields)
+  const result = await db.transaction(async (tx) => {
+    const payroll = await addPayroll(fields, tx)
+
+    if ("error" in payroll) {
+      return { error: payroll.error }
+    }
+
+    await createAuditLog({
+      actor: session,
+      action: "payroll.create",
+      targetType: "payroll",
+      targetId: payroll.id,
+      targetLabel: payroll.payrollPeriodLabel,
+      details: "Created payroll period and draft payslips.",
+      client: tx,
+    })
+
+    return { success: true as const }
+  })
 
   if ("error" in result) {
     return { error: result.error }
   }
-
-  await createAuditLog({
-    actor: session,
-    action: "payroll.create",
-    targetType: "payroll",
-    targetId: result.id,
-    targetLabel: result.payrollPeriodLabel,
-    details: "Created payroll period and draft payslips.",
-  })
 
   revalidatePath("/dashboard/payrolls")
   revalidatePath("/dashboard/payslips")
@@ -77,20 +87,29 @@ export async function updatePayrollAction(
     return { error: "Payroll not found." }
   }
 
-  const result = await updatePayroll({ id, ...fields })
+  const result = await db.transaction(async (tx) => {
+    const payroll = await updatePayroll({ id, ...fields }, tx)
+
+    if ("error" in payroll) {
+      return { error: payroll.error }
+    }
+
+    await createAuditLog({
+      actor: session,
+      action: "payroll.update",
+      targetType: "payroll",
+      targetId: payroll.id,
+      targetLabel: payroll.payrollPeriodLabel,
+      details: "Updated payroll period.",
+      client: tx,
+    })
+
+    return { success: true as const }
+  })
 
   if ("error" in result) {
     return { error: result.error }
   }
-
-  await createAuditLog({
-    actor: session,
-    action: "payroll.update",
-    targetType: "payroll",
-    targetId: result.id,
-    targetLabel: result.payrollPeriodLabel,
-    details: "Updated payroll period.",
-  })
 
   revalidatePath("/dashboard/payrolls")
   revalidatePath("/dashboard/payslips")
@@ -105,21 +124,30 @@ export async function deletePayrollAction(id: string) {
     return session
   }
 
-  const payroll = await getPayrollById(id)
-  const result = await deletePayroll(id)
+  const result = await db.transaction(async (tx) => {
+    const payroll = await getPayrollById(id, tx)
+    const deleted = await deletePayroll(id, tx)
+
+    if ("error" in deleted) {
+      return { error: deleted.error }
+    }
+
+    await createAuditLog({
+      actor: session,
+      action: "payroll.delete",
+      targetType: "payroll",
+      targetId: id,
+      targetLabel: payroll?.payrollPeriodLabel ?? "Deleted payroll",
+      details: "Deleted payroll period and its payslips.",
+      client: tx,
+    })
+
+    return { success: true as const }
+  })
 
   if ("error" in result) {
     return { error: result.error }
   }
-
-  await createAuditLog({
-    actor: session,
-    action: "payroll.delete",
-    targetType: "payroll",
-    targetId: id,
-    targetLabel: payroll?.payrollPeriodLabel ?? "Deleted payroll",
-    details: "Deleted payroll period and its payslips.",
-  })
 
   revalidatePath("/dashboard/payrolls")
   revalidatePath("/dashboard/payslips")

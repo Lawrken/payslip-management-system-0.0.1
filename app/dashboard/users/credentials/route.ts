@@ -2,7 +2,7 @@ import { createAuditLog } from "@/lib/audit-logs"
 import { requireDashboardSession } from "@/lib/authorization"
 import {
   buildCredentialsWorkbookBuffer,
-  listCredentialExportsForExport,
+  listCredentialExportsForRole,
 } from "@/lib/credential-exports"
 
 export async function GET() {
@@ -11,7 +11,7 @@ export async function GET() {
     return new Response(session.error, { status: 401 })
   }
 
-  const rows = await listCredentialExportsForExport()
+  const rows = await listCredentialExportsForRole(session.role)
   const buffer = buildCredentialsWorkbookBuffer(rows)
   const date = new Date().toISOString().slice(0, 10)
 

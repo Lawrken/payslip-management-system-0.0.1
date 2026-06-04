@@ -1,6 +1,6 @@
-import { and, eq, ne } from "drizzle-orm"
+import { and, eq, inArray, ne } from "drizzle-orm"
 
-import { db } from "@/db"
+import { db, type DatabaseClient } from "@/db"
 import {
   employees as employeesTable,
   payrolls as payrollsTable,
@@ -13,7 +13,14 @@ import {
   calculatePayslipTotals,
   createEmptyPayslipInputs,
 } from "@/lib/payroll-calculator"
-import type { Payslip, PayslipPayrollInputs, PayslipStatus } from "@/lib/types"
+import type {
+  EmployeePayslip,
+  Payslip,
+  PayslipPayrollInputs,
+  PayslipStatus,
+} from "@/lib/types"
+
+export const VISIBLE_EMPLOYEE_PAYSLIP_STATUSES = ["approved", "sent"] as const
 
 function buildPayslipTotals(inputs: PayslipPayrollInputs) {
   const totals = calculatePayslipTotals(inputs)
@@ -45,6 +52,21 @@ function mapPayslipRow(row: {
   }
 }
 
+function mapEmployeePayslipRow(row: {
+  payslip: typeof payslips.$inferSelect
+  payslipInput: typeof payslipInputs.$inferSelect | null
+  employee: typeof employeesTable.$inferSelect | null
+  payroll: typeof payrollsTable.$inferSelect
+}): EmployeePayslip {
+  return {
+    ...mapPayslipRow(row),
+    payrollPeriodLabel: row.payroll.payrollPeriodLabel,
+    payrollPeriodStart: row.payroll.payrollPeriodStart,
+    payrollPeriodEnd: row.payroll.payrollPeriodEnd,
+    payoutDate: row.payroll.payoutDate,
+  }
+}
+
 async function getPayslipRows() {
   return db
     .select({
@@ -68,8 +90,11 @@ export async function getPayslips(): Promise<Payslip[]> {
   })
 }
 
-export async function getPayslipById(id: string): Promise<Payslip | null> {
-  const [row] = await db
+export async function getPayslipById(
+  id: string,
+  client: DatabaseClient = db
+): Promise<Payslip | null> {
+  const [row] = await client
     .select({
       payslip: payslips,
       payslipInput: payslipInputs,
@@ -85,9 +110,10 @@ export async function getPayslipById(id: string): Promise<Payslip | null> {
 }
 
 export async function getPayslipsByPayrollId(
-  payrollId: string
+  payrollId: string,
+  client: DatabaseClient = db
 ): Promise<Payslip[]> {
-  const rows = await db
+  const rows = await client
     .select({
       payslip: payslips,
       payslipInput: payslipInputs,
@@ -99,6 +125,33 @@ export async function getPayslipsByPayrollId(
     .where(eq(payslips.payrollId, payrollId))
 
   return rows.map(mapPayslipRow)
+}
+
+export async function getVisiblePayslipsByEmployeeId(
+  employeeId: string
+): Promise<EmployeePayslip[]> {
+  const normalizedId = normalizeEmployeeId(employeeId)
+  const rows = await db
+    .select({
+      payslip: payslips,
+      payslipInput: payslipInputs,
+      employee: employeesTable,
+      payroll: payrollsTable,
+    })
+    .from(payslips)
+    .innerJoin(payrollsTable, eq(payrollsTable.id, payslips.payrollId))
+    .leftJoin(payslipInputs, eq(payslipInputs.payslipId, payslips.id))
+    .leftJoin(employeesTable, eq(employeesTable.employeeId, payslips.employeeId))
+    .where(
+      and(
+        eq(payslips.employeeId, normalizedId),
+        inArray(payslips.status, VISIBLE_EMPLOYEE_PAYSLIP_STATUSES)
+      )
+    )
+
+  return rows.map(mapEmployeePayslipRow).sort((a, b) => {
+    return b.payrollPeriodEnd.localeCompare(a.payrollPeriodEnd)
+  })
 }
 
 export async function countPayslipsByPayrollId(
@@ -139,10 +192,11 @@ export function resolveStatusAfterSave(
 }
 
 export async function createPayslipsForPayroll(
-  payrollId: string
+  payrollId: string,
+  client: DatabaseClient = db
 ): Promise<number> {
-  const employees = await getEmployees()
-  const existing = await getPayslipsByPayrollId(payrollId)
+  const employees = await getEmployees(client)
+  const existing = await getPayslipsByPayrollId(payrollId, client)
   const existingEmployeeIds = new Set(existing.map((payslip) => payslip.employeeId))
   const newPayslips = employees.filter(
     (employee) => !existingEmployeeIds.has(employee.employeeId)
@@ -161,8 +215,8 @@ export async function createPayslipsForPayroll(
   const inputs = createEmptyPayslipInputs()
   const totals = buildPayslipTotals(inputs)
 
-  await db.insert(payslips).values(rows)
-  await db.insert(payslipInputs).values(
+  await client.insert(payslips).values(rows)
+  await client.insert(payslipInputs).values(
     rows.map((row) => ({
       payslipId: row.id,
       inputs,
@@ -174,14 +228,6 @@ export async function createPayslipsForPayroll(
   return rows.length
 }
 
-export async function deletePayslipsByPayrollId(
-  payrollId: string
-): Promise<number> {
-  const before = await countPayslipsByPayrollId(payrollId)
-  await db.delete(payslips).where(eq(payslips.payrollId, payrollId))
-  return before
-}
-
 export type NewPayslipInput = {
   payrollId: string
   employeeId: string
@@ -189,14 +235,15 @@ export type NewPayslipInput = {
 }
 
 export async function addPayslip(
-  input: NewPayslipInput
+  input: NewPayslipInput,
+  client: DatabaseClient = db
 ): Promise<Payslip | { error: string }> {
   const payrollId = input.payrollId.trim()
   const employeeId = normalizeEmployeeId(input.employeeId)
-  const payroll = await db.query.payrolls.findFirst({
+  const payroll = await client.query.payrolls.findFirst({
     where: eq(payrollsTable.id, payrollId),
   })
-  const employee = await findEmployeeByEmployeeId(employeeId)
+  const employee = await findEmployeeByEmployeeId(employeeId, client)
 
   if (!payrollId || !payroll) {
     return { error: "Payroll period is required." }
@@ -206,7 +253,7 @@ export async function addPayslip(
     return { error: "No employee found with that Employee ID." }
   }
 
-  const duplicate = await db.query.payslips.findFirst({
+  const duplicate = await client.query.payslips.findFirst({
     where: and(
       eq(payslips.payrollId, payrollId),
       eq(payslips.employeeId, employeeId)
@@ -222,14 +269,14 @@ export async function addPayslip(
   const id = crypto.randomUUID()
   const totals = buildPayslipTotals(input.inputs)
 
-  await db.insert(payslips).values({
+  await client.insert(payslips).values({
     id,
     payrollId,
     employeeId,
     status,
     updatedAt: new Date(),
   })
-  await db.insert(payslipInputs).values({
+  await client.insert(payslipInputs).values({
     payslipId: id,
     inputs: input.inputs,
     totals,
@@ -255,19 +302,20 @@ export type UpdatePayslipInput = {
 }
 
 export async function updatePayslip(
-  input: UpdatePayslipInput
+  input: UpdatePayslipInput,
+  client: DatabaseClient = db
 ): Promise<Payslip | { error: string }> {
-  const existing = await getPayslipById(input.id)
+  const existing = await getPayslipById(input.id, client)
   if (!existing) {
     return { error: "Payslip not found." }
   }
 
   const payrollId = input.payrollId.trim()
   const employeeId = normalizeEmployeeId(input.employeeId)
-  const payroll = await db.query.payrolls.findFirst({
+  const payroll = await client.query.payrolls.findFirst({
     where: eq(payrollsTable.id, payrollId),
   })
-  const employee = await findEmployeeByEmployeeId(employeeId)
+  const employee = await findEmployeeByEmployeeId(employeeId, client)
 
   if (!payrollId || !payroll) {
     return { error: "Payroll period is required." }
@@ -277,7 +325,7 @@ export async function updatePayslip(
     return { error: "No employee found with that Employee ID." }
   }
 
-  const duplicate = await db.query.payslips.findFirst({
+  const duplicate = await client.query.payslips.findFirst({
     where: and(
       ne(payslips.id, input.id),
       eq(payslips.payrollId, payrollId),
@@ -293,7 +341,7 @@ export async function updatePayslip(
   const status = resolveStatusAfterSave(existing.status, input.inputs)
   const totals = buildPayslipTotals(input.inputs)
 
-  await db
+  await client
     .update(payslips)
     .set({
       payrollId,
@@ -302,7 +350,7 @@ export async function updatePayslip(
       updatedAt: new Date(),
     })
     .where(eq(payslips.id, input.id))
-  await db
+  await client
     .update(payslipInputs)
     .set({
       inputs: input.inputs,
@@ -323,9 +371,10 @@ export async function updatePayslip(
 }
 
 export async function approvePayslipByAdmin(
-  id: string
+  id: string,
+  client: DatabaseClient = db
 ): Promise<Payslip | { error: string }> {
-  const payslip = await getPayslipById(id)
+  const payslip = await getPayslipById(id, client)
   if (!payslip) {
     return { error: "Payslip not found." }
   }
@@ -338,7 +387,7 @@ export async function approvePayslipByAdmin(
     return { error: "Payslip must have payroll data before it can be checked." }
   }
 
-  await db
+  await client
     .update(payslips)
     .set({ status: "adminApproved", updatedAt: new Date() })
     .where(eq(payslips.id, id))
@@ -347,18 +396,19 @@ export async function approvePayslipByAdmin(
 }
 
 export async function approvePayslipBySuperAdmin(
-  id: string
+  id: string,
+  client: DatabaseClient = db
 ): Promise<Payslip | { error: string }> {
-  const payslip = await getPayslipById(id)
+  const payslip = await getPayslipById(id, client)
   if (!payslip) {
     return { error: "Payslip not found." }
   }
 
   if (payslip.status !== "adminApproved") {
-    return { error: "Only checked payslips can be approved." }
+    return { error: "Only checked payslips can be marked ready for email." }
   }
 
-  await db
+  await client
     .update(payslips)
     .set({ status: "approved", updatedAt: new Date() })
     .where(eq(payslips.id, id))
@@ -367,9 +417,10 @@ export async function approvePayslipBySuperAdmin(
 }
 
 export async function returnPayslipByAdmin(
-  id: string
+  id: string,
+  client: DatabaseClient = db
 ): Promise<Payslip | { error: string }> {
-  const payslip = await getPayslipById(id)
+  const payslip = await getPayslipById(id, client)
   if (!payslip) {
     return { error: "Payslip not found." }
   }
@@ -382,7 +433,7 @@ export async function returnPayslipByAdmin(
     return { error: "Payslip must have payroll data before it can be returned." }
   }
 
-  await db
+  await client
     .update(payslips)
     .set({ status: "returned", updatedAt: new Date() })
     .where(eq(payslips.id, id))
@@ -391,9 +442,10 @@ export async function returnPayslipByAdmin(
 }
 
 export async function returnPayslipBySuperAdmin(
-  id: string
+  id: string,
+  client: DatabaseClient = db
 ): Promise<Payslip | { error: string }> {
-  const payslip = await getPayslipById(id)
+  const payslip = await getPayslipById(id, client)
   if (!payslip) {
     return { error: "Payslip not found." }
   }
@@ -402,7 +454,7 @@ export async function returnPayslipBySuperAdmin(
     return { error: "Only checked payslips can be returned." }
   }
 
-  await db
+  await client
     .update(payslips)
     .set({ status: "returned", updatedAt: new Date() })
     .where(eq(payslips.id, id))
@@ -411,9 +463,10 @@ export async function returnPayslipBySuperAdmin(
 }
 
 export async function areAllPayslipsApproved(
-  payrollId: string
+  payrollId: string,
+  client: DatabaseClient = db
 ): Promise<boolean> {
-  const payrollPayslips = await getPayslipsByPayrollId(payrollId)
+  const payrollPayslips = await getPayslipsByPayrollId(payrollId, client)
   if (payrollPayslips.length === 0) {
     return false
   }
@@ -421,13 +474,14 @@ export async function areAllPayslipsApproved(
 }
 
 export async function sendApprovedPayslips(
-  payrollId: string
+  payrollId: string,
+  client: DatabaseClient = db
 ): Promise<{ count: number } | { error: string }> {
-  if (!(await areAllPayslipsApproved(payrollId))) {
-    return { error: "All payslips must be approved before sending bulk email." }
+  if (!(await areAllPayslipsApproved(payrollId, client))) {
+    return { error: "All payslips must be ready for email before sending bulk email." }
   }
 
-  const payrollPayslips = await getPayslipsByPayrollId(payrollId)
+  const payrollPayslips = await getPayslipsByPayrollId(payrollId, client)
   const approvedIds = payrollPayslips
     .filter((payslip) => payslip.status === "approved")
     .map((payslip) => payslip.id)
@@ -437,7 +491,7 @@ export async function sendApprovedPayslips(
   }
 
   for (const id of approvedIds) {
-    await db
+    await client
       .update(payslips)
       .set({ status: "sent", updatedAt: new Date() })
       .where(eq(payslips.id, id))
@@ -447,13 +501,14 @@ export async function sendApprovedPayslips(
 }
 
 export async function deletePayslip(
-  id: string
+  id: string,
+  client: DatabaseClient = db
 ): Promise<{ success: true } | { error: string }> {
-  const existing = await getPayslipById(id)
+  const existing = await getPayslipById(id, client)
   if (!existing) {
     return { error: "Payslip not found." }
   }
 
-  await db.delete(payslips).where(eq(payslips.id, id))
+  await client.delete(payslips).where(eq(payslips.id, id))
   return { success: true }
 }

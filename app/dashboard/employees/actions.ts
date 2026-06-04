@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
+import { db } from "@/db"
 import {
   addEmployee,
   deleteEmployee,
@@ -87,48 +88,69 @@ export async function addEmployeeAction(
     return validationError
   }
 
-  const result = await addEmployee(fields)
+  let result: { success: true; employeeId: string } | { error: string }
+  try {
+    result = await db.transaction(async (tx) => {
+      const employee = await addEmployee(fields, tx)
+
+      if ("error" in employee) {
+        return { error: employee.error }
+      }
+
+      const account = await createUserAccount({
+        employeeId: employee.employeeId,
+        role: "employee",
+        createdByEmployeeId: session.employeeId,
+        client: tx,
+      })
+
+      if ("error" in account) {
+        throw new Error(account.error)
+      }
+
+      await createAuditLog({
+        actor: session,
+        action: "employee.create",
+        targetType: "employee",
+        targetId: employee.id,
+        targetLabel: `${employee.name} (${employee.employeeId})`,
+        details: "Created employee record and login account.",
+        client: tx,
+      })
+
+      await createAuditLog({
+        actor: session,
+        action: "user.create",
+        targetType: "user",
+        targetId: account.employeeId,
+        targetLabel: `${account.employeeId} (employee)`,
+        details:
+          "Created login account; initial password queued for credential export.",
+        client: tx,
+      })
+
+      return {
+        success: true as const,
+        employeeId: account.employeeId,
+      }
+    })
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Employee was not created.",
+    }
+  }
 
   if ("error" in result) {
     return { error: result.error }
   }
-
-  const account = await createUserAccount({
-    employeeId: result.employeeId,
-    role: "employee",
-    createdByEmployeeId: session.employeeId,
-  })
-
-  if ("error" in account) {
-    await deleteEmployee(result.id)
-    return { error: account.error }
-  }
-
-  await createAuditLog({
-    actor: session,
-    action: "employee.create",
-    targetType: "employee",
-    targetId: result.id,
-    targetLabel: `${result.name} (${result.employeeId})`,
-    details: "Created employee record and login account.",
-  })
-
-  await createAuditLog({
-    actor: session,
-    action: "user.create",
-    targetType: "user",
-    targetId: account.employeeId,
-    targetLabel: `${account.employeeId} (employee)`,
-    details:
-      "Created login account; initial password queued for credential export.",
-  })
 
   revalidatePath("/dashboard/employees")
   revalidatePath("/dashboard/users")
   revalidatePath("/dashboard/logs")
   return {
     success: true,
-    employeeId: account.employeeId,
+    employeeId: result.employeeId,
     message:
       "Employee and login account created. Download initial credentials from the Users page (.xlsx).",
   }
@@ -153,20 +175,29 @@ export async function updateEmployeeAction(
     return validationError
   }
 
-  const result = await updateEmployee({ id, ...fields })
+  const result = await db.transaction(async (tx) => {
+    const employee = await updateEmployee({ id, ...fields }, tx)
+
+    if ("error" in employee) {
+      return { error: employee.error }
+    }
+
+    await createAuditLog({
+      actor: session,
+      action: "employee.update",
+      targetType: "employee",
+      targetId: employee.id,
+      targetLabel: `${employee.name} (${employee.employeeId})`,
+      details: "Updated employee record.",
+      client: tx,
+    })
+
+    return { success: true as const }
+  })
 
   if ("error" in result) {
     return { error: result.error }
   }
-
-  await createAuditLog({
-    actor: session,
-    action: "employee.update",
-    targetType: "employee",
-    targetId: result.id,
-    targetLabel: `${result.name} (${result.employeeId})`,
-    details: "Updated employee record.",
-  })
 
   revalidatePath("/dashboard/employees")
   revalidatePath("/dashboard/logs")
@@ -179,23 +210,32 @@ export async function deleteEmployeeAction(id: string) {
     return session
   }
 
-  const employee = await getEmployeeById(id)
-  const result = await deleteEmployee(id)
+  const result = await db.transaction(async (tx) => {
+    const employee = await getEmployeeById(id, tx)
+    const deleted = await deleteEmployee(id, tx)
+
+    if ("error" in deleted) {
+      return { error: deleted.error }
+    }
+
+    await createAuditLog({
+      actor: session,
+      action: "employee.delete",
+      targetType: "employee",
+      targetId: id,
+      targetLabel: employee
+        ? `${employee.name} (${employee.employeeId})`
+        : "Deleted employee",
+      details: "Deleted employee record.",
+      client: tx,
+    })
+
+    return { success: true as const }
+  })
 
   if ("error" in result) {
     return { error: result.error }
   }
-
-  await createAuditLog({
-    actor: session,
-    action: "employee.delete",
-    targetType: "employee",
-    targetId: id,
-    targetLabel: employee
-      ? `${employee.name} (${employee.employeeId})`
-      : "Deleted employee",
-    details: "Deleted employee record.",
-  })
 
   revalidatePath("/dashboard/employees")
   revalidatePath("/dashboard/logs")

@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm"
 
-import { db } from "@/db"
+import { db, type DatabaseClient } from "@/db"
 import { payrolls } from "@/db/schema"
 import {
   dateRangesOverlap,
@@ -10,14 +10,19 @@ import {
 import { createPayslipsForPayroll } from "@/lib/payslips"
 import type { Payroll } from "@/lib/types"
 
-export async function getPayrolls(): Promise<Payroll[]> {
-  return db.query.payrolls.findMany({
+export async function getPayrolls(
+  client: DatabaseClient = db
+): Promise<Payroll[]> {
+  return client.query.payrolls.findMany({
     orderBy: (table, { desc }) => [desc(table.payrollPeriodEnd)],
   })
 }
 
-export async function getPayrollById(id: string): Promise<Payroll | null> {
-  const payroll = await db.query.payrolls.findFirst({
+export async function getPayrollById(
+  id: string,
+  client: DatabaseClient = db
+): Promise<Payroll | null> {
+  const payroll = await client.query.payrolls.findFirst({
     where: eq(payrolls.id, id),
   })
   return payroll ?? null
@@ -59,9 +64,10 @@ function validatePayrollDates(input: NewPayrollInput): { error: string } | null 
 async function hasOverlappingPayrollPeriod(
   start: string,
   end: string,
-  excludeId?: string
+  excludeId?: string,
+  client: DatabaseClient = db
 ): Promise<boolean> {
-  const existingPayrolls = await getPayrolls()
+  const existingPayrolls = await getPayrolls(client)
   return existingPayrolls.some(
     (payroll) =>
       payroll.id !== excludeId &&
@@ -89,7 +95,8 @@ function buildPayroll(id: string, input: NewPayrollInput): Payroll {
 }
 
 export async function addPayroll(
-  input: NewPayrollInput
+  input: NewPayrollInput,
+  client: DatabaseClient = db
 ): Promise<Payroll | { error: string }> {
   const validationError = validatePayrollDates(input)
   if (validationError) {
@@ -99,25 +106,28 @@ export async function addPayroll(
   if (
     await hasOverlappingPayrollPeriod(
       input.payrollPeriodStart,
-      input.payrollPeriodEnd
+      input.payrollPeriodEnd,
+      undefined,
+      client
     )
   ) {
     return { error: "This payroll period overlaps an existing payroll period." }
   }
 
   const payroll = buildPayroll(crypto.randomUUID(), input)
-  await db.insert(payrolls).values({
+  await client.insert(payrolls).values({
     ...payroll,
     updatedAt: new Date(),
   })
-  await createPayslipsForPayroll(payroll.id)
+  await createPayslipsForPayroll(payroll.id, client)
   return payroll
 }
 
 export async function updatePayroll(
-  input: UpdatePayrollInput
+  input: UpdatePayrollInput,
+  client: DatabaseClient = db
 ): Promise<Payroll | { error: string }> {
-  const existing = await getPayrollById(input.id)
+  const existing = await getPayrollById(input.id, client)
   if (!existing) {
     return { error: "Payroll not found." }
   }
@@ -131,14 +141,15 @@ export async function updatePayroll(
     await hasOverlappingPayrollPeriod(
       input.payrollPeriodStart,
       input.payrollPeriodEnd,
-      input.id
+      input.id,
+      client
     )
   ) {
     return { error: "This payroll period overlaps an existing payroll period." }
   }
 
   const updated = buildPayroll(input.id, input)
-  await db
+  await client
     .update(payrolls)
     .set({ ...updated, updatedAt: new Date() })
     .where(eq(payrolls.id, input.id))
@@ -146,13 +157,14 @@ export async function updatePayroll(
 }
 
 export async function deletePayroll(
-  id: string
+  id: string,
+  client: DatabaseClient = db
 ): Promise<{ success: true } | { error: string }> {
-  const existing = await getPayrollById(id)
+  const existing = await getPayrollById(id, client)
   if (!existing) {
     return { error: "Payroll not found." }
   }
 
-  await db.delete(payrolls).where(eq(payrolls.id, id))
+  await client.delete(payrolls).where(eq(payrolls.id, id))
   return { success: true }
 }

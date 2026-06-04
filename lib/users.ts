@@ -3,7 +3,7 @@ import { randomInt } from "node:crypto"
 import bcrypt from "bcryptjs"
 import { asc, eq } from "drizzle-orm"
 
-import { db } from "@/db"
+import { db, type DatabaseClient } from "@/db"
 import { employees, users } from "@/db/schema"
 import { normalizeEmployeeId } from "@/lib/auth-helpers"
 import {
@@ -61,10 +61,11 @@ export async function getUserAccounts(): Promise<UserAccount[]> {
 }
 
 export async function getUserAccount(
-  employeeId: string
+  employeeId: string,
+  client: DatabaseClient = db
 ): Promise<UserAccount | null> {
   const normalizedId = normalizeEmployeeId(employeeId)
-  const [row] = await db
+  const [row] = await client
     .select({
       employeeId: users.employeeId,
       role: users.role,
@@ -84,13 +85,15 @@ export async function createUserAccount(input: {
   employeeId: string
   role: Role
   createdByEmployeeId: string
+  client?: DatabaseClient
 }): Promise<UserAccount | { error: string }> {
+  const client = input.client ?? db
   const employeeId = normalizeEmployeeId(input.employeeId)
   if (!employeeId) {
     return { error: "Employee ID is required." }
   }
 
-  const existing = await db.query.users.findFirst({
+  const existing = await client.query.users.findFirst({
     where: eq(users.employeeId, employeeId),
   })
   if (existing) {
@@ -98,14 +101,14 @@ export async function createUserAccount(input: {
   }
 
   const generatedPassword = generatePassword()
-  await db.insert(users).values({
+  await client.insert(users).values({
     employeeId,
     role: input.role,
     passwordHash: await bcrypt.hash(generatedPassword, 10),
     updatedAt: new Date(),
   })
 
-  const user = await getUserAccount(employeeId)
+  const user = await getUserAccount(employeeId, client)
   if (!user) {
     return { error: "User account was not created." }
   }
@@ -116,37 +119,40 @@ export async function createUserAccount(input: {
     role: input.role,
     password: generatedPassword,
     createdByEmployeeId: input.createdByEmployeeId,
+    client,
   })
 
   return user
 }
 
 export async function deleteUserAccount(
-  employeeId: string
+  employeeId: string,
+  client: DatabaseClient = db
 ): Promise<UserAccount | { error: string }> {
-  const user = await getUserAccount(employeeId)
+  const user = await getUserAccount(employeeId, client)
   if (!user) {
     return { error: "User account not found." }
   }
 
-  await db.delete(users).where(eq(users.employeeId, user.employeeId))
+  await client.delete(users).where(eq(users.employeeId, user.employeeId))
   return user
 }
 
 export async function resetUserPassword(
-  employeeId: string
+  employeeId: string,
+  client: DatabaseClient = db
 ): Promise<UserAccount | { error: string }> {
-  const user = await getUserAccount(employeeId)
+  const user = await getUserAccount(employeeId, client)
   if (!user) {
     return { error: "User account not found." }
   }
 
-  const credential = await getInitialCredentialPassword(employeeId)
+  const credential = await getInitialCredentialPassword(employeeId, client)
   if ("error" in credential) {
     return { error: credential.error }
   }
 
-  await db
+  await client
     .update(users)
     .set({
       passwordHash: await bcrypt.hash(credential.password, 10),

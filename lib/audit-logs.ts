@@ -1,6 +1,6 @@
 import { and, desc, eq, gte, lte } from "drizzle-orm"
 
-import { db } from "@/db"
+import { db, type DatabaseClient } from "@/db"
 import { auditLogs } from "@/db/schema"
 import type { AuditAction, AuditLog, AuditLogQuery, Session } from "@/lib/types"
 
@@ -20,7 +20,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "payslip.update": "Payslip edited",
   "payslip.delete": "Payslip deleted",
   "payslip.admin_check": "Payslip checked",
-  "payslip.superadmin_approve": "Payslip approved",
+  "payslip.superadmin_approve": "Payslip ready for email",
   "payslip.return": "Payslip returned",
   "payslip.bulk_send": "Payslips sent",
 }
@@ -36,10 +36,12 @@ type CreateAuditLogInput = {
   targetId: string
   targetLabel: string
   details: string
+  client?: DatabaseClient
 }
 
 export async function createAuditLog(input: CreateAuditLogInput) {
-  await db.insert(auditLogs).values({
+  const client = input.client ?? db
+  await client.insert(auditLogs).values({
     id: crypto.randomUUID(),
     actorEmployeeId: input.actor.employeeId,
     actorRole: input.actor.role,

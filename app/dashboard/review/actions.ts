@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
+import { db } from "@/db"
 import { createAuditLog } from "@/lib/audit-logs"
 import {
   requireAdminSession,
@@ -30,19 +31,28 @@ export async function adminApprovePayslipAction(
     return session
   }
 
-  const result = await approvePayslipByAdmin(id)
+  const result = await db.transaction(async (tx) => {
+    const payslip = await approvePayslipByAdmin(id, tx)
+    if ("error" in payslip) {
+      return { error: payslip.error }
+    }
+
+    await createAuditLog({
+      actor: session,
+      action: "payslip.admin_check",
+      targetType: "payslip",
+      targetId: payslip.id,
+      targetLabel: `${payslip.employeeName} (${payslip.employeeId})`,
+      details: "Marked payslip checked for superadmin approval.",
+      client: tx,
+    })
+
+    return { success: true as const }
+  })
+
   if ("error" in result) {
     return { error: result.error }
   }
-
-  await createAuditLog({
-    actor: session,
-    action: "payslip.admin_check",
-    targetType: "payslip",
-    targetId: result.id,
-    targetLabel: `${result.employeeName} (${result.employeeId})`,
-    details: "Marked payslip checked for superadmin approval.",
-  })
 
   revalidatePath("/dashboard/review")
   revalidatePath("/dashboard/payslips")
@@ -58,19 +68,28 @@ export async function superAdminApprovePayslipAction(
     return session
   }
 
-  const result = await approvePayslipBySuperAdmin(id)
+  const result = await db.transaction(async (tx) => {
+    const payslip = await approvePayslipBySuperAdmin(id, tx)
+    if ("error" in payslip) {
+      return { error: payslip.error }
+    }
+
+    await createAuditLog({
+      actor: session,
+      action: "payslip.superadmin_approve",
+      targetType: "payslip",
+      targetId: payslip.id,
+      targetLabel: `${payslip.employeeName} (${payslip.employeeId})`,
+      details: "Marked payslip ready for email.",
+      client: tx,
+    })
+
+    return { success: true as const }
+  })
+
   if ("error" in result) {
     return { error: result.error }
   }
-
-  await createAuditLog({
-    actor: session,
-    action: "payslip.superadmin_approve",
-    targetType: "payslip",
-    targetId: result.id,
-    targetLabel: `${result.employeeName} (${result.employeeId})`,
-    details: "Approved payslip.",
-  })
 
   revalidatePath("/dashboard/review")
   revalidatePath("/dashboard/payslips")
@@ -86,23 +105,32 @@ export async function returnPayslipAction(
     return session
   }
 
-  const result =
-    session.role === "admin"
-      ? await returnPayslipByAdmin(id)
-      : await returnPayslipBySuperAdmin(id)
+  const result = await db.transaction(async (tx) => {
+    const payslip =
+      session.role === "admin"
+        ? await returnPayslipByAdmin(id, tx)
+        : await returnPayslipBySuperAdmin(id, tx)
+
+    if ("error" in payslip) {
+      return { error: payslip.error }
+    }
+
+    await createAuditLog({
+      actor: session,
+      action: "payslip.return",
+      targetType: "payslip",
+      targetId: payslip.id,
+      targetLabel: `${payslip.employeeName} (${payslip.employeeId})`,
+      details: "Returned payslip for edits.",
+      client: tx,
+    })
+
+    return { success: true as const }
+  })
 
   if ("error" in result) {
     return { error: result.error }
   }
-
-  await createAuditLog({
-    actor: session,
-    action: "payslip.return",
-    targetType: "payslip",
-    targetId: result.id,
-    targetLabel: `${result.employeeName} (${result.employeeId})`,
-    details: "Returned payslip for edits.",
-  })
 
   revalidatePath("/dashboard/review")
   revalidatePath("/dashboard/payslips")
@@ -116,26 +144,35 @@ export async function bulkEmailAction(payrollId: string) {
     return session
   }
 
-  if (!(await areAllPayslipsApproved(payrollId))) {
-    return { error: "All payslips must be approved before sending bulk email." }
-  }
+  const result = await db.transaction(async (tx) => {
+    if (!(await areAllPayslipsApproved(payrollId, tx))) {
+      return { error: "All payslips must be ready for email before sending bulk email." }
+    }
 
-  const result = await sendApprovedPayslips(payrollId)
+    const sent = await sendApprovedPayslips(payrollId, tx)
+    if ("error" in sent) {
+      return { error: sent.error }
+    }
+
+    await createAuditLog({
+      actor: session,
+      action: "payslip.bulk_send",
+      targetType: "payroll",
+      targetId: payrollId,
+      targetLabel: payrollId,
+      details: `Marked ${sent.count} payslip${sent.count === 1 ? "" : "s"} ready for email as sent.`,
+      client: tx,
+    })
+
+    return { success: true as const, count: sent.count }
+  })
+
   if ("error" in result) {
     return { error: result.error }
   }
 
-  await createAuditLog({
-    actor: session,
-    action: "payslip.bulk_send",
-    targetType: "payroll",
-    targetId: payrollId,
-    targetLabel: payrollId,
-    details: `Marked ${result.count} approved payslip${result.count === 1 ? "" : "s"} as sent.`,
-  })
-
   revalidatePath("/dashboard/review")
   revalidatePath("/dashboard/payslips")
   revalidatePath("/dashboard/logs")
-  return { success: true as const, count: result.count }
+  return result
 }

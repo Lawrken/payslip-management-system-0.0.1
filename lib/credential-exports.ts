@@ -1,9 +1,9 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto"
 
-import { asc, eq } from "drizzle-orm"
+import { asc, eq, inArray } from "drizzle-orm"
 import * as XLSX from "xlsx"
 
-import { db } from "@/db"
+import { db, type DatabaseClient } from "@/db"
 import { credentialExports } from "@/db/schema"
 import { normalizeEmployeeId } from "@/lib/auth-helpers"
 import type { Role } from "@/lib/types"
@@ -24,6 +24,12 @@ export type CredentialLookupOption = {
   employeeId: string
   employeeName: string | null
   role: Role
+}
+
+export function getCredentialExportRolesForActor(role: Role): Role[] {
+  return role === "superAdmin"
+    ? ["employee", "admin", "superAdmin"]
+    : ["employee"]
 }
 
 function getEncryptionKey(): Buffer {
@@ -73,12 +79,14 @@ export async function queueInitialCredential(input: {
   role: Role
   password: string
   createdByEmployeeId: string
+  client?: DatabaseClient
 }) {
+  const client = input.client ?? db
   const employeeId = normalizeEmployeeId(input.employeeId)
   const createdByEmployeeId = normalizeEmployeeId(input.createdByEmployeeId)
   const passwordCiphertext = encryptPassword(input.password)
 
-  await db
+  await client
     .insert(credentialExports)
     .values({
       employeeId,
@@ -101,10 +109,11 @@ export async function queueInitialCredential(input: {
 }
 
 export async function getInitialCredentialPassword(
-  employeeId: string
+  employeeId: string,
+  client: DatabaseClient = db
 ): Promise<{ password: string } | { error: string }> {
   const normalizedId = normalizeEmployeeId(employeeId)
-  const [row] = await db
+  const [row] = await client
     .select()
     .from(credentialExports)
     .where(eq(credentialExports.employeeId, normalizedId))
@@ -154,12 +163,14 @@ export async function getCredentialLookupOption(
   return row ?? null
 }
 
-export async function listCredentialExportsForExport(): Promise<
-  CredentialExportRow[]
-> {
+export async function listCredentialExportsForRole(
+  role: Role
+): Promise<CredentialExportRow[]> {
+  const allowedRoles = getCredentialExportRolesForActor(role)
   const rows = await db
     .select()
     .from(credentialExports)
+    .where(inArray(credentialExports.role, allowedRoles))
     .orderBy(asc(credentialExports.employeeId))
 
   return rows.map(rowToCredentialExport)
@@ -214,4 +225,3 @@ export function buildCredentialsWorkbookBuffer(
     XLSX.write(workbook, { type: "buffer", bookType: "xlsx" })
   )
 }
-

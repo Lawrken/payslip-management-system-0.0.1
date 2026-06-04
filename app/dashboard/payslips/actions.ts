@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
+import { db } from "@/db"
 import { createAuditLog } from "@/lib/audit-logs"
 import { requireDashboardSession } from "@/lib/authorization"
 import {
@@ -46,24 +47,36 @@ export async function addPayslipAction(
 
   calculatePayslipTotals(parsedInputs)
 
-  const result = await addPayslip({
-    payrollId,
-    employeeId,
-    inputs: parsedInputs,
+  const result = await db.transaction(async (tx) => {
+    const payslip = await addPayslip(
+      {
+        payrollId,
+        employeeId,
+        inputs: parsedInputs,
+      },
+      tx
+    )
+
+    if ("error" in payslip) {
+      return { error: payslip.error }
+    }
+
+    await createAuditLog({
+      actor: session,
+      action: "payslip.create",
+      targetType: "payslip",
+      targetId: payslip.id,
+      targetLabel: `${payslip.employeeName} (${payslip.employeeId})`,
+      details: "Created payslip.",
+      client: tx,
+    })
+
+    return { success: true as const }
   })
 
   if ("error" in result) {
     return { error: result.error }
   }
-
-  await createAuditLog({
-    actor: session,
-    action: "payslip.create",
-    targetType: "payslip",
-    targetId: result.id,
-    targetLabel: `${result.employeeName} (${result.employeeId})`,
-    details: "Created payslip.",
-  })
 
   revalidatePath("/dashboard/payslips")
   revalidatePath("/dashboard/review")
@@ -98,25 +111,37 @@ export async function updatePayslipAction(
 
   calculatePayslipTotals(parsedInputs)
 
-  const result = await updatePayslip({
-    id,
-    payrollId,
-    employeeId,
-    inputs: parsedInputs,
+  const result = await db.transaction(async (tx) => {
+    const payslip = await updatePayslip(
+      {
+        id,
+        payrollId,
+        employeeId,
+        inputs: parsedInputs,
+      },
+      tx
+    )
+
+    if ("error" in payslip) {
+      return { error: payslip.error }
+    }
+
+    await createAuditLog({
+      actor: session,
+      action: "payslip.update",
+      targetType: "payslip",
+      targetId: payslip.id,
+      targetLabel: `${payslip.employeeName} (${payslip.employeeId})`,
+      details: `Updated payslip. Status is now ${payslip.status}.`,
+      client: tx,
+    })
+
+    return { success: true as const }
   })
 
   if ("error" in result) {
     return { error: result.error }
   }
-
-  await createAuditLog({
-    actor: session,
-    action: "payslip.update",
-    targetType: "payslip",
-    targetId: result.id,
-    targetLabel: `${result.employeeName} (${result.employeeId})`,
-    details: `Updated payslip. Status is now ${result.status}.`,
-  })
 
   revalidatePath("/dashboard/payslips")
   revalidatePath("/dashboard/review")
@@ -130,23 +155,32 @@ export async function deletePayslipAction(id: string) {
     return session
   }
 
-  const payslip = await getPayslipById(id)
-  const result = await deletePayslip(id)
+  const result = await db.transaction(async (tx) => {
+    const payslip = await getPayslipById(id, tx)
+    const deleted = await deletePayslip(id, tx)
+
+    if ("error" in deleted) {
+      return { error: deleted.error }
+    }
+
+    await createAuditLog({
+      actor: session,
+      action: "payslip.delete",
+      targetType: "payslip",
+      targetId: id,
+      targetLabel: payslip
+        ? `${payslip.employeeName} (${payslip.employeeId})`
+        : "Deleted payslip",
+      details: "Deleted payslip.",
+      client: tx,
+    })
+
+    return { success: true as const }
+  })
 
   if ("error" in result) {
     return { error: result.error }
   }
-
-  await createAuditLog({
-    actor: session,
-    action: "payslip.delete",
-    targetType: "payslip",
-    targetId: id,
-    targetLabel: payslip
-      ? `${payslip.employeeName} (${payslip.employeeId})`
-      : "Deleted payslip",
-    details: "Deleted payslip.",
-  })
 
   revalidatePath("/dashboard/payslips")
   revalidatePath("/dashboard/review")
