@@ -4,7 +4,6 @@ import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import * as React from "react"
 
-import { BulkEmailDialog } from "@/components/dashboard/payslips/bulk-email-dialog"
 import { EditPayslipDialog } from "@/components/dashboard/payslips/edit-payslip-dialog"
 import { EmployeeCombobox } from "@/components/dashboard/shared/employee-combobox"
 import { PayrollPeriodCombobox } from "@/components/dashboard/shared/payroll-period-combobox"
@@ -97,10 +96,6 @@ export function PayslipsPageContent({
     ? filteredPayslips.findIndex((payslip) => payslip.id === activePayslipId)
     : -1
 
-  const pendingCount = payrollPayslips.filter(
-    (payslip) => payslip.status === "pending"
-  ).length
-
   function handleActiveIndexChange(index: number) {
     if (index < 0) {
       setActivePayslipId(null)
@@ -148,14 +143,6 @@ export function PayslipsPageContent({
               onChange={setSelectedEmployeeId}
               variant="filter"
             />
-            <BulkEmailDialog
-              pendingCount={pendingCount}
-              payrollId={selectedPayrollId}
-            >
-              <Button type="button" variant="outline">
-                Bulk Email
-              </Button>
-            </BulkEmailDialog>
             {selectedPayrollId ? (
               <EditPayslipDialog
                 employees={employees}

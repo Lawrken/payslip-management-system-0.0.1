@@ -25,7 +25,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Field, FieldLabel } from "@/components/ui/field"
 import {
   DEDUCTION_FIELDS,
   NON_TAXABLE_FIELDS,
@@ -36,14 +35,9 @@ import {
   createEmptyPayslipInputs,
   parseDecimalInput,
 } from "@/lib/payroll-calculator"
-import { cn } from "@/lib/utils"
-import type { Employee, Payslip, PayslipPayrollInputs, PayslipStatus } from "@/lib/types"
+import type { Employee, Payslip, PayslipPayrollInputs } from "@/lib/types"
 
 const initialState: PayslipFormState = {}
-
-const selectClassName = cn(
-  "h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-2.5 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm dark:bg-input/30"
-)
 
 type EditPayslipDialogProps = {
   employees: Employee[]
@@ -84,7 +78,6 @@ export function EditPayslipDialog({
   const isCreateMode = activeIndex === -1
 
   const [employeeId, setEmployeeId] = React.useState("")
-  const [status, setStatus] = React.useState<PayslipStatus>("pending")
   const [inputs, setInputs] = React.useState<PayslipPayrollInputs>(
     createEmptyPayslipInputs
   )
@@ -103,7 +96,6 @@ export function EditPayslipDialog({
   function resetForm() {
     setState(initialState)
     setEmployeeId("")
-    setStatus("pending")
     setInputs(createEmptyPayslipInputs())
     setFieldDrafts({})
     formRef.current?.reset()
@@ -113,12 +105,10 @@ export function EditPayslipDialog({
     setFieldDrafts({})
     if (!payslip) {
       setEmployeeId("")
-      setStatus("pending")
       setInputs(createEmptyPayslipInputs())
       return
     }
     setEmployeeId(payslip.employeeId)
-    setStatus(payslip.status)
     setInputs({ ...payslip.inputs })
   }
 
@@ -179,7 +169,6 @@ export function EditPayslipDialog({
 
     onActiveIndexChange(-1)
     setEmployeeId(nextEmployeeId)
-    setStatus("pending")
     setInputs(createEmptyPayslipInputs())
     setFieldDrafts({})
   }
@@ -267,7 +256,7 @@ export function EditPayslipDialog({
         <DialogHeader className="shrink-0 space-y-0 border-b px-6 py-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <DialogTitle className="shrink-0">Edit Payslip</DialogTitle>
-            <div className="grid w-full gap-4 sm:grid-cols-2 lg:max-w-3xl">
+            <div className="grid w-full gap-4 lg:max-w-xl">
               <div className="flex min-w-0 items-end gap-1">
                 <Button
                   type="button"
@@ -299,23 +288,6 @@ export function EditPayslipDialog({
                   <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} />
                 </Button>
               </div>
-              <Field>
-                <FieldLabel htmlFor="status">Status</FieldLabel>
-                <select
-                  id="status"
-                  name="status"
-                  value={status}
-                  onChange={(event) =>
-                    setStatus(event.target.value as PayslipStatus)
-                  }
-                  className={selectClassName}
-                  required
-                  disabled={isPending}
-                >
-                  <option value="pending">Pending</option>
-                  <option value="sent">Sent</option>
-                </select>
-              </Field>
             </div>
           </div>
         </DialogHeader>
