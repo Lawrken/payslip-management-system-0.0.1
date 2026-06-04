@@ -6,6 +6,20 @@ export type MockUser = {
   role: Role
 }
 
+export type User = {
+  employeeId: string
+  passwordHash: string
+  role: Role
+}
+
+export type UserAccount = {
+  employeeId: string
+  role: Role
+  employeeName: string | null
+  createdAt: Date
+  updatedAt: Date
+}
+
 export type Session = {
   employeeId: string
   role: Role
@@ -15,6 +29,7 @@ export type Employee = {
   id: string
   name: string
   employeeId: string
+  email: string
   tin: string
   sssNo: string
   phicNo: string
@@ -32,7 +47,13 @@ export type Payroll = {
   payoutDate: string
 }
 
-export type PayslipStatus = "pending" | "sent"
+export type PayslipStatus =
+  | "draft"
+  | "pending"
+  | "adminApproved"
+  | "approved"
+  | "returned"
+  | "sent"
 
 export type PayslipPayrollInputs = {
   basicPay: number
@@ -99,4 +120,43 @@ export type Payslip = {
   status: PayslipStatus
   inputs: PayslipPayrollInputs
   totals: PayslipTotals
+}
+
+export type AuditAction =
+  | "employee.create"
+  | "employee.update"
+  | "employee.delete"
+  | "user.create"
+  | "user.delete"
+  | "user.password_reset"
+  | "credential.export"
+  | "credential.view"
+  | "payroll.create"
+  | "payroll.update"
+  | "payroll.delete"
+  | "payslip.create"
+  | "payslip.update"
+  | "payslip.delete"
+  | "payslip.admin_check"
+  | "payslip.superadmin_approve"
+  | "payslip.return"
+  | "payslip.bulk_send"
+
+export type AuditLog = {
+  id: string
+  createdAt: Date
+  actorEmployeeId: string
+  actorRole: Role
+  action: AuditAction
+  targetType: string
+  targetId: string
+  targetLabel: string
+  details: string
+}
+
+export type AuditLogQuery = {
+  dateFrom?: string
+  dateTo?: string
+  actorEmployeeId?: string
+  action?: AuditAction
 }
