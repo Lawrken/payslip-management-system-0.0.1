@@ -1,11 +1,17 @@
-import type { MockUser } from "@/lib/types"
+import type { Role } from "@/lib/types"
+
+export type SeedUser = {
+  employeeId: string
+  password: string
+  role: Role
+}
 
 /**
- * Dev mock accounts:
+ * Local seed accounts:
  * ADMIN001 / admin123 (admin)
  * SUPER001 / super123 (superAdmin)
  */
-export const mockUsers: MockUser[] = [
+export const seedUsers: SeedUser[] = [
   {
     employeeId: "ADMIN001",
     password: "admin123",

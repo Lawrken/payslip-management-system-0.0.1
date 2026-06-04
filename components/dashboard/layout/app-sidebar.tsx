@@ -14,7 +14,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
-import { logoutAction } from "@/app/dashboard/actions"
+import { logoutAction } from "@/app/account/actions"
 import { ThemeSelector } from "@/components/theme-selector"
 import { Button } from "@/components/ui/button"
 import {

@@ -1,11 +1,5 @@
 export type Role = "admin" | "superAdmin" | "employee"
 
-export type MockUser = {
-  employeeId: string
-  password: string
-  role: Role
-}
-
 export type User = {
   employeeId: string
   passwordHash: string
@@ -120,6 +114,13 @@ export type Payslip = {
   status: PayslipStatus
   inputs: PayslipPayrollInputs
   totals: PayslipTotals
+}
+
+export type EmployeePayslip = Payslip & {
+  payrollPeriodLabel: string
+  payrollPeriodStart: string
+  payrollPeriodEnd: string
+  payoutDate: string
 }
 
 export type AuditAction =

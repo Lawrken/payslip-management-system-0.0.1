@@ -1,5 +1,6 @@
 import { cookies } from "next/headers"
 
+import { parseSession, serializeSession } from "@/lib/auth-helpers"
 import type { Session } from "@/lib/types"
 
 export const SESSION_COOKIE_NAME = "payslip_session"
@@ -11,25 +12,12 @@ export async function getSession(): Promise<Session | null> {
     return null
   }
 
-  try {
-    const parsed = JSON.parse(value) as Session
-    if (
-      typeof parsed.employeeId !== "string" ||
-      (parsed.role !== "admin" &&
-        parsed.role !== "superAdmin" &&
-        parsed.role !== "employee")
-    ) {
-      return null
-    }
-    return parsed
-  } catch {
-    return null
-  }
+  return parseSession(value)
 }
 
 export async function setSession(session: Session): Promise<void> {
   const cookieStore = await cookies()
-  cookieStore.set(SESSION_COOKIE_NAME, JSON.stringify(session), {
+  cookieStore.set(SESSION_COOKIE_NAME, serializeSession(session), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",

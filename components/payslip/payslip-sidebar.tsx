@@ -8,7 +8,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
-import { logoutAction } from "@/app/payslip/actions"
+import { logoutAction } from "@/app/account/actions"
 import { Button } from "@/components/ui/button"
 import {
   Sidebar,

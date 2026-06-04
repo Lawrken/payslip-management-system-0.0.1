@@ -1,8 +1,9 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { redirect } from "next/navigation"
 
-import { getSession } from "@/lib/session"
+import { clearSession, getSession } from "@/lib/session"
 import { changeUserPassword } from "@/lib/users"
 
 export type ChangePasswordState = {
@@ -45,4 +46,9 @@ export async function changePasswordAction(
   revalidatePath("/dashboard/account/password")
   revalidatePath("/payslip/account/password")
   return { success: true }
+}
+
+export async function logoutAction() {
+  await clearSession()
+  redirect("/login")
 }

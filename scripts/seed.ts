@@ -4,10 +4,10 @@ import bcrypt from "bcryptjs"
 
 import { closeDb, db } from "@/db"
 import { users } from "@/db/schema"
-import { mockUsers } from "@/lib/mock-users"
+import { seedUsers } from "@/lib/seed-users"
 
 async function main() {
-  const dashboardUsers = mockUsers.filter((user) => user.role !== "employee")
+  const dashboardUsers = seedUsers.filter((user) => user.role !== "employee")
 
   await db.insert(users).values(
     await Promise.all(
