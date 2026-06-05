@@ -22,12 +22,11 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "payslip.admin_check": "Payslip checked",
   "payslip.superadmin_approve": "Payslip ready for email",
   "payslip.return": "Payslip returned",
+  "payslip.email_send": "Payslip email sent",
   "payslip.bulk_send": "Payslips sent",
 }
 
-export const AUDIT_ACTIONS = Object.keys(
-  AUDIT_ACTION_LABELS
-) as AuditAction[]
+export const AUDIT_ACTIONS = Object.keys(AUDIT_ACTION_LABELS) as AuditAction[]
 
 type CreateAuditLogInput = {
   actor: Session
