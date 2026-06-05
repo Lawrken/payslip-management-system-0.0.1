@@ -16,6 +16,7 @@ import {
 import type {
   EmployeePayslip,
   Payslip,
+  PayslipEmailData,
   PayslipPayrollInputs,
   PayslipStatus,
 } from "@/lib/types"
@@ -67,6 +68,28 @@ function mapEmployeePayslipRow(row: {
   }
 }
 
+function mapPayslipEmailRow(row: {
+  payslip: typeof payslips.$inferSelect
+  payslipInput: typeof payslipInputs.$inferSelect | null
+  employee: typeof employeesTable.$inferSelect
+  payroll: typeof payrollsTable.$inferSelect
+}): PayslipEmailData {
+  return {
+    ...mapPayslipRow(row),
+    employeeEmail: row.employee.email,
+    tin: row.employee.tin,
+    sssNo: row.employee.sssNo,
+    phicNo: row.employee.phicNo,
+    hdmfNo: row.employee.hdmfNo,
+    payrollPeriodLabel: row.payroll.payrollPeriodLabel,
+    payrollPeriodStart: row.payroll.payrollPeriodStart,
+    payrollPeriodEnd: row.payroll.payrollPeriodEnd,
+    dtrCutOffStart: row.payroll.dtrCutOffStart,
+    dtrCutOffEnd: row.payroll.dtrCutOffEnd,
+    payoutDate: row.payroll.payoutDate,
+  }
+}
+
 async function getPayslipRows() {
   return db
     .select({
@@ -76,7 +99,10 @@ async function getPayslipRows() {
     })
     .from(payslips)
     .leftJoin(payslipInputs, eq(payslipInputs.payslipId, payslips.id))
-    .leftJoin(employeesTable, eq(employeesTable.employeeId, payslips.employeeId))
+    .leftJoin(
+      employeesTable,
+      eq(employeesTable.employeeId, payslips.employeeId)
+    )
 }
 
 export async function getPayslips(): Promise<Payslip[]> {
@@ -102,7 +128,10 @@ export async function getPayslipById(
     })
     .from(payslips)
     .leftJoin(payslipInputs, eq(payslipInputs.payslipId, payslips.id))
-    .leftJoin(employeesTable, eq(employeesTable.employeeId, payslips.employeeId))
+    .leftJoin(
+      employeesTable,
+      eq(employeesTable.employeeId, payslips.employeeId)
+    )
     .where(eq(payslips.id, id))
     .limit(1)
 
@@ -121,10 +150,62 @@ export async function getPayslipsByPayrollId(
     })
     .from(payslips)
     .leftJoin(payslipInputs, eq(payslipInputs.payslipId, payslips.id))
-    .leftJoin(employeesTable, eq(employeesTable.employeeId, payslips.employeeId))
+    .leftJoin(
+      employeesTable,
+      eq(employeesTable.employeeId, payslips.employeeId)
+    )
     .where(eq(payslips.payrollId, payrollId))
 
   return rows.map(mapPayslipRow)
+}
+
+export async function getApprovedPayslipEmailById(
+  id: string,
+  client: DatabaseClient = db
+): Promise<PayslipEmailData | null> {
+  const [row] = await client
+    .select({
+      payslip: payslips,
+      payslipInput: payslipInputs,
+      employee: employeesTable,
+      payroll: payrollsTable,
+    })
+    .from(payslips)
+    .innerJoin(payrollsTable, eq(payrollsTable.id, payslips.payrollId))
+    .innerJoin(
+      employeesTable,
+      eq(employeesTable.employeeId, payslips.employeeId)
+    )
+    .leftJoin(payslipInputs, eq(payslipInputs.payslipId, payslips.id))
+    .where(and(eq(payslips.id, id), eq(payslips.status, "approved")))
+    .limit(1)
+
+  return row ? mapPayslipEmailRow(row) : null
+}
+
+export async function getApprovedPayslipEmailsByPayrollId(
+  payrollId: string,
+  client: DatabaseClient = db
+): Promise<PayslipEmailData[]> {
+  const rows = await client
+    .select({
+      payslip: payslips,
+      payslipInput: payslipInputs,
+      employee: employeesTable,
+      payroll: payrollsTable,
+    })
+    .from(payslips)
+    .innerJoin(payrollsTable, eq(payrollsTable.id, payslips.payrollId))
+    .innerJoin(
+      employeesTable,
+      eq(employeesTable.employeeId, payslips.employeeId)
+    )
+    .leftJoin(payslipInputs, eq(payslipInputs.payslipId, payslips.id))
+    .where(
+      and(eq(payslips.payrollId, payrollId), eq(payslips.status, "approved"))
+    )
+
+  return rows.map(mapPayslipEmailRow)
 }
 
 export async function getVisiblePayslipsByEmployeeId(
@@ -141,7 +222,10 @@ export async function getVisiblePayslipsByEmployeeId(
     .from(payslips)
     .innerJoin(payrollsTable, eq(payrollsTable.id, payslips.payrollId))
     .leftJoin(payslipInputs, eq(payslipInputs.payslipId, payslips.id))
-    .leftJoin(employeesTable, eq(employeesTable.employeeId, payslips.employeeId))
+    .leftJoin(
+      employeesTable,
+      eq(employeesTable.employeeId, payslips.employeeId)
+    )
     .where(
       and(
         eq(payslips.employeeId, normalizedId),
@@ -197,7 +281,9 @@ export async function createPayslipsForPayroll(
 ): Promise<number> {
   const employees = await getEmployees(client)
   const existing = await getPayslipsByPayrollId(payrollId, client)
-  const existingEmployeeIds = new Set(existing.map((payslip) => payslip.employeeId))
+  const existingEmployeeIds = new Set(
+    existing.map((payslip) => payslip.employeeId)
+  )
   const newPayslips = employees.filter(
     (employee) => !existingEmployeeIds.has(employee.employeeId)
   )
@@ -265,7 +351,9 @@ export async function addPayslip(
     }
   }
 
-  const status: PayslipStatus = hasPayslipData(input.inputs) ? "pending" : "draft"
+  const status: PayslipStatus = hasPayslipData(input.inputs)
+    ? "pending"
+    : "draft"
   const id = crypto.randomUUID()
   const totals = buildPayslipTotals(input.inputs)
 
@@ -430,7 +518,9 @@ export async function returnPayslipByAdmin(
   }
 
   if (!hasPayslipData(payslip.inputs)) {
-    return { error: "Payslip must have payroll data before it can be returned." }
+    return {
+      error: "Payslip must have payroll data before it can be returned.",
+    }
   }
 
   await client
@@ -478,7 +568,9 @@ export async function sendApprovedPayslips(
   client: DatabaseClient = db
 ): Promise<{ count: number } | { error: string }> {
   if (!(await areAllPayslipsApproved(payrollId, client))) {
-    return { error: "All payslips must be ready for email before sending bulk email." }
+    return {
+      error: "All payslips must be ready for email before sending bulk email.",
+    }
   }
 
   const payrollPayslips = await getPayslipsByPayrollId(payrollId, client)
@@ -498,6 +590,31 @@ export async function sendApprovedPayslips(
   }
 
   return { count: approvedIds.length }
+}
+
+export async function markPayslipsSentByIds(
+  ids: string[],
+  client: DatabaseClient = db
+): Promise<{ count: number } | { error: string }> {
+  if (ids.length === 0) {
+    return { count: 0 }
+  }
+
+  const approvedPayslips = await client
+    .select({ id: payslips.id })
+    .from(payslips)
+    .where(and(inArray(payslips.id, ids), eq(payslips.status, "approved")))
+
+  if (approvedPayslips.length !== ids.length) {
+    return { error: "Only payslips ready for email can be marked sent." }
+  }
+
+  await client
+    .update(payslips)
+    .set({ status: "sent", updatedAt: new Date() })
+    .where(inArray(payslips.id, ids))
+
+  return { count: ids.length }
 }
 
 export async function deletePayslip(
