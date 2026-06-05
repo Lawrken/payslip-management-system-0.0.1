@@ -8,10 +8,7 @@ import { ReviewPayslipDialog } from "@/components/dashboard/review/review-paysli
 import { ReviewTable } from "@/components/dashboard/review/review-table"
 import { PayrollPeriodCombobox } from "@/components/dashboard/shared/payroll-period-combobox"
 import { Button } from "@/components/ui/button"
-import {
-  formatDisplayDate,
-  formatDtrCutOffRange,
-} from "@/lib/payroll-dates"
+import { formatDisplayDate, formatDtrCutOffRange } from "@/lib/payroll-dates"
 import type { Employee, Payroll, Payslip, Role } from "@/lib/types"
 
 type ReviewPageContentProps = {
@@ -85,11 +82,14 @@ export function ReviewPageContent({
 
   const reviewQueuePayslips = React.useMemo(() => {
     if (role === "admin") {
-      return allPayrollPayslips.filter((payslip) => payslip.status === "pending")
+      return allPayrollPayslips.filter(
+        (payslip) => payslip.status === "pending"
+      )
     }
     if (role === "superAdmin") {
       return allPayrollPayslips.filter(
-        (payslip) => payslip.status === "adminApproved"
+        (payslip) =>
+          payslip.status === "adminApproved" || payslip.status === "approved"
       )
     }
     return []
@@ -121,7 +121,7 @@ export function ReviewPageContent({
   const reviewEmptyMessage =
     role === "admin"
       ? "No payslips ready for review for this payroll period."
-      : "No checked payslips ready for email for this payroll period."
+      : "No checked or ready-for-email payslips for this payroll period."
 
   if (payrolls.length === 0) {
     return (

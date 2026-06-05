@@ -35,15 +35,25 @@ export function BulkEmailDialog({
   const [open, setOpen] = React.useState(false)
   const [isSending, setIsSending] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
+  const [summary, setSummary] = React.useState<string | null>(null)
 
   async function handleSend() {
     setIsSending(true)
     setError(null)
+    setSummary(null)
     const result = await bulkEmailAction(payrollId)
     setIsSending(false)
 
-    if ("error" in result && result.error) {
-      setError(result.error)
+    if ("error" in result) {
+      setError(result.error ?? "Failed to send bulk email.")
+      return
+    }
+
+    if (result.failedCount && result.failedCount > 0) {
+      setSummary(
+        `Sent ${result.count ?? 0} payslip email${result.count === 1 ? "" : "s"}. ${result.failedCount} failed and stayed ready for retry.`
+      )
+      router.refresh()
       return
     }
 
@@ -65,8 +75,9 @@ export function BulkEmailDialog({
             period and mark them as sent.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        {error ? (
-          <p className="text-sm text-destructive">{error}</p>
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        {summary ? (
+          <p className="text-sm text-muted-foreground">{summary}</p>
         ) : null}
         {!disabled && approvedCount < totalCount ? (
           <p className="text-sm text-muted-foreground">

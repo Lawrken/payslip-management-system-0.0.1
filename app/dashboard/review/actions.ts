@@ -13,14 +13,26 @@ import {
   approvePayslipByAdmin,
   approvePayslipBySuperAdmin,
   areAllPayslipsApproved,
+  getApprovedPayslipEmailById,
+  getApprovedPayslipEmailsByPayrollId,
+  getPayslipsByPayrollId,
+  markPayslipsSentByIds,
   returnPayslipByAdmin,
   returnPayslipBySuperAdmin,
-  sendApprovedPayslips,
 } from "@/lib/payslips"
+import { sendPayslipEmail, sendPayslipEmailBatch } from "@/lib/payslip-email"
 
 export type ReviewActionState = {
   error?: string
   success?: boolean
+  count?: number
+  failedCount?: number
+  failed?: {
+    employeeId: string
+    employeeName: string
+    email: string
+    error: string
+  }[]
 }
 
 export async function adminApprovePayslipAction(
@@ -138,33 +150,46 @@ export async function returnPayslipAction(
   return { success: true }
 }
 
-export async function bulkEmailAction(payrollId: string) {
+function getEmailError(error: unknown) {
+  return error instanceof Error
+    ? error.message
+    : "Failed to send payslip email."
+}
+
+export async function sendPayslipEmailAction(id: string) {
   const session = await requireSuperAdminSession()
   if ("error" in session) {
     return session
   }
 
-  const result = await db.transaction(async (tx) => {
-    if (!(await areAllPayslipsApproved(payrollId, tx))) {
-      return { error: "All payslips must be ready for email before sending bulk email." }
-    }
+  const payslip = await getApprovedPayslipEmailById(id)
+  if (!payslip) {
+    return { error: "Only payslips ready for email can be sent." }
+  }
 
-    const sent = await sendApprovedPayslips(payrollId, tx)
-    if ("error" in sent) {
-      return { error: sent.error }
+  try {
+    await sendPayslipEmail(payslip)
+  } catch (error) {
+    return { error: getEmailError(error) }
+  }
+
+  const result = await db.transaction(async (tx) => {
+    const marked = await markPayslipsSentByIds([id], tx)
+    if ("error" in marked) {
+      return { error: marked.error }
     }
 
     await createAuditLog({
       actor: session,
-      action: "payslip.bulk_send",
-      targetType: "payroll",
-      targetId: payrollId,
-      targetLabel: payrollId,
-      details: `Marked ${sent.count} payslip${sent.count === 1 ? "" : "s"} ready for email as sent.`,
+      action: "payslip.email_send",
+      targetType: "payslip",
+      targetId: payslip.id,
+      targetLabel: `${payslip.employeeName} (${payslip.employeeId})`,
+      details: `Sent payslip email to ${payslip.employeeEmail}.`,
       client: tx,
     })
 
-    return { success: true as const, count: sent.count }
+    return { success: true as const, count: marked.count }
   })
 
   if ("error" in result) {
@@ -174,5 +199,87 @@ export async function bulkEmailAction(payrollId: string) {
   revalidatePath("/dashboard/review")
   revalidatePath("/dashboard/payslips")
   revalidatePath("/dashboard/logs")
+  revalidatePath("/payslip")
+  return result
+}
+
+export async function bulkEmailAction(payrollId: string) {
+  const session = await requireSuperAdminSession()
+  if ("error" in session) {
+    return session
+  }
+
+  if (!(await areAllPayslipsApproved(payrollId))) {
+    return {
+      error: "All payslips must be ready for email before sending bulk email.",
+    }
+  }
+
+  const [payrollPayslips, emailPayslips] = await Promise.all([
+    getPayslipsByPayrollId(payrollId),
+    getApprovedPayslipEmailsByPayrollId(payrollId),
+  ])
+
+  if (emailPayslips.length !== payrollPayslips.length) {
+    return {
+      error:
+        "Every payslip must have a matching employee record and email before sending bulk email.",
+    }
+  }
+
+  let sent: Awaited<ReturnType<typeof sendPayslipEmailBatch>>
+  try {
+    sent = await sendPayslipEmailBatch(emailPayslips)
+  } catch (error) {
+    return { error: getEmailError(error) }
+  }
+  const sentIds = sent.sent.map((payslip) => payslip.id)
+
+  const result = await db.transaction(async (tx) => {
+    const marked = await markPayslipsSentByIds(sentIds, tx)
+    if ("error" in marked) {
+      return { error: marked.error }
+    }
+
+    const failedDetails =
+      sent.failed.length > 0
+        ? ` ${sent.failed.length} failed: ${sent.failed
+            .map(
+              ({ payslip }) => `${payslip.employeeName} (${payslip.employeeId})`
+            )
+            .join(", ")}.`
+        : ""
+
+    await createAuditLog({
+      actor: session,
+      action: "payslip.bulk_send",
+      targetType: "payroll",
+      targetId: payrollId,
+      targetLabel: payrollId,
+      details: `Sent ${marked.count} payslip email${marked.count === 1 ? "" : "s"} via Gmail API.${failedDetails}`,
+      client: tx,
+    })
+
+    return {
+      success: true as const,
+      count: marked.count,
+      failedCount: sent.failed.length,
+      failed: sent.failed.map(({ payslip, error }) => ({
+        employeeId: payslip.employeeId,
+        employeeName: payslip.employeeName,
+        email: payslip.employeeEmail,
+        error,
+      })),
+    }
+  })
+
+  if ("error" in result) {
+    return { error: result.error }
+  }
+
+  revalidatePath("/dashboard/review")
+  revalidatePath("/dashboard/payslips")
+  revalidatePath("/dashboard/logs")
+  revalidatePath("/payslip")
   return result
 }
