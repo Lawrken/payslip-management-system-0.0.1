@@ -123,6 +123,20 @@ export type EmployeePayslip = Payslip & {
   payoutDate: string
 }
 
+export type PayslipEmailData = Payslip & {
+  employeeEmail: string
+  tin: string
+  sssNo: string
+  phicNo: string
+  hdmfNo: string
+  payrollPeriodLabel: string
+  payrollPeriodStart: string
+  payrollPeriodEnd: string
+  dtrCutOffStart: string
+  dtrCutOffEnd: string
+  payoutDate: string
+}
+
 export type AuditAction =
   | "employee.create"
   | "employee.update"
@@ -141,6 +155,7 @@ export type AuditAction =
   | "payslip.admin_check"
   | "payslip.superadmin_approve"
   | "payslip.return"
+  | "payslip.email_send"
   | "payslip.bulk_send"
 
 export type AuditLog = {

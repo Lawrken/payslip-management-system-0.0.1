@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Helport Payslip — Preview</title>
+    <!--
+      Subject: Payslip — {{payrollPeriodLabel}} — Payout {{payoutDate}}
+      Logo: {{appUrl}}/helport.png | Local: ../public/helport.png
+
+      {{employeeName}} {{employeeId}} {{employeeEmail}}
+      {{payrollPeriodLabel}} {{dtrCutOffRange}} {{payoutDate}}
+      {{tin}} {{sssNo}} {{phicNo}} {{hdmfNo}}
+      PAY_DETAILS_ROWS | DEDUCTION_ROWS | NON_TAXABLE_ITEMS
+      {{taxableEarnings}} {{totalDeductions}} {{nonTaxableEarnings}}
+      {{grossPay}} {{netPay}}
+    -->
+  </head>
+  <body
+    style="
+      margin: 0;
+      padding: 40px 16px;
+      background-color: #f0f2f1;
+      font-family:
+        -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto,
+        Helvetica, Arial, sans-serif;
+      font-size: 14px;
+      line-height: 1.55;
+      color: #1c1917;
+      -webkit-font-smoothing: antialiased;
+    "
+  >
+    <table
+      role="presentation"
+      cellpadding="0"
+      cellspacing="0"
+      border="0"
+      width="100%"
+      style="max-width: 640px; margin: 0 auto"
+    >
+      <tr>
+        <td
+          style="
+            background-color: #ffffff;
+            border-radius: 20px;
+            overflow: hidden;
+          "
+        >
+          <!-- Header -->
+          <table
+            role="presentation"
+            cellpadding="0"
+            cellspacing="0"
+            border="0"
+            width="100%"
+            style="background-color: #0c2623"
+          >
+            <tr>
+              <td style="padding: 32px 36px 28px">
+                <table
+                  role="presentation"
+                  cellpadding="0"
+                  cellspacing="0"
+                  border="0"
+                  width="100%"
+                >
+                  <tr>
+                    <td valign="top">
+                      <img
+                        src="../public/helport.png"
+                        alt="Helport"
+                        width="128"
+                        height="32"
+                        style="
+                          display: block;
+                          height: 32px;
+                          width: auto;
+                          border: 0;
+                        "
+                      />
+                      <p
+                        style="
+                          margin: 14px 0 0;
+                          font-size: 12px;
+                          color: #6ee7d7;
+                          letter-spacing: 0.02em;
+                        "
+                      >
+                        Payslip · Philippines Branch
+                      </p>
+                    </td>
+                    <td valign="top" align="right">
+                      <p
+                        style="
+                          margin: 0;
+                          font-size: 12px;
+                          color: rgba(255, 255, 255, 0.45);
+                        "
+                      >
+                        Payout
+                      </p>
+                      <p
+                        style="
+                          margin: 4px 0 0;
+                          font-size: 22px;
+                          font-weight: 600;
+                          color: #ffffff;
+                          letter-spacing: -0.02em;
+                        "
+                      >
+                        <!-- {{payoutDate}} -->
+                        Jun 15, 2026
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+
+                <table
+                  role="presentation"
+                  cellpadding="0"
+                  cellspacing="0"
+                  border="0"
+                  width="100%"
+                  style="margin-top: 28px"
+                >
+                  <tr>
+                    <td width="50%" valign="top" style="padding-right: 12px">
+                      <p
+                        style="
+                          margin: 0 0 4px;
+                          font-size: 11px;
+                          color: rgba(255, 255, 255, 0.4);
+                        "
+                      >
+                        Employee
+                      </p>
+                      <p
+                        style="
+                          margin: 0;
+                          font-size: 16px;
+                          font-weight: 600;
+                          color: #ffffff;
+                        "
+                      >
+                        <!-- {{employeeName}} -->
+                        Employee Test 009
+                      </p>
+                      <p
+                        style="
+                          margin: 6px 0 0;
+                          font-size: 13px;
+                          color: rgba(255, 255, 255, 0.65);
+                        "
+                      >
+                        <!-- {{employeeId}} -->
+                        EMP-T009
+                      </p>
+                    </td>
+                    <td width="50%" valign="top" align="right">
+                      <p
+                        style="
+                          margin: 0 0 6px;
+                          font-size: 11px;
+                          color: rgba(255, 255, 255, 0.4);
+                        "
+                      >
+                        TIN · SSS · PHIC · HDMF
+                      </p>
+                      <p
+                        style="
+                          margin: 0;
+                          font-size: 12px;
+                          line-height: 1.7;
+                          color: rgba(255, 255, 255, 0.7);
+                        "
+                      >
+                        <!-- {{tin}} -->756-677-306<br />
+                        <!-- {{sssNo}} -->3484438334<br />
+                        <!-- {{phicNo}} -->030264356306<br />
+                        <!-- {{hdmfNo}} -->121249319894
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Period -->
+          <table
+            role="presentation"
+            cellpadding="0"
+            cellspacing="0"
+            border="0"
+            width="100%"
+          >
+            <tr>
+              <td style="padding: 28px 36px 0">
+                <table
+                  role="presentation"
+                  cellpadding="0"
+                  cellspacing="0"
+                  border="0"
+                  width="100%"
+                  style="background-color: #f7f8f7; border-radius: 12px"
+                >
+                  <tr>
+                    <td width="50%" style="padding: 16px 20px">
+                      <p
+                        style="
+                          margin: 0 0 4px;
+                          font-size: 11px;
+                          color: #78716c;
+                        "
+                      >
+                        Payroll period
+                      </p>
+                      <p
+                        style="
+                          margin: 0;
+                          font-size: 15px;
+                          font-weight: 600;
+                          color: #1c1917;
+                        "
+                      >
+                        <!-- {{payrollPeriodLabel}} -->
+                        June 1–15, 2026
+                      </p>
+                    </td>
+                    <td width="50%" style="padding: 16px 20px">
+                      <p
+                        style="
+                          margin: 0 0 4px;
+                          font-size: 11px;
+                          color: #78716c;
+                        "
+                      >
+                        DTR cut-off
+                      </p>
+                      <p
+                        style="
+                          margin: 0;
+                          font-size: 15px;
+                          font-weight: 600;
+                          color: #1c1917;
+                        "
+                      >
+                        <!-- {{dtrCutOffRange}} -->
+                        May 26 – Jun 10, 2026
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Summary -->
+          <table
+            role="presentation"
+            cellpadding="0"
+            cellspacing="0"
+            border="0"
+            width="100%"
+          >
+            <tr>
+              <td style="padding: 20px 36px 0">
+                <table
+                  role="presentation"
+                  cellpadding="0"
+                  cellspacing="0"
+                  border="0"
+                  width="100%"
+                >
+                  <tr>
+                    <td width="32%" style="padding-right: 6px">
+                      <table
+                        role="presentation"
+                        cellpadding="0"
+                        cellspacing="0"
+                        border="0"
+                        width="100%"
+                        style="
+                          background-color: #f5f5f4;
+                          border-radius: 12px;
+                        "
+                      >
+                        <tr>
+                          <td style="padding: 18px 14px">
+                            <p
+                              style="
+                                margin: 0;
+                                font-size: 11px;
+                                color: #78716c;
+                              "
+                            >
+                              Gross
+                            </p>
+                            <p
+                              style="
+                                margin: 8px 0 0;
+                                font-size: 18px;
+                                font-weight: 600;
+                                color: #1c1917;
+                                letter-spacing: -0.02em;
+                              "
+                            >
+                              <!-- {{grossPay}} -->
+                              ₱20,450
+                            </p>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                    <td width="36%" style="padding: 0 3px">
+                      <table
+                        role="presentation"
+                        cellpadding="0"
+                        cellspacing="0"
+                        border="0"
+                        width="100%"
+                        style="
+                          background-color: #fdf5f4;
+                          border-radius: 12px;
+                        "
+                      >
+                        <tr>
+                          <td style="padding: 18px 14px">
+                            <p
+                              style="
+                                margin: 0;
+                                font-size: 11px;
+                                color: #b45309;
+                              "
+                            >
+                              Deductions
+                            </p>
+                            <p
+                              style="
+                                margin: 8px 0 0;
+                                font-size: 18px;
+                                font-weight: 600;
+                                color: #c2410c;
+                                letter-spacing: -0.02em;
+                              "
+                            >
+                              <!-- {{totalDeductions}} -->
+                              ₱2,450
+                            </p>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                    <td width="32%" style="padding-left: 6px">
+                      <table
+                        role="presentation"
+                        cellpadding="0"
+                        cellspacing="0"
+                        border="0"
+                        width="100%"
+                        style="
+                          background-color: #ecfdf8;
+                          border-radius: 12px;
+                        "
+                      >
+                        <tr>
+                          <td style="padding: 18px 14px">
+                            <p
+                              style="
+                                margin: 0;
+                                font-size: 11px;
+                                color: #0f766e;
+                              "
+                            >
+                              Net
+                            </p>
+                            <p
+                              style="
+                                margin: 8px 0 0;
+                                font-size: 18px;
+                                font-weight: 600;
+                                color: #0d9488;
+                                letter-spacing: -0.02em;
+                              "
+                            >
+                              <!-- {{netPay}} -->
+                              ₱18,000
+                            </p>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Details -->
+          <table
+            role="presentation"
+            cellpadding="0"
+            cellspacing="0"
+            border="0"
+            width="100%"
+          >
+            <tr>
+              <td style="padding: 28px 36px">
+                <table
+                  role="presentation"
+                  cellpadding="0"
+                  cellspacing="0"
+                  border="0"
+                  width="100%"
+                >
+                  <tr>
+                    <td valign="top" width="50%" style="padding-right: 14px">
+                      <p
+                        style="
+                          margin: 0 0 14px;
+                          font-size: 13px;
+                          font-weight: 600;
+                          color: #1c1917;
+                        "
+                      >
+                        Pay details
+                      </p>
+                      <!-- PAY_DETAILS_ROWS -->
+                      <table
+                        role="presentation"
+                        cellpadding="0"
+                        cellspacing="0"
+                        border="0"
+                        width="100%"
+                        style="font-size: 13px"
+                      >
+                        <tr>
+                          <td
+                            style="
+                              padding: 0 0 10px;
+                              color: #a8a29e;
+                              font-size: 11px;
+                            "
+                          >
+                            Item
+                          </td>
+                          <td
+                            align="right"
+                            style="
+                              padding: 0 8px 10px;
+                              color: #a8a29e;
+                              font-size: 11px;
+                            "
+                          >
+                            Days
+                          </td>
+                          <td
+                            align="right"
+                            style="
+                              padding: 0 8px 10px;
+                              color: #a8a29e;
+                              font-size: 11px;
+                            "
+                          >
+                            Hrs
+                          </td>
+                          <td
+                            align="right"
+                            style="
+                              padding: 0 0 10px;
+                              color: #a8a29e;
+                              font-size: 11px;
+                            "
+                          >
+                            Amount
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 8px 0; color: #44403c">
+                            Basic Pay
+                          </td>
+                          <td align="right" style="padding: 8px; color: #d6d3d1">—</td>
+                          <td align="right" style="padding: 8px; color: #d6d3d1">—</td>
+                          <td
+                            align="right"
+                            style="padding: 8px 0; font-weight: 500; color: #0d9488"
+                          >
+                            ₱16,000.00
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 8px 0; color: #44403c">ND</td>
+                          <td align="right" style="padding: 8px; color: #d6d3d1">—</td>
+                          <td align="right" style="padding: 8px; color: #44403c">19</td>
+                          <td align="right" style="padding: 8px 0; color: #d6d3d1">—</td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 8px 0; color: #44403c">Reg OT</td>
+                          <td align="right" style="padding: 8px; color: #d6d3d1">—</td>
+                          <td align="right" style="padding: 8px; color: #44403c">3.5</td>
+                          <td align="right" style="padding: 8px 0; color: #d6d3d1">—</td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 8px 0; color: #44403c">Special</td>
+                          <td align="right" style="padding: 8px; color: #d6d3d1">—</td>
+                          <td align="right" style="padding: 8px; color: #44403c">8</td>
+                          <td align="right" style="padding: 8px 0; color: #d6d3d1">—</td>
+                        </tr>
+                        <tr>
+                          <td colspan="3" style="padding: 14px 0 6px; color: #78716c">
+                            Taxable earnings
+                          </td>
+                          <td
+                            align="right"
+                            style="padding: 14px 0 6px; font-weight: 600; color: #1c1917"
+                          >
+                            <!-- {{taxableEarnings}} -->
+                            ₱18,450.00
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                    <td valign="top" width="50%" style="padding-left: 14px">
+                      <p
+                        style="
+                          margin: 0 0 14px;
+                          font-size: 13px;
+                          font-weight: 600;
+                          color: #1c1917;
+                        "
+                      >
+                        Deductions
+                      </p>
+                      <!-- DEDUCTION_ROWS -->
+                      <table
+                        role="presentation"
+                        cellpadding="0"
+                        cellspacing="0"
+                        border="0"
+                        width="100%"
+                        style="font-size: 13px"
+                      >
+                        <tr>
+                          <td
+                            style="
+                              padding: 0 0 10px;
+                              color: #a8a29e;
+                              font-size: 11px;
+                            "
+                          >
+                            Item
+                          </td>
+                          <td
+                            align="right"
+                            style="
+                              padding: 0 0 10px;
+                              color: #a8a29e;
+                              font-size: 11px;
+                            "
+                          >
+                            Amount
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 8px 0; color: #44403c">Tax</td>
+                          <td
+                            align="right"
+                            style="padding: 8px 0; font-weight: 500; color: #c2410c"
+                          >
+                            ₱1,250.00
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 8px 0; color: #44403c">SSS</td>
+                          <td
+                            align="right"
+                            style="padding: 8px 0; font-weight: 500; color: #c2410c"
+                          >
+                            ₱800.00
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 8px 0; color: #44403c">PHIC</td>
+                          <td
+                            align="right"
+                            style="padding: 8px 0; font-weight: 500; color: #c2410c"
+                          >
+                            ₱400.00
+                          </td>
+                        </tr>
+                        <tr>
+                          <td colspan="1" style="padding: 14px 0 6px; color: #78716c">
+                            Total
+                          </td>
+                          <td
+                            align="right"
+                            style="padding: 14px 0 6px; font-weight: 600; color: #1c1917"
+                          >
+                            ₱2,450.00
+                          </td>
+                        </tr>
+                      </table>
+
+                      <p
+                        style="
+                          margin: 28px 0 12px;
+                          font-size: 13px;
+                          font-weight: 600;
+                          color: #1c1917;
+                        "
+                      >
+                        Non-taxable
+                      </p>
+                      <!-- NON_TAXABLE_ITEMS -->
+                      <table
+                        role="presentation"
+                        cellpadding="0"
+                        cellspacing="0"
+                        border="0"
+                        width="100%"
+                      >
+                        <tr>
+                          <td width="50%" style="padding: 0 4px 8px 0">
+                            <table
+                              role="presentation"
+                              cellpadding="0"
+                              cellspacing="0"
+                              border="0"
+                              width="100%"
+                              style="
+                                background-color: #f7f8f7;
+                                border-radius: 10px;
+                              "
+                            >
+                              <tr>
+                                <td style="padding: 12px 14px">
+                                  <p
+                                    style="
+                                      margin: 0;
+                                      font-size: 11px;
+                                      color: #78716c;
+                                    "
+                                  >
+                                    Rice subsidy
+                                  </p>
+                                  <p
+                                    style="
+                                      margin: 4px 0 0;
+                                      font-size: 13px;
+                                      font-weight: 500;
+                                      color: #1c1917;
+                                    "
+                                  >
+                                    ₱750.00
+                                  </p>
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                          <td width="50%" style="padding: 0 0 8px 4px">
+                            <table
+                              role="presentation"
+                              cellpadding="0"
+                              cellspacing="0"
+                              border="0"
+                              width="100%"
+                              style="
+                                background-color: #f7f8f7;
+                                border-radius: 10px;
+                              "
+                            >
+                              <tr>
+                                <td style="padding: 12px 14px">
+                                  <p
+                                    style="
+                                      margin: 0;
+                                      font-size: 11px;
+                                      color: #78716c;
+                                    "
+                                  >
+                                    OT meal
+                                  </p>
+                                  <p
+                                    style="
+                                      margin: 4px 0 0;
+                                      font-size: 13px;
+                                      font-weight: 500;
+                                      color: #1c1917;
+                                    "
+                                  >
+                                    ₱500.00
+                                  </p>
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
+                      <p
+                        align="right"
+                        style="margin: 10px 0 0; font-size: 12px; color: #78716c"
+                      >
+                        Total
+                        <span style="font-weight: 600; color: #1c1917"
+                          ><!-- {{nonTaxableEarnings}} -->₱2,000.00</span
+                        >
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Take-home -->
+          <table
+            role="presentation"
+            cellpadding="0"
+            cellspacing="0"
+            border="0"
+            width="100%"
+            style="background-color: #0c2623"
+          >
+            <tr>
+              <td align="center" style="padding: 28px 36px">
+                <p
+                  style="
+                    margin: 0;
+                    font-size: 12px;
+                    color: rgba(255, 255, 255, 0.45);
+                  "
+                >
+                  Take-home pay
+                </p>
+                <p
+                  style="
+                    margin: 6px 0 0;
+                    font-size: 36px;
+                    font-weight: 600;
+                    color: #6ee7d7;
+                    letter-spacing: -0.03em;
+                  "
+                >
+                  <!-- {{netPay}} -->
+                  ₱18,000.00
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding: 20px 8px 0">
+          <p
+            style="
+              margin: 0;
+              font-size: 12px;
+              line-height: 1.6;
+              color: #a8a29e;
+              text-align: center;
+            "
+          >
+            Automated payslip from Helport. View history in the employee
+            portal.
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
