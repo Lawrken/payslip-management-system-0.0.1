@@ -69,9 +69,7 @@ export function AddEmployeeDialog({ children }: AddEmployeeDialogProps) {
         <DialogHeader>
           <DialogTitle>Add Employee</DialogTitle>
           <DialogDescription>
-            A login account with an initial password is created automatically.
-            Download credentials from the Users page (.xlsx)—passwords are not
-            shown here.
+            Add the employee details used for payroll and payslip generation.
           </DialogDescription>
         </DialogHeader>
         <form ref={formRef} onSubmit={handleSubmit}>

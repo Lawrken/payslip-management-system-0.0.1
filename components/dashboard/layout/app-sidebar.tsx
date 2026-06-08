@@ -8,7 +8,6 @@ import {
   Invoice01Icon,
   SquareLock01Icon,
   UserGroupIcon,
-  UserMultipleIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import Link from "next/link"
@@ -36,7 +35,6 @@ const navItems = [
   { label: "Payrolls", href: "/dashboard/payrolls", icon: Calendar03Icon },
   { label: "Payslips", href: "/dashboard/payslips", icon: Invoice01Icon },
   { label: "Review", href: "/dashboard/review", icon: CheckListIcon },
-  { label: "Users", href: "/dashboard/users", icon: UserMultipleIcon },
   { label: "Logs", href: "/dashboard/logs", icon: Activity01Icon },
 ] as const
 

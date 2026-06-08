@@ -11,13 +11,10 @@ import {
 } from "@/lib/employees"
 import { createAuditLog } from "@/lib/audit-logs"
 import { requireDashboardSession } from "@/lib/authorization"
-import { createUserAccount } from "@/lib/users"
 
-export type EmployeeFormState = {
+type EmployeeFormState = {
   error?: string
   success?: boolean
-  employeeId?: string
-  message?: string
 }
 
 export type AddEmployeeState = EmployeeFormState
@@ -88,72 +85,33 @@ export async function addEmployeeAction(
     return validationError
   }
 
-  let result: { success: true; employeeId: string } | { error: string }
-  try {
-    result = await db.transaction(async (tx) => {
-      const employee = await addEmployee(fields, tx)
+  const result = await db.transaction(async (tx) => {
+    const employee = await addEmployee(fields, tx)
 
-      if ("error" in employee) {
-        return { error: employee.error }
-      }
-
-      const account = await createUserAccount({
-        employeeId: employee.employeeId,
-        role: "employee",
-        createdByEmployeeId: session.employeeId,
-        client: tx,
-      })
-
-      if ("error" in account) {
-        throw new Error(account.error)
-      }
-
-      await createAuditLog({
-        actor: session,
-        action: "employee.create",
-        targetType: "employee",
-        targetId: employee.id,
-        targetLabel: `${employee.name} (${employee.employeeId})`,
-        details: "Created employee record and login account.",
-        client: tx,
-      })
-
-      await createAuditLog({
-        actor: session,
-        action: "user.create",
-        targetType: "user",
-        targetId: account.employeeId,
-        targetLabel: `${account.employeeId} (employee)`,
-        details:
-          "Created login account; initial password queued for credential export.",
-        client: tx,
-      })
-
-      return {
-        success: true as const,
-        employeeId: account.employeeId,
-      }
-    })
-  } catch (error) {
-    return {
-      error:
-        error instanceof Error ? error.message : "Employee was not created.",
+    if ("error" in employee) {
+      return { error: employee.error }
     }
-  }
+
+    await createAuditLog({
+      actor: session,
+      action: "employee.create",
+      targetType: "employee",
+      targetId: employee.id,
+      targetLabel: `${employee.name} (${employee.employeeId})`,
+      details: "Created employee record.",
+      client: tx,
+    })
+
+    return { success: true as const }
+  })
 
   if ("error" in result) {
     return { error: result.error }
   }
 
   revalidatePath("/dashboard/employees")
-  revalidatePath("/dashboard/users")
   revalidatePath("/dashboard/logs")
-  return {
-    success: true,
-    employeeId: result.employeeId,
-    message:
-      "Employee and login account created. Download initial credentials from the Users page (.xlsx).",
-  }
+  return { success: true }
 }
 
 export async function updateEmployeeAction(
