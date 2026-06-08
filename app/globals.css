@@ -80,6 +80,49 @@
     --sidebar-accent-foreground: oklch(0.205 0 0);
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.708 0 0);
+    --dashboard-status-draft: oklch(0.55 0.01 0);
+    --dashboard-status-pending: oklch(0.58 0.14 55);
+    --dashboard-status-admin-approved: oklch(0.42 0.14 264);
+    --dashboard-status-approved: oklch(0.42 0.1 155);
+    --dashboard-status-returned: oklch(0.42 0.14 25);
+    --dashboard-status-sent: oklch(0.42 0.14 264);
+    --dashboard-chart-card-bg: oklch(0.97 0 0);
+    --dashboard-status-draft-bg: oklch(0.965 0.006 0);
+    --dashboard-status-pending-bg: oklch(0.97 0.03 55);
+    --dashboard-status-admin-approved-bg: oklch(0.965 0.028 264);
+    --dashboard-status-approved-bg: oklch(0.965 0.025 155);
+    --dashboard-status-returned-bg: oklch(0.97 0.028 25);
+    --dashboard-status-sent-bg: oklch(0.965 0.028 264);
+    --dashboard-totals-gross-bg: oklch(0.965 0.028 264);
+    --dashboard-totals-deductions-bg: oklch(0.97 0.028 25);
+    --dashboard-totals-net-bg: oklch(0.965 0.025 155);
+    --dashboard-totals-gross-fg: oklch(0.42 0.14 264);
+    --dashboard-urgency-critical-bg: oklch(0.98 0.015 25);
+    --dashboard-urgency-critical-fg: oklch(0.42 0.14 25);
+    --dashboard-urgency-critical-accent: oklch(0.55 0.17 25);
+    --dashboard-urgency-action-bg: oklch(0.98 0.02 75);
+    --dashboard-urgency-action-fg: oklch(0.45 0.12 55);
+    --dashboard-urgency-action-accent: oklch(0.58 0.14 55);
+    --dashboard-urgency-soon-bg: oklch(0.985 0.015 90);
+    --dashboard-urgency-soon-fg: oklch(0.48 0.09 75);
+    --dashboard-urgency-soon-accent: oklch(0.62 0.11 70);
+    --dashboard-urgency-clear-bg: oklch(0.98 0.02 155);
+    --dashboard-urgency-clear-fg: oklch(0.42 0.1 155);
+    --dashboard-urgency-clear-accent: oklch(0.52 0.12 155);
+    --dashboard-chart-gray: oklch(0.66 0.03 0);
+    --dashboard-chart-orange: oklch(0.72 0.12 55);
+    --dashboard-chart-blue: oklch(0.64 0.12 264);
+    --dashboard-chart-green: oklch(0.66 0.11 155);
+    --dashboard-chart-red: oklch(0.68 0.12 25);
+    --dashboard-status-draft-chart: var(--dashboard-chart-gray);
+    --dashboard-status-pending-chart: var(--dashboard-chart-orange);
+    --dashboard-status-admin-approved-chart: var(--dashboard-chart-blue);
+    --dashboard-status-approved-chart: var(--dashboard-chart-green);
+    --dashboard-status-returned-chart: var(--dashboard-chart-red);
+    --dashboard-status-sent-chart: var(--dashboard-chart-blue);
+    --dashboard-totals-gross-chart: var(--dashboard-chart-blue);
+    --dashboard-totals-deductions-chart: var(--dashboard-chart-red);
+    --dashboard-totals-net-chart: var(--dashboard-chart-green);
 }
 
 .dark {
@@ -114,6 +157,49 @@
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.556 0 0);
+    --dashboard-status-draft: oklch(0.7 0.01 0);
+    --dashboard-status-pending: oklch(0.72 0.12 60);
+    --dashboard-status-admin-approved: oklch(0.82 0.08 264);
+    --dashboard-status-approved: oklch(0.84 0.07 155);
+    --dashboard-status-returned: oklch(0.82 0.08 25);
+    --dashboard-status-sent: oklch(0.82 0.08 264);
+    --dashboard-chart-card-bg: oklch(0.22 0 0);
+    --dashboard-status-draft-bg: oklch(0.22 0.01 0);
+    --dashboard-status-pending-bg: oklch(0.24 0.03 55);
+    --dashboard-status-admin-approved-bg: oklch(0.24 0.03 264);
+    --dashboard-status-approved-bg: oklch(0.23 0.025 155);
+    --dashboard-status-returned-bg: oklch(0.24 0.03 25);
+    --dashboard-status-sent-bg: oklch(0.24 0.03 264);
+    --dashboard-totals-gross-bg: oklch(0.24 0.03 264);
+    --dashboard-totals-deductions-bg: oklch(0.24 0.03 25);
+    --dashboard-totals-net-bg: oklch(0.23 0.025 155);
+    --dashboard-totals-gross-fg: oklch(0.82 0.08 264);
+    --dashboard-urgency-critical-bg: oklch(0.24 0.03 25);
+    --dashboard-urgency-critical-fg: oklch(0.82 0.08 25);
+    --dashboard-urgency-critical-accent: oklch(0.68 0.14 25);
+    --dashboard-urgency-action-bg: oklch(0.24 0.03 70);
+    --dashboard-urgency-action-fg: oklch(0.84 0.07 70);
+    --dashboard-urgency-action-accent: oklch(0.72 0.12 60);
+    --dashboard-urgency-soon-bg: oklch(0.23 0.02 90);
+    --dashboard-urgency-soon-fg: oklch(0.86 0.06 85);
+    --dashboard-urgency-soon-accent: oklch(0.74 0.1 75);
+    --dashboard-urgency-clear-bg: oklch(0.23 0.025 155);
+    --dashboard-urgency-clear-fg: oklch(0.84 0.07 155);
+    --dashboard-urgency-clear-accent: oklch(0.68 0.11 155);
+    --dashboard-chart-gray: oklch(0.76 0.03 0);
+    --dashboard-chart-orange: oklch(0.8 0.11 60);
+    --dashboard-chart-blue: oklch(0.78 0.12 264);
+    --dashboard-chart-green: oklch(0.8 0.1 155);
+    --dashboard-chart-red: oklch(0.78 0.11 25);
+    --dashboard-status-draft-chart: var(--dashboard-chart-gray);
+    --dashboard-status-pending-chart: var(--dashboard-chart-orange);
+    --dashboard-status-admin-approved-chart: var(--dashboard-chart-blue);
+    --dashboard-status-approved-chart: var(--dashboard-chart-green);
+    --dashboard-status-returned-chart: var(--dashboard-chart-red);
+    --dashboard-status-sent-chart: var(--dashboard-chart-blue);
+    --dashboard-totals-gross-chart: var(--dashboard-chart-blue);
+    --dashboard-totals-deductions-chart: var(--dashboard-chart-red);
+    --dashboard-totals-net-chart: var(--dashboard-chart-green);
 }
 
 @layer base {
@@ -126,4 +212,60 @@
   html {
     @apply font-sans;
     }
+}
+
+.dashboard-reminder[data-urgency="critical"] {
+  background-color: var(--dashboard-urgency-critical-bg);
+  --reminder-fg: var(--dashboard-urgency-critical-fg);
+  --reminder-accent: var(--dashboard-urgency-critical-accent);
+}
+
+.dashboard-reminder[data-urgency="action"] {
+  background-color: var(--dashboard-urgency-action-bg);
+  --reminder-fg: var(--dashboard-urgency-action-fg);
+  --reminder-accent: var(--dashboard-urgency-action-accent);
+}
+
+.dashboard-reminder[data-urgency="soon"] {
+  background-color: var(--dashboard-urgency-soon-bg);
+  --reminder-fg: var(--dashboard-urgency-soon-fg);
+  --reminder-accent: var(--dashboard-urgency-soon-accent);
+}
+
+.dashboard-reminder[data-urgency="clear"] {
+  background-color: var(--dashboard-urgency-clear-bg);
+  --reminder-fg: var(--dashboard-urgency-clear-fg);
+  --reminder-accent: var(--dashboard-urgency-clear-accent);
+}
+
+.dashboard-chart-card {
+  background-color: var(--dashboard-chart-card-bg);
+}
+
+.dashboard-metric-card {
+  background-color: var(--metric-bg);
+}
+
+.dashboard-metric-card.dashboard-chart-card {
+  background-color: var(--dashboard-chart-card-bg);
+}
+
+.dashboard-metric-card.dashboard-chart-card .metric-value {
+  color: var(--card-foreground);
+}
+
+.dashboard-metric-card.dashboard-chart-card[data-zero="true"] .metric-value {
+  color: var(--muted-foreground);
+}
+
+.dashboard-metric-card:not(.dashboard-chart-card)[data-zero="true"] {
+  background-color: color-mix(in oklab, var(--metric-bg) 65%, var(--card));
+}
+
+.dashboard-metric-card:not(.dashboard-chart-card) .metric-value {
+  color: color-mix(in oklab, var(--metric-chart) 65%, var(--foreground));
+}
+
+.dashboard-metric-card:not(.dashboard-chart-card)[data-zero="true"] .metric-value {
+  color: var(--muted-foreground);
 }

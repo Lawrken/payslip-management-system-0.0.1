@@ -1,30 +1,39 @@
 import { redirect } from "next/navigation"
+import { Suspense } from "react"
 
 import { DashboardPageContent } from "@/components/dashboard/dashboard-page-content"
-import { isDashboardRole } from "@/lib/auth-helpers"
-import { buildDashboardSummary } from "@/lib/dashboard-summary"
-import { getLatestPayroll } from "@/lib/payrolls"
+import { requireDashboardSession } from "@/lib/authorization"
+import { getLatestPayroll, getPayrolls } from "@/lib/payrolls"
 import { getPayslips } from "@/lib/payslips"
-import { getSession } from "@/lib/session"
 
 export const dynamic = "force-dynamic"
 
-export default async function DashboardPage() {
-  const session = await getSession()
-  if (!session || !isDashboardRole(session.role)) {
+async function DashboardPageInner() {
+  const session = await requireDashboardSession()
+  if ("error" in session) {
     redirect("/login")
   }
 
-  const [latestPayroll, payslips] = await Promise.all([
-    getLatestPayroll(),
+  const [payrolls, payslips, latestPayroll] = await Promise.all([
+    getPayrolls(),
     getPayslips(),
+    getLatestPayroll(),
   ])
 
-  const summary = buildDashboardSummary({
-    latestPayroll,
-    payslips,
-    role: session.role,
-  })
+  return (
+    <DashboardPageContent
+      session={session}
+      payrolls={payrolls}
+      payslips={payslips}
+      defaultPayrollId={latestPayroll?.id ?? null}
+    />
+  )
+}
 
-  return <DashboardPageContent session={session} summary={summary} />
+export default function DashboardPage() {
+  return (
+    <Suspense>
+      <DashboardPageInner />
+    </Suspense>
+  )
 }
