@@ -2,17 +2,18 @@ import { and, desc, eq, gte, lte } from "drizzle-orm"
 
 import { db, type DatabaseClient } from "@/db"
 import { auditLogs } from "@/db/schema"
-import type { AuditAction, AuditLog, AuditLogQuery, Session } from "@/lib/types"
+import type {
+  AuditAction,
+  AuditLog,
+  AuditLogQuery,
+  Role,
+  Session,
+} from "@/lib/types"
 
 export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "employee.create": "Employee created",
   "employee.update": "Employee edited",
   "employee.delete": "Employee deleted",
-  "user.create": "User created",
-  "user.delete": "User deleted",
-  "user.password_reset": "Password reset",
-  "credential.export": "Credentials exported",
-  "credential.view": "Initial credential viewed",
   "payroll.create": "Payroll created",
   "payroll.update": "Payroll edited",
   "payroll.delete": "Payroll deleted",
@@ -27,6 +28,15 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
 }
 
 export const AUDIT_ACTIONS = Object.keys(AUDIT_ACTION_LABELS) as AuditAction[]
+
+export const AUDIT_ACTOR_ROLE_LABELS: Record<Role, string> = {
+  admin: "Admin",
+  superAdmin: "Superadmin",
+}
+
+export const AUDIT_ACTOR_ROLES = Object.keys(
+  AUDIT_ACTOR_ROLE_LABELS
+) as Role[]
 
 type CreateAuditLogInput = {
   actor: Session
@@ -81,8 +91,8 @@ export async function getAuditLogs(
     }
   }
 
-  if (query.actorEmployeeId) {
-    conditions.push(eq(auditLogs.actorEmployeeId, query.actorEmployeeId))
+  if (query.actorRole) {
+    conditions.push(eq(auditLogs.actorRole, query.actorRole))
   }
 
   if (query.action) {
