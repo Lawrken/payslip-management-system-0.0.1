@@ -22,6 +22,13 @@
       "when": 1780552378673,
       "tag": "0002_mixed_maelstrom",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1780642635240,
+      "tag": "0003_strange_thena",
+      "breakpoints": true
     }
   ]
 }

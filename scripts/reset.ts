@@ -6,7 +6,7 @@ import { closeDb, db } from "@/db"
 
 async function main() {
   await db.execute(
-    sql`TRUNCATE audit_logs, credential_exports, payslip_inputs, payslips, payrolls, employees, users CASCADE`
+    sql`TRUNCATE audit_logs, payslip_inputs, payslips, payrolls, employees, users CASCADE`
   )
 }
 

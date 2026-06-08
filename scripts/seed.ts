@@ -7,11 +7,9 @@ import { users } from "@/db/schema"
 import { seedUsers } from "@/lib/seed-users"
 
 async function main() {
-  const dashboardUsers = seedUsers.filter((user) => user.role !== "employee")
-
   await db.insert(users).values(
     await Promise.all(
-      dashboardUsers.map(async (user) => ({
+      seedUsers.map(async (user) => ({
         employeeId: user.employeeId,
         passwordHash: await bcrypt.hash(user.password, 10),
         role: user.role,

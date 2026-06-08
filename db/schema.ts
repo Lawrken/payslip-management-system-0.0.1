@@ -74,15 +74,6 @@ export const payslipInputs = pgTable("payslip_inputs", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 })
 
-export const credentialExports = pgTable("credential_exports", {
-  employeeId: text("employee_id").primaryKey(),
-  employeeName: text("employee_name"),
-  role: text("role").$type<Role>().notNull(),
-  passwordCiphertext: text("password_ciphertext").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  createdByEmployeeId: text("created_by_employee_id").notNull(),
-})
-
 export const auditLogs = pgTable(
   "audit_logs",
   {
