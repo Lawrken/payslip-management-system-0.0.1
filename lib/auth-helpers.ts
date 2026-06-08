@@ -3,21 +3,16 @@ import { createHmac, timingSafeEqual } from "node:crypto"
 import type { Role, Session, User } from "@/lib/types"
 
 export const ROLE_LABELS: Record<Role, string> = {
-  employee: "Employee",
   admin: "Admin",
   superAdmin: "Superadmin",
 }
-
-export const USER_ROLES = Object.keys(ROLE_LABELS) as Role[]
 
 export function normalizeEmployeeId(employeeId: string): string {
   return employeeId.trim().toUpperCase()
 }
 
 export function getHomePath(role: Role): string {
-  if (role === "employee") {
-    return "/payslip"
-  }
+  void role
   return "/dashboard"
 }
 
@@ -28,8 +23,8 @@ export function createSessionPayload(user: User): Session {
   }
 }
 
-function isRole(value: unknown): value is Role {
-  return value === "admin" || value === "superAdmin" || value === "employee"
+export function isRole(value: unknown): value is Role {
+  return value === "admin" || value === "superAdmin"
 }
 
 function isSession(value: unknown): value is Session {
@@ -100,7 +95,7 @@ export function parseSession(cookieValue: string | undefined): Session | null {
 }
 
 export function isDashboardRole(role: Role): boolean {
-  return role === "admin" || role === "superAdmin"
+  return isRole(role)
 }
 
 export function isAdmin(role: Role): boolean {

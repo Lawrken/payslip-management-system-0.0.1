@@ -1,4 +1,7 @@
+import { redirect } from "next/navigation"
+
 import { PayrollsPageContent } from "@/components/dashboard/payrolls/payrolls-page-content"
+import { requireDashboardSession } from "@/lib/authorization"
 import { getPayrolls } from "@/lib/payrolls"
 import { getPayslips } from "@/lib/payslips"
 import type { Payslip } from "@/lib/types"
@@ -20,6 +23,11 @@ function groupPayslipsByPayrollId(
 }
 
 export default async function PayrollsPage() {
+  const session = await requireDashboardSession()
+  if ("error" in session) {
+    redirect("/login")
+  }
+
   const [payrolls, payslips] = await Promise.all([getPayrolls(), getPayslips()])
   const payslipsByPayrollId = groupPayslipsByPayrollId(payslips)
 

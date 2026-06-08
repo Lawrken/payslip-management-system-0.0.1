@@ -29,7 +29,7 @@ export function LoginForm() {
           </Alert>
         ) : null}
         <Field>
-          <FieldLabel htmlFor="employeeId">Employee ID</FieldLabel>
+          <FieldLabel htmlFor="employeeId">Admin ID</FieldLabel>
           <Input
             id="employeeId"
             name="employeeId"

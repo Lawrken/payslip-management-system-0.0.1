@@ -1,17 +1,18 @@
+import { redirect } from "next/navigation"
+import { Suspense } from "react"
+
 import { ReviewPageContent } from "@/components/dashboard/review/review-page-content"
+import { requireDashboardSession } from "@/lib/authorization"
 import { getEmployees } from "@/lib/employees"
 import { getLatestPayroll, getPayrolls } from "@/lib/payrolls"
 import { getPayslips } from "@/lib/payslips"
-import { getSession } from "@/lib/session"
-import { Suspense } from "react"
 
 export const dynamic = "force-dynamic"
 
 async function ReviewPageInner() {
-  const session = await getSession()
-
-  if (!session) {
-    return null
+  const session = await requireDashboardSession()
+  if ("error" in session) {
+    redirect("/login")
   }
 
   const [payslips, employees, payrolls, latestPayroll] = await Promise.all([

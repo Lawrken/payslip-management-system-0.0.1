@@ -42,9 +42,7 @@ export async function changePasswordAction(
     return { error: result.error }
   }
 
-  revalidatePath("/dashboard/users")
   revalidatePath("/dashboard/account/password")
-  revalidatePath("/payslip/account/password")
   return { success: true }
 }
 

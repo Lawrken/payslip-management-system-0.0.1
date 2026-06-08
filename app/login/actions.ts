@@ -18,12 +18,12 @@ export async function loginAction(
   const password = String(formData.get("password") ?? "")
 
   if (!employeeId.trim() || !password) {
-    return { error: "Employee ID and password are required." }
+    return { error: "Admin ID and password are required." }
   }
 
   const user = await validateCredentials(employeeId, password)
   if (!user) {
-    return { error: "Invalid employee ID or password." }
+    return { error: "Invalid admin ID or password." }
   }
 
   await setSession(createSessionPayload(user))

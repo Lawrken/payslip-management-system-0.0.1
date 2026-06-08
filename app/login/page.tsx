@@ -23,7 +23,7 @@ export default async function LoginPage() {
         <CardHeader>
           <CardTitle>Sign in</CardTitle>
           <CardDescription>
-            Enter your employee ID and password to continue.
+            Enter your admin ID and password to continue.
           </CardDescription>
         </CardHeader>
         <CardContent>

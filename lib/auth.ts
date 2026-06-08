@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm"
 
 import { db } from "@/db"
 import { users } from "@/db/schema"
-import { normalizeEmployeeId } from "@/lib/auth-helpers"
+import { isRole, normalizeEmployeeId } from "@/lib/auth-helpers"
 import type { User } from "@/lib/types"
 
 export function validateCredentials(
@@ -17,6 +17,9 @@ export function validateCredentials(
     })
     .then(async (user) => {
       if (!user) {
+        return null
+      }
+      if (!isRole(user.role)) {
         return null
       }
 

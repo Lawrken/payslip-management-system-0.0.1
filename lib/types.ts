@@ -1,17 +1,9 @@
-export type Role = "admin" | "superAdmin" | "employee"
+export type Role = "admin" | "superAdmin"
 
 export type User = {
   employeeId: string
   passwordHash: string
   role: Role
-}
-
-export type UserAccount = {
-  employeeId: string
-  role: Role
-  employeeName: string | null
-  createdAt: Date
-  updatedAt: Date
 }
 
 export type Session = {
@@ -116,13 +108,6 @@ export type Payslip = {
   totals: PayslipTotals
 }
 
-export type EmployeePayslip = Payslip & {
-  payrollPeriodLabel: string
-  payrollPeriodStart: string
-  payrollPeriodEnd: string
-  payoutDate: string
-}
-
 export type PayslipEmailData = Payslip & {
   employeeEmail: string
   tin: string
@@ -141,11 +126,6 @@ export type AuditAction =
   | "employee.create"
   | "employee.update"
   | "employee.delete"
-  | "user.create"
-  | "user.delete"
-  | "user.password_reset"
-  | "credential.export"
-  | "credential.view"
   | "payroll.create"
   | "payroll.update"
   | "payroll.delete"
@@ -173,6 +153,6 @@ export type AuditLog = {
 export type AuditLogQuery = {
   dateFrom?: string
   dateTo?: string
-  actorEmployeeId?: string
+  actorRole?: Role
   action?: AuditAction
 }
