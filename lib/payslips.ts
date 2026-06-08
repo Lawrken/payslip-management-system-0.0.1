@@ -14,14 +14,11 @@ import {
   createEmptyPayslipInputs,
 } from "@/lib/payroll-calculator"
 import type {
-  EmployeePayslip,
   Payslip,
   PayslipEmailData,
   PayslipPayrollInputs,
   PayslipStatus,
 } from "@/lib/types"
-
-export const VISIBLE_EMPLOYEE_PAYSLIP_STATUSES = ["approved", "sent"] as const
 
 function buildPayslipTotals(inputs: PayslipPayrollInputs) {
   const totals = calculatePayslipTotals(inputs)
@@ -50,21 +47,6 @@ function mapPayslipRow(row: {
     status: row.payslip.status,
     inputs,
     totals,
-  }
-}
-
-function mapEmployeePayslipRow(row: {
-  payslip: typeof payslips.$inferSelect
-  payslipInput: typeof payslipInputs.$inferSelect | null
-  employee: typeof employeesTable.$inferSelect | null
-  payroll: typeof payrollsTable.$inferSelect
-}): EmployeePayslip {
-  return {
-    ...mapPayslipRow(row),
-    payrollPeriodLabel: row.payroll.payrollPeriodLabel,
-    payrollPeriodStart: row.payroll.payrollPeriodStart,
-    payrollPeriodEnd: row.payroll.payrollPeriodEnd,
-    payoutDate: row.payroll.payoutDate,
   }
 }
 
@@ -208,50 +190,13 @@ export async function getApprovedPayslipEmailsByPayrollId(
   return rows.map(mapPayslipEmailRow)
 }
 
-export async function getVisiblePayslipsByEmployeeId(
-  employeeId: string
-): Promise<EmployeePayslip[]> {
-  const normalizedId = normalizeEmployeeId(employeeId)
-  const rows = await db
-    .select({
-      payslip: payslips,
-      payslipInput: payslipInputs,
-      employee: employeesTable,
-      payroll: payrollsTable,
-    })
-    .from(payslips)
-    .innerJoin(payrollsTable, eq(payrollsTable.id, payslips.payrollId))
-    .leftJoin(payslipInputs, eq(payslipInputs.payslipId, payslips.id))
-    .leftJoin(
-      employeesTable,
-      eq(employeesTable.employeeId, payslips.employeeId)
-    )
-    .where(
-      and(
-        eq(payslips.employeeId, normalizedId),
-        inArray(payslips.status, VISIBLE_EMPLOYEE_PAYSLIP_STATUSES)
-      )
-    )
-
-  return rows.map(mapEmployeePayslipRow).sort((a, b) => {
-    return b.payrollPeriodEnd.localeCompare(a.payrollPeriodEnd)
-  })
-}
-
-export async function countPayslipsByPayrollId(
-  payrollId: string
-): Promise<number> {
-  const payrollPayslips = await getPayslipsByPayrollId(payrollId)
-  return payrollPayslips.length
-}
-
-export function hasPayslipData(inputs: PayslipPayrollInputs): boolean {
+function hasPayslipData(inputs: PayslipPayrollInputs): boolean {
   return Object.values(inputs).some(
     (value) => typeof value === "number" && value > 0
   )
 }
 
-export function resolveStatusAfterSave(
+function resolveStatusAfterSave(
   existingStatus: PayslipStatus,
   inputs: PayslipPayrollInputs
 ): PayslipStatus {
@@ -561,35 +506,6 @@ export async function areAllPayslipsApproved(
     return false
   }
   return payrollPayslips.every((payslip) => payslip.status === "approved")
-}
-
-export async function sendApprovedPayslips(
-  payrollId: string,
-  client: DatabaseClient = db
-): Promise<{ count: number } | { error: string }> {
-  if (!(await areAllPayslipsApproved(payrollId, client))) {
-    return {
-      error: "All payslips must be ready for email before sending bulk email.",
-    }
-  }
-
-  const payrollPayslips = await getPayslipsByPayrollId(payrollId, client)
-  const approvedIds = payrollPayslips
-    .filter((payslip) => payslip.status === "approved")
-    .map((payslip) => payslip.id)
-
-  if (approvedIds.length === 0) {
-    return { count: 0 }
-  }
-
-  for (const id of approvedIds) {
-    await client
-      .update(payslips)
-      .set({ status: "sent", updatedAt: new Date() })
-      .where(eq(payslips.id, id))
-  }
-
-  return { count: approvedIds.length }
 }
 
 export async function markPayslipsSentByIds(

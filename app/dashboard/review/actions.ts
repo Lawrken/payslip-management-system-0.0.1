@@ -199,7 +199,6 @@ export async function sendPayslipEmailAction(id: string) {
   revalidatePath("/dashboard/review")
   revalidatePath("/dashboard/payslips")
   revalidatePath("/dashboard/logs")
-  revalidatePath("/payslip")
   return result
 }
 
@@ -280,6 +279,5 @@ export async function bulkEmailAction(payrollId: string) {
   revalidatePath("/dashboard/review")
   revalidatePath("/dashboard/payslips")
   revalidatePath("/dashboard/logs")
-  revalidatePath("/payslip")
   return result
 }

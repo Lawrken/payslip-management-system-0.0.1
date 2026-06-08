@@ -1,6 +1,6 @@
 import type { PayrollRateKey } from "@/lib/payroll-rates"
 
-export type PayslipFieldInputKind = "peso" | "hours" | "days"
+type PayslipFieldInputKind = "peso" | "hours" | "days"
 
 export type PayslipFieldDefinition = {
   key: string

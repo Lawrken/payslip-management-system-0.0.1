@@ -12,7 +12,7 @@ import {
 import { createAuditLog } from "@/lib/audit-logs"
 import { requireDashboardSession } from "@/lib/authorization"
 
-export type PayrollFormState = {
+type PayrollFormState = {
   error?: string
   success?: boolean
 }

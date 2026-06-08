@@ -257,7 +257,7 @@ function renderNonTaxableItems(data: PayslipEmailData) {
                       </table>`
 }
 
-export async function renderPayslipEmail(data: PayslipEmailData) {
+async function renderPayslipEmail(data: PayslipEmailData) {
   const appUrl = getRequiredEnv("APP_URL").replace(/\/$/, "")
   let html = await getTemplate()
   const replacements = {

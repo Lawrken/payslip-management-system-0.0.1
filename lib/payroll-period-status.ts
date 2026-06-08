@@ -1,6 +1,6 @@
 import type { Payslip } from "@/lib/types"
 
-export type PayrollPeriodStatusVariant = "muted" | "default" | "success"
+type PayrollPeriodStatusVariant = "muted" | "default" | "success"
 
 export type PayrollPeriodStatus = {
   label: string

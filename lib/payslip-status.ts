@@ -25,7 +25,7 @@ export function isReturnedStatus(status: PayslipStatus): boolean {
   return status === "returned"
 }
 
-export const STATUS_SORT_RANK: Record<PayslipStatus, number> = {
+const STATUS_SORT_RANK: Record<PayslipStatus, number> = {
   returned: 0,
   draft: 1,
   pending: 2,

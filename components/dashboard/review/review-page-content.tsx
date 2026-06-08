@@ -7,8 +7,8 @@ import { BulkEmailDialog } from "@/components/dashboard/review/bulk-email-dialog
 import { ReviewPayslipDialog } from "@/components/dashboard/review/review-payslip-dialog"
 import { ReviewTable } from "@/components/dashboard/review/review-table"
 import { PayrollPeriodCombobox } from "@/components/dashboard/shared/payroll-period-combobox"
+import { PayrollPeriodStrip } from "@/components/dashboard/shared/payroll-period-strip"
 import { Button } from "@/components/ui/button"
-import { formatDisplayDate, formatDtrCutOffRange } from "@/lib/payroll-dates"
 import type { Employee, Payroll, Payslip, Role } from "@/lib/types"
 
 type ReviewPageContentProps = {
@@ -169,37 +169,7 @@ export function ReviewPageContent({
         </div>
 
         {selectedPayroll ? (
-          <div className="rounded-lg border bg-muted/30 px-4 py-3 text-sm">
-            <dl className="grid gap-2 sm:grid-cols-3">
-              <div>
-                <dt className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                  Payroll Period
-                </dt>
-                <dd className="mt-0.5 font-medium">
-                  {selectedPayroll.payrollPeriodLabel}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                  DTR Cut-Off
-                </dt>
-                <dd className="mt-0.5 font-medium">
-                  {formatDtrCutOffRange(
-                    selectedPayroll.dtrCutOffStart,
-                    selectedPayroll.dtrCutOffEnd
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                  Payout Date
-                </dt>
-                <dd className="mt-0.5 font-medium">
-                  {formatDisplayDate(selectedPayroll.payoutDate)}
-                </dd>
-              </div>
-            </dl>
-          </div>
+          <PayrollPeriodStrip payroll={selectedPayroll} />
         ) : null}
       </div>
 
