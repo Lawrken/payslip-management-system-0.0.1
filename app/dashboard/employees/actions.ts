@@ -11,10 +11,14 @@ import {
 } from "@/lib/employees"
 import { createAuditLog } from "@/lib/audit-logs"
 import { requireDashboardSession } from "@/lib/authorization"
+import { createUserAccount, syncEmployeeUserIdentity } from "@/lib/users"
 
 type EmployeeFormState = {
   error?: string
   success?: boolean
+  employeeId?: string
+  initialPassword?: string
+  message?: string
 }
 
 export type AddEmployeeState = EmployeeFormState
@@ -42,7 +46,9 @@ function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
 }
 
-function validateEmployeeFields(fields: ReturnType<typeof parseEmployeeFormData>) {
+function validateEmployeeFields(
+  fields: ReturnType<typeof parseEmployeeFormData>
+) {
   if (
     !fields.name ||
     !fields.employeeId ||
@@ -62,7 +68,8 @@ function validateEmployeeFields(fields: ReturnType<typeof parseEmployeeFormData>
   for (const field of numericIdFields) {
     if (!isDigitsOnly(fields[field])) {
       return {
-        error: "TIN, SSS NO., PHIC NO., and HDMF NO. must contain numbers only.",
+        error:
+          "TIN, SSS NO., PHIC NO., and HDMF NO. must contain numbers only.",
       } as const
     }
   }
@@ -92,17 +99,41 @@ export async function addEmployeeAction(
       return { error: employee.error }
     }
 
+    const account = await createUserAccount({
+      employeeId: employee.employeeId,
+      email: employee.email,
+      role: "employee",
+      client: tx,
+    })
+    if ("error" in account) {
+      return { error: account.error }
+    }
+
     await createAuditLog({
       actor: session,
       action: "employee.create",
       targetType: "employee",
       targetId: employee.id,
       targetLabel: `${employee.name} (${employee.employeeId})`,
-      details: "Created employee record.",
+      details: "Created employee record and login account.",
       client: tx,
     })
 
-    return { success: true as const }
+    await createAuditLog({
+      actor: session,
+      action: "user.create",
+      targetType: "user",
+      targetId: account.user.employeeId,
+      targetLabel: `${account.user.employeeId} (${account.user.role})`,
+      details: "Created login account with stored initial password.",
+      client: tx,
+    })
+
+    return {
+      success: true as const,
+      employeeId: account.user.employeeId,
+      initialPassword: account.initialPassword,
+    }
   })
 
   if ("error" in result) {
@@ -110,8 +141,15 @@ export async function addEmployeeAction(
   }
 
   revalidatePath("/dashboard/employees")
+  revalidatePath("/dashboard/users")
   revalidatePath("/dashboard/logs")
-  return { success: true }
+  return {
+    success: true,
+    employeeId: result.employeeId,
+    initialPassword: result.initialPassword,
+    message:
+      "Employee and login account created. Give the initial password to the employee and ask them to change it after first login.",
+  }
 }
 
 export async function updateEmployeeAction(
@@ -134,10 +172,24 @@ export async function updateEmployeeAction(
   }
 
   const result = await db.transaction(async (tx) => {
+    const previousEmployee = await getEmployeeById(id, tx)
     const employee = await updateEmployee({ id, ...fields }, tx)
 
     if ("error" in employee) {
       return { error: employee.error }
+    }
+    if (!previousEmployee) {
+      return { error: "Employee not found." }
+    }
+
+    const syncResult = await syncEmployeeUserIdentity({
+      previousEmployeeId: previousEmployee.employeeId,
+      employeeId: employee.employeeId,
+      email: employee.email,
+      client: tx,
+    })
+    if ("error" in syncResult) {
+      return { error: syncResult.error }
     }
 
     await createAuditLog({

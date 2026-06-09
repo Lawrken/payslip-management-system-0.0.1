@@ -14,6 +14,8 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "employee.create": "Employee created",
   "employee.update": "Employee edited",
   "employee.delete": "Employee deleted",
+  "user.create": "User created",
+  "user.password_reset": "Password reset",
   "payroll.create": "Payroll created",
   "payroll.update": "Payroll edited",
   "payroll.delete": "Payroll deleted",
@@ -32,11 +34,10 @@ export const AUDIT_ACTIONS = Object.keys(AUDIT_ACTION_LABELS) as AuditAction[]
 export const AUDIT_ACTOR_ROLE_LABELS: Record<Role, string> = {
   admin: "Admin",
   superAdmin: "Superadmin",
+  employee: "Employee",
 }
 
-export const AUDIT_ACTOR_ROLES = Object.keys(
-  AUDIT_ACTOR_ROLE_LABELS
-) as Role[]
+export const AUDIT_ACTOR_ROLES = Object.keys(AUDIT_ACTOR_ROLE_LABELS) as Role[]
 
 type CreateAuditLogInput = {
   actor: Session

@@ -35,6 +35,7 @@ const navItems = [
   { label: "Payrolls", href: "/dashboard/payrolls", icon: Calendar03Icon },
   { label: "Payslips", href: "/dashboard/payslips", icon: Invoice01Icon },
   { label: "Review", href: "/dashboard/review", icon: CheckListIcon },
+  { label: "Users", href: "/dashboard/users", icon: UserGroupIcon },
   { label: "Logs", href: "/dashboard/logs", icon: Activity01Icon },
 ] as const
 
