@@ -43,6 +43,7 @@ export async function changePasswordAction(
   }
 
   revalidatePath("/dashboard/account/password")
+  revalidatePath("/payslips")
   return { success: true }
 }
 

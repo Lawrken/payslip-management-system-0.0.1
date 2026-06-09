@@ -14,11 +14,14 @@ import {
   createEmptyPayslipInputs,
 } from "@/lib/payroll-calculator"
 import type {
+  EmployeePayslip,
   Payslip,
   PayslipEmailData,
   PayslipPayrollInputs,
   PayslipStatus,
 } from "@/lib/types"
+
+const VISIBLE_EMPLOYEE_PAYSLIP_STATUSES: PayslipStatus[] = ["approved", "sent"]
 
 function buildPayslipTotals(inputs: PayslipPayrollInputs) {
   const totals = calculatePayslipTotals(inputs)
@@ -63,6 +66,23 @@ function mapPayslipEmailRow(row: {
     sssNo: row.employee.sssNo,
     phicNo: row.employee.phicNo,
     hdmfNo: row.employee.hdmfNo,
+    payrollPeriodLabel: row.payroll.payrollPeriodLabel,
+    payrollPeriodStart: row.payroll.payrollPeriodStart,
+    payrollPeriodEnd: row.payroll.payrollPeriodEnd,
+    dtrCutOffStart: row.payroll.dtrCutOffStart,
+    dtrCutOffEnd: row.payroll.dtrCutOffEnd,
+    payoutDate: row.payroll.payoutDate,
+  }
+}
+
+function mapEmployeePayslipRow(row: {
+  payslip: typeof payslips.$inferSelect
+  payslipInput: typeof payslipInputs.$inferSelect | null
+  employee: typeof employeesTable.$inferSelect | null
+  payroll: typeof payrollsTable.$inferSelect
+}): EmployeePayslip {
+  return {
+    ...mapPayslipRow(row),
     payrollPeriodLabel: row.payroll.payrollPeriodLabel,
     payrollPeriodStart: row.payroll.payrollPeriodStart,
     payrollPeriodEnd: row.payroll.payrollPeriodEnd,
@@ -188,6 +208,36 @@ export async function getApprovedPayslipEmailsByPayrollId(
     )
 
   return rows.map(mapPayslipEmailRow)
+}
+
+export async function getVisiblePayslipsByEmployeeId(
+  employeeId: string
+): Promise<EmployeePayslip[]> {
+  const normalizedId = normalizeEmployeeId(employeeId)
+  const rows = await db
+    .select({
+      payslip: payslips,
+      payslipInput: payslipInputs,
+      employee: employeesTable,
+      payroll: payrollsTable,
+    })
+    .from(payslips)
+    .innerJoin(payrollsTable, eq(payrollsTable.id, payslips.payrollId))
+    .leftJoin(payslipInputs, eq(payslipInputs.payslipId, payslips.id))
+    .leftJoin(
+      employeesTable,
+      eq(employeesTable.employeeId, payslips.employeeId)
+    )
+    .where(
+      and(
+        eq(payslips.employeeId, normalizedId),
+        inArray(payslips.status, VISIBLE_EMPLOYEE_PAYSLIP_STATUSES)
+      )
+    )
+
+  return rows.map(mapEmployeePayslipRow).sort((a, b) => {
+    return b.payrollPeriodEnd.localeCompare(a.payrollPeriodEnd)
+  })
 }
 
 function hasPayslipData(inputs: PayslipPayrollInputs): boolean {
