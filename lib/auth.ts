@@ -3,17 +3,17 @@ import { eq } from "drizzle-orm"
 
 import { db } from "@/db"
 import { users } from "@/db/schema"
-import { isRole, normalizeEmployeeId } from "@/lib/auth-helpers"
+import { isRole, normalizeEmail } from "@/lib/auth-helpers"
 import type { User } from "@/lib/types"
 
 export function validateCredentials(
-  employeeId: string,
+  email: string,
   password: string
 ): Promise<User | null> {
-  const normalizedId = normalizeEmployeeId(employeeId)
+  const normalizedEmail = normalizeEmail(email)
   return db.query.users
     .findFirst({
-      where: eq(users.employeeId, normalizedId),
+      where: eq(users.email, normalizedEmail),
     })
     .then(async (user) => {
       if (!user) {

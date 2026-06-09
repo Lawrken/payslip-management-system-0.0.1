@@ -5,14 +5,21 @@ import type { Role, Session, User } from "@/lib/types"
 export const ROLE_LABELS: Record<Role, string> = {
   admin: "Admin",
   superAdmin: "Superadmin",
+  employee: "Employee",
 }
 
 export function normalizeEmployeeId(employeeId: string): string {
   return employeeId.trim().toUpperCase()
 }
 
+export function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase()
+}
+
 export function getHomePath(role: Role): string {
-  void role
+  if (role === "employee") {
+    return "/payslips"
+  }
   return "/dashboard"
 }
 
@@ -24,7 +31,7 @@ export function createSessionPayload(user: User): Session {
 }
 
 export function isRole(value: unknown): value is Role {
-  return value === "admin" || value === "superAdmin"
+  return value === "admin" || value === "superAdmin" || value === "employee"
 }
 
 function isSession(value: unknown): value is Session {
@@ -37,7 +44,8 @@ function isSession(value: unknown): value is Session {
 }
 
 function getSessionSecret(): string {
-  const secret = process.env.SESSION_SECRET ?? process.env.CREDENTIALS_ENCRYPTION_KEY
+  const secret =
+    process.env.SESSION_SECRET ?? process.env.CREDENTIALS_ENCRYPTION_KEY
   if (secret) {
     return secret
   }
@@ -50,7 +58,9 @@ function getSessionSecret(): string {
 }
 
 function signPayload(payload: string): string {
-  return createHmac("sha256", getSessionSecret()).update(payload).digest("base64url")
+  return createHmac("sha256", getSessionSecret())
+    .update(payload)
+    .digest("base64url")
 }
 
 function verifySignature(payload: string, signature: string): boolean {
@@ -95,7 +105,7 @@ export function parseSession(cookieValue: string | undefined): Session | null {
 }
 
 export function isDashboardRole(role: Role): boolean {
-  return isRole(role)
+  return role === "admin" || role === "superAdmin"
 }
 
 export function isAdmin(role: Role): boolean {
@@ -104,4 +114,8 @@ export function isAdmin(role: Role): boolean {
 
 export function isSuperAdmin(role: Role): boolean {
   return role === "superAdmin"
+}
+
+export function isEmployee(role: Role): boolean {
+  return role === "employee"
 }

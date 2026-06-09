@@ -1,4 +1,9 @@
-import { isAdmin, isDashboardRole, isSuperAdmin } from "@/lib/auth-helpers"
+import {
+  isAdmin,
+  isDashboardRole,
+  isEmployee,
+  isSuperAdmin,
+} from "@/lib/auth-helpers"
 import { getSession } from "@/lib/session"
 import type { Session } from "@/lib/types"
 
@@ -12,7 +17,9 @@ export async function requireDashboardSession(): Promise<
   return session
 }
 
-export async function requireAdminSession(): Promise<Session | { error: string }> {
+export async function requireAdminSession(): Promise<
+  Session | { error: string }
+> {
   const session = await getSession()
   if (!session || !isAdmin(session.role)) {
     return { error: "Unauthorized." }
@@ -25,6 +32,16 @@ export async function requireSuperAdminSession(): Promise<
 > {
   const session = await getSession()
   if (!session || !isSuperAdmin(session.role)) {
+    return { error: "Unauthorized." }
+  }
+  return session
+}
+
+export async function requireEmployeeSession(): Promise<
+  Session | { error: string }
+> {
+  const session = await getSession()
+  if (!session || !isEmployee(session.role)) {
     return { error: "Unauthorized." }
   }
   return session

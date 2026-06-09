@@ -14,16 +14,16 @@ export async function loginAction(
   _prevState: LoginState,
   formData: FormData
 ): Promise<LoginState> {
-  const employeeId = String(formData.get("employeeId") ?? "")
+  const email = String(formData.get("email") ?? "")
   const password = String(formData.get("password") ?? "")
 
-  if (!employeeId.trim() || !password) {
-    return { error: "Admin ID and password are required." }
+  if (!email.trim() || !password) {
+    return { error: "Email and password are required." }
   }
 
-  const user = await validateCredentials(employeeId, password)
+  const user = await validateCredentials(email, password)
   if (!user) {
-    return { error: "Invalid admin ID or password." }
+    return { error: "Invalid email or password." }
   }
 
   await setSession(createSessionPayload(user))
