@@ -1,9 +1,23 @@
-export type Role = "admin" | "superAdmin"
+export type Role = "admin" | "superAdmin" | "employee"
 
 export type User = {
   employeeId: string
+  email: string
   passwordHash: string
+  initialPasswordCiphertext: string | null
+  passwordChangedAt: Date | null
   role: Role
+}
+
+export type UserAccount = {
+  employeeId: string
+  email: string
+  role: Role
+  employeeName: string | null
+  hasInitialPassword: boolean
+  passwordChangedAt: Date | null
+  createdAt: Date
+  updatedAt: Date
 }
 
 export type Session = {
@@ -122,10 +136,21 @@ export type PayslipEmailData = Payslip & {
   payoutDate: string
 }
 
+export type EmployeePayslip = Payslip & {
+  payrollPeriodLabel: string
+  payrollPeriodStart: string
+  payrollPeriodEnd: string
+  dtrCutOffStart: string
+  dtrCutOffEnd: string
+  payoutDate: string
+}
+
 export type AuditAction =
   | "employee.create"
   | "employee.update"
   | "employee.delete"
+  | "user.create"
+  | "user.password_reset"
   | "payroll.create"
   | "payroll.update"
   | "payroll.delete"

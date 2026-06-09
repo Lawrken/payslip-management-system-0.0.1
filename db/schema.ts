@@ -1,10 +1,4 @@
-import {
-  index,
-  jsonb,
-  pgTable,
-  text,
-  timestamp,
-} from "drizzle-orm/pg-core"
+import { index, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core"
 
 import type {
   AuditAction,
@@ -16,10 +10,17 @@ import type {
 
 export const users = pgTable("users", {
   employeeId: text("employee_id").primaryKey(),
+  email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
+  initialPasswordCiphertext: text("initial_password_ciphertext"),
+  passwordChangedAt: timestamp("password_changed_at", { withTimezone: true }),
   role: text("role").$type<Role>().notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 })
 
 export const employees = pgTable("employees", {
@@ -31,8 +32,12 @@ export const employees = pgTable("employees", {
   sssNo: text("sss_no").notNull(),
   phicNo: text("phic_no").notNull(),
   hdmfNo: text("hdmf_no").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 })
 
 export const payrolls = pgTable("payrolls", {
@@ -43,8 +48,12 @@ export const payrolls = pgTable("payrolls", {
   dtrCutOffStart: text("dtr_cut_off_start").notNull(),
   dtrCutOffEnd: text("dtr_cut_off_end").notNull(),
   payoutDate: text("payout_date").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 })
 
 export const payslips = pgTable(
@@ -56,8 +65,12 @@ export const payslips = pgTable(
       .references(() => payrolls.id, { onDelete: "cascade" }),
     employeeId: text("employee_id").notNull(),
     status: text("status").$type<PayslipStatus>().notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
   },
   (table) => [
     index("payslips_payroll_id_idx").on(table.payrollId),
@@ -71,14 +84,18 @@ export const payslipInputs = pgTable("payslip_inputs", {
     .references(() => payslips.id, { onDelete: "cascade" }),
   inputs: jsonb("inputs").$type<PayslipPayrollInputs>().notNull(),
   totals: jsonb("totals").$type<PayslipTotals>().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 })
 
 export const auditLogs = pgTable(
   "audit_logs",
   {
     id: text("id").primaryKey(),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
     actorEmployeeId: text("actor_employee_id").notNull(),
     actorRole: text("actor_role").$type<Role>().notNull(),
     action: text("action").$type<AuditAction>().notNull(),

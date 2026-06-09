@@ -29,6 +29,13 @@
       "when": 1780642635240,
       "tag": "0003_strange_thena",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1780984384686,
+      "tag": "0004_peaceful_mariko_yashida",
+      "breakpoints": true
     }
   ]
 }
