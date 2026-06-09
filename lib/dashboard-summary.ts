@@ -32,7 +32,7 @@ export type PayrollTotalsChartRow = {
 
 export type DashboardUrgencyLevel = "critical" | "action" | "soon" | "clear"
 
-export type DashboardUrgency = {
+type DashboardUrgency = {
   level: DashboardUrgencyLevel
   daysUntilPayout: number | null
   returnedCount: number
@@ -62,7 +62,7 @@ function startOfDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate())
 }
 
-export function getDaysUntilPayout(
+function getDaysUntilPayout(
   payoutDate: string,
   today: Date = new Date()
 ): number {
@@ -111,7 +111,7 @@ function isPipelineComplete(payslips: Payslip[]): boolean {
   )
 }
 
-export function getDashboardUrgency(input: {
+function getDashboardUrgency(input: {
   payslips: Payslip[]
   role: Role
   payoutDate: string | null
@@ -160,7 +160,7 @@ export function filterPayslipsForPayroll(
   return payslips.filter((payslip) => payslip.payrollId === payrollId)
 }
 
-export function countPayslipsByStatus(
+function countPayslipsByStatus(
   payslips: Payslip[]
 ): PayslipStatusCount[] {
   const counts = Object.fromEntries(
