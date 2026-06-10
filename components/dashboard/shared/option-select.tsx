@@ -36,6 +36,8 @@ type OptionSelectProps = {
   searchPlaceholder: string
   emptyMessage: string
   disabled?: boolean
+  required?: boolean
+  allowClear?: boolean
   className?: string
 }
 
@@ -49,8 +51,11 @@ export function OptionSelect({
   searchPlaceholder,
   emptyMessage,
   disabled = false,
+  required = false,
+  allowClear,
   className,
 }: OptionSelectProps) {
+  const canClear = allowClear ?? !required
   const [open, setOpen] = React.useState(false)
   const [value, setValue] = React.useState(defaultValue)
   const selected = options.find((option) => option.value === value)
@@ -58,9 +63,9 @@ export function OptionSelect({
   return (
     <Field className={cn("min-w-0", className)}>
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <input type="hidden" name={name} value={value} />
+      <input type="hidden" name={name} value={value} required={required} />
       <div className="relative min-w-0">
-        <Popover open={open} onOpenChange={setOpen}>
+        <Popover open={open} onOpenChange={setOpen} modal={false}>
           <PopoverTrigger asChild>
             <Button
               id={id}
@@ -87,8 +92,9 @@ export function OptionSelect({
             </Button>
           </PopoverTrigger>
           <PopoverContent
-            className="w-[var(--radix-popover-trigger-width)] p-0"
+            className="z-[60] w-[var(--radix-popover-trigger-width)] p-0"
             align="start"
+            onWheel={(event) => event.stopPropagation()}
           >
             <Command>
               <CommandInput placeholder={searchPlaceholder} />
@@ -112,7 +118,7 @@ export function OptionSelect({
             </Command>
           </PopoverContent>
         </Popover>
-        {value ? (
+        {canClear && value ? (
           <Button
             type="button"
             variant="ghost"

@@ -7,6 +7,7 @@ import {
   updateEmployeeAction,
   type UpdateEmployeeState,
 } from "@/app/dashboard/employees/actions"
+import { EmployeeFormFields } from "@/components/dashboard/employees/employee-form-fields"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
@@ -17,13 +18,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  Field,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field"
-import { NumericInput } from "@/components/dashboard/shared/numeric-input"
-import { Input } from "@/components/ui/input"
 import type { Employee } from "@/lib/types"
 
 const initialState: UpdateEmployeeState = {}
@@ -42,13 +36,11 @@ export function EditEmployeeDialog({
   const router = useRouter()
   const [state, setState] = React.useState<UpdateEmployeeState>(initialState)
   const [isPending, startTransition] = React.useTransition()
-  const formRef = React.useRef<HTMLFormElement>(null)
 
-  React.useEffect(() => {
-    if (open) {
-      formRef.current?.reset()
-    }
-  }, [open, employee])
+  function handleOpenChange(nextOpen: boolean) {
+    setState(initialState)
+    onOpenChange(nextOpen)
+  }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -60,116 +52,53 @@ export function EditEmployeeDialog({
 
       if (result.success) {
         onOpenChange(false)
+        setState(initialState)
         router.refresh()
       }
     })
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="flex max-h-[min(92vh,48rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
+        <DialogHeader className="shrink-0 border-b px-6 py-4">
           <DialogTitle>Edit Employee</DialogTitle>
           <DialogDescription>
             Update the employee details below. All fields are required.
           </DialogDescription>
         </DialogHeader>
-        <form ref={formRef} onSubmit={handleSubmit} key={employee.id}>
+        <form
+          onSubmit={handleSubmit}
+          key={employee.id}
+          className="flex min-h-0 flex-1 flex-col"
+        >
           <input type="hidden" name="id" value={employee.id} />
-          <FieldGroup>
-            {state.error ? (
-              <Alert variant="destructive">
-                <AlertDescription>{state.error}</AlertDescription>
-              </Alert>
-            ) : null}
-            <Field>
-              <FieldLabel htmlFor={`edit-name-${employee.id}`}>
-                Employee Name
-              </FieldLabel>
-              <Input
-                id={`edit-name-${employee.id}`}
-                name="name"
-                defaultValue={employee.name}
-                required
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+            <div className="flex flex-col gap-4">
+              {state.error ? (
+                <Alert variant="destructive">
+                  <AlertDescription>{state.error}</AlertDescription>
+                </Alert>
+              ) : null}
+              <EmployeeFormFields
+                employee={employee}
+                idPrefix={`edit-${employee.id}`}
+                resetKey={employee.id}
               />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor={`edit-employeeId-${employee.id}`}>
-                Employee ID
-              </FieldLabel>
-              <Input
-                id={`edit-employeeId-${employee.id}`}
-                name="employeeId"
-                defaultValue={employee.employeeId}
-                required
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor={`edit-email-${employee.id}`}>Email</FieldLabel>
-              <Input
-                id={`edit-email-${employee.id}`}
-                name="email"
-                type="email"
-                autoComplete="email"
-                defaultValue={employee.email}
-                required
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor={`edit-tin-${employee.id}`}>TIN</FieldLabel>
-              <NumericInput
-                id={`edit-tin-${employee.id}`}
-                name="tin"
-                defaultValue={employee.tin.replace(/\D/g, "")}
-                required
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor={`edit-sssNo-${employee.id}`}>
-                SSS NO.
-              </FieldLabel>
-              <NumericInput
-                id={`edit-sssNo-${employee.id}`}
-                name="sssNo"
-                defaultValue={employee.sssNo.replace(/\D/g, "")}
-                required
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor={`edit-phicNo-${employee.id}`}>
-                PHIC NO.
-              </FieldLabel>
-              <NumericInput
-                id={`edit-phicNo-${employee.id}`}
-                name="phicNo"
-                defaultValue={employee.phicNo.replace(/\D/g, "")}
-                required
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor={`edit-hdmfNo-${employee.id}`}>
-                HDMF NO.
-              </FieldLabel>
-              <NumericInput
-                id={`edit-hdmfNo-${employee.id}`}
-                name="hdmfNo"
-                defaultValue={employee.hdmfNo.replace(/\D/g, "")}
-                required
-              />
-            </Field>
-            <DialogFooter className="px-0">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isPending}>
-                {isPending ? "Saving…" : "Save Changes"}
-              </Button>
-            </DialogFooter>
-          </FieldGroup>
+            </div>
+          </div>
+          <DialogFooter className="shrink-0 border-t px-6 py-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isPending}>
+              {isPending ? "Saving…" : "Save Changes"}
+            </Button>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
