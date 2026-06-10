@@ -13,13 +13,19 @@ import {
 import type { PayslipPayrollInputs, PayslipTotals } from "@/lib/types"
 
 export function createEmptyPayslipInputs(): PayslipPayrollInputs {
-  return ALL_PAYSLIP_FIELD_KEYS.reduce(
-    (acc, key) => {
-      acc[key as keyof PayslipPayrollInputs] = 0
-      return acc
-    },
-    {} as PayslipPayrollInputs
-  )
+  return ALL_PAYSLIP_FIELD_KEYS.reduce((acc, key) => {
+    acc[key as keyof PayslipPayrollInputs] = 0
+    return acc
+  }, {} as PayslipPayrollInputs)
+}
+
+export function createPayslipInputsWithBasicPay(
+  basicPay: number
+): PayslipPayrollInputs {
+  return {
+    ...createEmptyPayslipInputs(),
+    basicPay,
+  }
 }
 
 function roundMoney(value: number): number {
@@ -99,9 +105,7 @@ export function calculatePayslipTotals(
 
   const taxableEarnings = roundMoney(
     Object.entries(lineAmounts)
-      .filter(([key]) =>
-        PAY_DETAILS_FIELDS.some((field) => field.key === key)
-      )
+      .filter(([key]) => PAY_DETAILS_FIELDS.some((field) => field.key === key))
       .reduce((sum, [, amount]) => sum + amount, 0)
   )
 

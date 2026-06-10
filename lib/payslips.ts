@@ -12,6 +12,7 @@ import { findEmployeeByEmployeeId, getEmployees } from "@/lib/employees"
 import {
   calculatePayslipTotals,
   createEmptyPayslipInputs,
+  createPayslipInputsWithBasicPay,
 } from "@/lib/payroll-calculator"
 import type {
   EmployeePayslip,
@@ -293,17 +294,20 @@ export async function createPayslipsForPayroll(
     employeeId: employee.employeeId,
     status: "draft" as const,
   }))
-  const inputs = createEmptyPayslipInputs()
-  const totals = buildPayslipTotals(inputs)
-
   await client.insert(payslips).values(rows)
   await client.insert(payslipInputs).values(
-    rows.map((row) => ({
-      payslipId: row.id,
-      inputs,
-      totals,
-      updatedAt: new Date(),
-    }))
+    rows.map((row, index) => {
+      const inputs = createPayslipInputsWithBasicPay(
+        newPayslips[index].basicPay
+      )
+
+      return {
+        payslipId: row.id,
+        inputs,
+        totals: buildPayslipTotals(inputs),
+        updatedAt: new Date(),
+      }
+    })
   )
 
   return rows.length

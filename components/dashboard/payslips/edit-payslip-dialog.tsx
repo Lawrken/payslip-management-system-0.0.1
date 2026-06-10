@@ -1,9 +1,6 @@
 "use client"
 
-import {
-  ArrowLeft01Icon,
-  ArrowRight01Icon,
-} from "@hugeicons/core-free-icons"
+import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useRouter } from "next/navigation"
 import * as React from "react"
@@ -33,6 +30,7 @@ import {
 import {
   calculatePayslipTotals,
   createEmptyPayslipInputs,
+  createPayslipInputsWithBasicPay,
   parseDecimalInput,
 } from "@/lib/payroll-calculator"
 import type { Employee, Payslip, PayslipPayrollInputs } from "@/lib/types"
@@ -169,14 +167,14 @@ export function EditPayslipDialog({
 
     onActiveIndexChange(-1)
     setEmployeeId(nextEmployeeId)
-    setInputs(createEmptyPayslipInputs())
+    const selectedEmployee = employees.find(
+      (employee) => employee.employeeId === nextEmployeeId
+    )
+    setInputs(createPayslipInputsWithBasicPay(selectedEmployee?.basicPay ?? 0))
     setFieldDrafts({})
   }
 
-  function handleFieldChange(
-    key: keyof PayslipPayrollInputs,
-    value: string
-  ) {
+  function handleFieldChange(key: keyof PayslipPayrollInputs, value: string) {
     if (value === "") {
       setFieldDrafts((prev) => {
         const next = { ...prev }
@@ -256,7 +254,7 @@ export function EditPayslipDialog({
         <DialogHeader className="shrink-0 space-y-0 border-b px-6 py-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <DialogTitle className="shrink-0">Edit Payslip</DialogTitle>
-            <div className="flex w-full min-w-0 overflow-hidden rounded-md border border-input shadow-xs dark:bg-input/30 lg:max-w-xl">
+            <div className="flex w-full min-w-0 overflow-hidden rounded-md border border-input shadow-xs lg:max-w-xl dark:bg-input/30">
               <Button
                 type="button"
                 variant="ghost"
