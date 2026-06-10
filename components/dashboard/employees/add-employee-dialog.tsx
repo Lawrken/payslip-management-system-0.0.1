@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import * as React from "react"
+import { toast } from "sonner"
 
 import {
   addEmployeeAction,
@@ -47,6 +48,17 @@ export function AddEmployeeDialog({ children }: AddEmployeeDialogProps) {
         setFormKey((key) => key + 1)
         formRef.current?.reset()
         router.refresh()
+        toast.success("Employee created", {
+          description:
+            "Share the initial password with the employee and ask them to change it after first login.",
+          action: {
+            label: "Copy password",
+            onClick: () => {
+              void navigator.clipboard.writeText(result.initialPassword!)
+            },
+          },
+          duration: 10000,
+        })
         return
       }
 
