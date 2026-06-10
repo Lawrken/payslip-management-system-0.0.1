@@ -13,9 +13,16 @@ const MONTH_NAMES = [
   "December",
 ] as const
 
-function parseIsoDate(isoDate: string): Date {
+export function parseIsoDate(isoDate: string): Date {
   const [year, month, day] = isoDate.split("-").map(Number)
   return new Date(year, month - 1, day)
+}
+
+export function formatIsoDate(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
 }
 
 export function formatPayrollPeriodLabel(start: string, end: string): string {
@@ -38,6 +45,42 @@ export function formatDisplayDate(isoDate: string): string {
   const day = String(date.getDate()).padStart(2, "0")
   const year = date.getFullYear()
   return `${month}/${day}/${year}`
+}
+
+function isValidCalendarDate(year: number, month: number, day: number): boolean {
+  const date = new Date(year, month - 1, day)
+  return (
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day
+  )
+}
+
+export function parseDisplayDate(value: string): Date | null {
+  const trimmed = value.trim()
+  if (!trimmed) {
+    return null
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    const [year, month, day] = trimmed.split("-").map(Number)
+    return isValidCalendarDate(year, month, day) ? parseIsoDate(trimmed) : null
+  }
+
+  const slashMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  if (!slashMatch) {
+    return null
+  }
+
+  const month = Number(slashMatch[1])
+  const day = Number(slashMatch[2])
+  const year = Number(slashMatch[3])
+
+  if (!isValidCalendarDate(year, month, day)) {
+    return null
+  }
+
+  return new Date(year, month - 1, day)
 }
 
 export function formatDtrCutOffRange(start: string, end: string): string {
