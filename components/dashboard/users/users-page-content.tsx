@@ -2,8 +2,8 @@
 
 import * as React from "react"
 
+import { UserCombobox } from "@/components/dashboard/shared/user-combobox"
 import { UsersTable } from "@/components/dashboard/users/users-table"
-import { Input } from "@/components/ui/input"
 import type { Role, UserAccount } from "@/lib/types"
 
 type UsersPageContentProps = {
@@ -17,42 +17,29 @@ export function UsersPageContent({
   currentEmployeeId,
   currentRole,
 }: UsersPageContentProps) {
-  const [query, setQuery] = React.useState("")
+  const [selectedEmployeeId, setSelectedEmployeeId] = React.useState("")
+
   const filteredUsers = React.useMemo(() => {
-    const search = query.trim().toLowerCase()
-    if (!search) {
+    if (!selectedEmployeeId) {
       return users
     }
-
-    return users.filter((user) => {
-      return (
-        user.employeeId.toLowerCase().includes(search) ||
-        user.email.toLowerCase().includes(search) ||
-        user.role.toLowerCase().includes(search) ||
-        (user.employeeName?.toLowerCase().includes(search) ?? false)
-      )
-    })
-  }, [query, users])
+    return users.filter((user) => user.employeeId === selectedEmployeeId)
+  }, [selectedEmployeeId, users])
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Users</h1>
-        <p className="text-sm text-muted-foreground">
-          Manage login accounts and reset forgotten passwords to their stored
-          initial password.
-        </p>
-      </div>
-
-      <div className="flex max-w-sm flex-col gap-2">
-        <label className="text-sm font-medium" htmlFor="userSearch">
-          Filter users
-        </label>
-        <Input
-          id="userSearch"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Email, Employee ID, name, or role"
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Users</h1>
+          <p className="text-sm text-muted-foreground">
+            Manage login accounts and reset forgotten passwords to their stored
+            initial password.
+          </p>
+        </div>
+        <UserCombobox
+          users={users}
+          value={selectedEmployeeId}
+          onChange={setSelectedEmployeeId}
         />
       </div>
 
@@ -60,6 +47,11 @@ export function UsersPageContent({
         users={filteredUsers}
         currentEmployeeId={currentEmployeeId}
         currentRole={currentRole}
+        emptyMessage={
+          selectedEmployeeId
+            ? "No user matches that selection."
+            : "No users found."
+        }
       />
     </div>
   )
