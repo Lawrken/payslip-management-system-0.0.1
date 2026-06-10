@@ -39,12 +39,111 @@ function isValidShiftType(value: string): value is ShiftType {
   return VALID_SHIFT_TYPES.has(value as ShiftType)
 }
 
-export function isHolidayShiftType(shiftType: ShiftType | ""): boolean {
+function isHolidayShiftType(shiftType: ShiftType | ""): boolean {
   return shiftType === "specialHoliday" || shiftType === "legalHoliday"
 }
 
 export function isTimesRequired(shiftType: ShiftType | ""): boolean {
   return shiftType === "scheduledShift"
+}
+
+function isShiftTimesRequired(shiftType: ShiftType | ""): boolean {
+  return shiftType === "scheduledShift" || shiftType === "legalHoliday"
+}
+
+export function isTimesAllowed(shiftType: ShiftType | ""): boolean {
+  return isTimesRequired(shiftType) || isHolidayShiftType(shiftType)
+}
+
+function hasTimeValue(value: string): boolean {
+  return value.trim().length > 0
+}
+
+function normalizeDayTimes(day: Partial<EmployeeScheduleDay>) {
+  return {
+    shiftIn: normalizeTimeValue(String(day.shiftIn ?? "")),
+    shiftOut: normalizeTimeValue(String(day.shiftOut ?? "")),
+    logIn: normalizeTimeValue(String(day.logIn ?? "")),
+    logOut: normalizeTimeValue(String(day.logOut ?? "")),
+  }
+}
+
+function validateTimePair(
+  inValue: string,
+  outValue: string,
+  inLabel: string,
+  outLabel: string,
+  dateLabel: string
+): { error: string } | null {
+  const hasIn = hasTimeValue(inValue)
+  const hasOut = hasTimeValue(outValue)
+
+  if (hasIn && !hasOut) {
+    return {
+      error: `${outLabel} is required when ${inLabel} is set on ${dateLabel}.`,
+    }
+  }
+  if (hasOut && !hasIn) {
+    return {
+      error: `${inLabel} is required when ${outLabel} is set on ${dateLabel}.`,
+    }
+  }
+  if (hasIn && !isValidTimeValue(inValue)) {
+    return { error: `Invalid ${inLabel.toLowerCase()} on ${dateLabel}.` }
+  }
+  if (hasOut && !isValidTimeValue(outValue)) {
+    return { error: `Invalid ${outLabel.toLowerCase()} on ${dateLabel}.` }
+  }
+  return null
+}
+
+function validateRequiredShiftTimes(
+  day: EmployeeScheduleDay,
+  dateLabel: string
+): { error: string } | null {
+  if (!isValidTimeValue(day.shiftIn) || !isValidTimeValue(day.shiftOut)) {
+    return {
+      error: `Shift-in and shift-out are required on ${dateLabel}.`,
+    }
+  }
+  return null
+}
+
+function validateDayTimePairs(
+  day: EmployeeScheduleDay,
+  dateLabel: string
+): { error: string } | null {
+  const shiftError = validateTimePair(
+    day.shiftIn,
+    day.shiftOut,
+    "Shift-in",
+    "Shift-out",
+    dateLabel
+  )
+  if (shiftError) {
+    return shiftError
+  }
+
+  return validateTimePair(
+    day.logIn,
+    day.logOut,
+    "Log-in",
+    "Log-out",
+    dateLabel
+  )
+}
+
+function validateOptionalLogTimes(
+  day: EmployeeScheduleDay,
+  dateLabel: string
+): { error: string } | null {
+  return validateTimePair(
+    day.logIn,
+    day.logOut,
+    "Log-in",
+    "Log-out",
+    dateLabel
+  )
 }
 
 function dtrStatusToShiftType(status: DtrDayStatus): ShiftType | null {
@@ -74,7 +173,7 @@ function normalizeScheduleDay(
     return {
       date: day.date,
       shiftType: holidayShiftType,
-      ...EMPTY_SCHEDULE_DAY_TIMES,
+      ...normalizeDayTimes(day),
     }
   }
 
@@ -83,12 +182,7 @@ function normalizeScheduleDay(
     : ""
 
   const times = isTimesRequired(shiftType)
-    ? {
-        shiftIn: normalizeTimeValue(String(day.shiftIn ?? "")),
-        shiftOut: normalizeTimeValue(String(day.shiftOut ?? "")),
-        logIn: normalizeTimeValue(String(day.logIn ?? "")),
-        logOut: normalizeTimeValue(String(day.logOut ?? "")),
-      }
+    ? normalizeDayTimes(day)
     : { ...EMPTY_SCHEDULE_DAY_TIMES }
 
   return {
@@ -210,20 +304,27 @@ export function validateScheduleDays(
       : null
 
     if (expectedHolidayShift) {
+      const dateLabel = formatLongDisplayDate(date)
       if (day.shiftType !== expectedHolidayShift) {
         return {
-          error: `Holiday shift type must match payroll for ${formatLongDisplayDate(date)}.`,
+          error: `Holiday shift type must match payroll for ${dateLabel}.`,
         }
       }
-      if (
-        day.shiftIn ||
-        day.shiftOut ||
-        day.logIn ||
-        day.logOut
-      ) {
-        return {
-          error: `Time fields must be empty for holidays (${formatLongDisplayDate(date)}).`,
+      if (day.shiftType === "legalHoliday") {
+        const shiftRequiredError = validateRequiredShiftTimes(day, dateLabel)
+        if (shiftRequiredError) {
+          return shiftRequiredError
         }
+      } else {
+        const pairError = validateDayTimePairs(day, dateLabel)
+        if (pairError) {
+          return pairError
+        }
+        continue
+      }
+      const logPairError = validateOptionalLogTimes(day, dateLabel)
+      if (logPairError) {
+        return logPairError
       }
       continue
     }
@@ -234,13 +335,15 @@ export function validateScheduleDays(
       }
     }
 
-    if (isTimesRequired(day.shiftType)) {
-      for (const field of ["shiftIn", "shiftOut", "logIn", "logOut"] as const) {
-        if (!isValidTimeValue(day[field])) {
-          return {
-            error: `All time fields are required for scheduled shifts on ${formatLongDisplayDate(date)}.`,
-          }
-        }
+    if (isShiftTimesRequired(day.shiftType)) {
+      const dateLabel = formatLongDisplayDate(date)
+      const shiftRequiredError = validateRequiredShiftTimes(day, dateLabel)
+      if (shiftRequiredError) {
+        return shiftRequiredError
+      }
+      const logPairError = validateOptionalLogTimes(day, dateLabel)
+      if (logPairError) {
+        return logPairError
       }
     } else if (
       day.shiftIn ||

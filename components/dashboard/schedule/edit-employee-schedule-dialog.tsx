@@ -78,7 +78,9 @@ function EditEmployeeScheduleDialogContent({
         <DialogTitle>{employeeName}</DialogTitle>
         <DialogDescription>
           Employee schedule for {payroll.payrollPeriodLabel}. Holiday shift types
-          are set from the payroll DTR calendar.
+          are set from the payroll DTR calendar. Scheduled shifts and legal holidays
+          require shift-in and shift-out. Log times are optional but must be entered
+          in pairs when used.
         </DialogDescription>
       </DialogHeader>
       <form onSubmit={handleSubmit}>

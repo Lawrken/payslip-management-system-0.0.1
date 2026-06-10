@@ -19,8 +19,8 @@ import {
 import { TimePicker } from "@/components/ui/time-picker"
 import {
   getHolidayNameForDate,
-  isHolidayShiftType,
   isScheduleDayHolidayLocked,
+  isTimesAllowed,
   isTimesRequired,
   MANUAL_SHIFT_TYPE_OPTIONS,
   SHIFT_TYPE_OPTIONS,
@@ -125,7 +125,7 @@ export function EmployeeScheduleDaysTable({
             const dateLabel = formatLongDisplayDate(day.date)
             const isHolidayLocked = isScheduleDayHolidayLocked(payroll, day.date)
             const holidayName = getHolidayNameForDate(payroll, day.date)
-            const timesEnabled = isTimesRequired(day.shiftType)
+            const timesEnabled = isTimesAllowed(day.shiftType)
 
             return (
               <TableRow key={day.date}>
@@ -156,7 +156,7 @@ export function EmployeeScheduleDaysTable({
                     onChange={(timeValue) =>
                       handleTimeChange(day.date, "shiftIn", timeValue)
                     }
-                    disabled={!timesEnabled || isHolidayShiftType(day.shiftType)}
+                    disabled={!timesEnabled}
                     aria-label={`Shift-in for ${dateLabel}`}
                   />
                 </TableCell>
@@ -166,7 +166,7 @@ export function EmployeeScheduleDaysTable({
                     onChange={(timeValue) =>
                       handleTimeChange(day.date, "shiftOut", timeValue)
                     }
-                    disabled={!timesEnabled || isHolidayShiftType(day.shiftType)}
+                    disabled={!timesEnabled}
                     aria-label={`Shift-out for ${dateLabel}`}
                   />
                 </TableCell>
@@ -176,7 +176,7 @@ export function EmployeeScheduleDaysTable({
                     onChange={(timeValue) =>
                       handleTimeChange(day.date, "logIn", timeValue)
                     }
-                    disabled={!timesEnabled || isHolidayShiftType(day.shiftType)}
+                    disabled={!timesEnabled}
                     aria-label={`Log-in for ${dateLabel}`}
                   />
                 </TableCell>
@@ -186,7 +186,7 @@ export function EmployeeScheduleDaysTable({
                     onChange={(timeValue) =>
                       handleTimeChange(day.date, "logOut", timeValue)
                     }
-                    disabled={!timesEnabled || isHolidayShiftType(day.shiftType)}
+                    disabled={!timesEnabled}
                     aria-label={`Log-out for ${dateLabel}`}
                   />
                 </TableCell>
