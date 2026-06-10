@@ -1,43 +1,10 @@
+import "server-only"
+
 import { and, desc, eq, gte, lte } from "drizzle-orm"
 
 import { db, type DatabaseClient } from "@/db"
 import { auditLogs } from "@/db/schema"
-import type {
-  AuditAction,
-  AuditLog,
-  AuditLogQuery,
-  Role,
-  Session,
-} from "@/lib/types"
-
-export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
-  "employee.create": "Employee created",
-  "employee.update": "Employee edited",
-  "employee.delete": "Employee deleted",
-  "user.create": "User created",
-  "user.password_reset": "Password reset",
-  "payroll.create": "Payroll created",
-  "payroll.update": "Payroll edited",
-  "payroll.delete": "Payroll deleted",
-  "payslip.create": "Payslip created",
-  "payslip.update": "Payslip edited",
-  "payslip.delete": "Payslip deleted",
-  "payslip.admin_check": "Payslip checked",
-  "payslip.superadmin_approve": "Payslip ready for email",
-  "payslip.return": "Payslip returned",
-  "payslip.email_send": "Payslip email sent",
-  "payslip.bulk_send": "Payslips sent",
-}
-
-export const AUDIT_ACTIONS = Object.keys(AUDIT_ACTION_LABELS) as AuditAction[]
-
-export const AUDIT_ACTOR_ROLE_LABELS: Record<Role, string> = {
-  admin: "Admin",
-  superAdmin: "Superadmin",
-  employee: "Employee",
-}
-
-export const AUDIT_ACTOR_ROLES = Object.keys(AUDIT_ACTOR_ROLE_LABELS) as Role[]
+import type { AuditAction, AuditLog, AuditLogQuery, Session } from "@/lib/types"
 
 type CreateAuditLogInput = {
   actor: Session
