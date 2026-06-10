@@ -7,19 +7,15 @@ import {
   updatePayrollAction,
   type UpdatePayrollState,
 } from "@/app/dashboard/payrolls/actions"
-import { PayrollFormFields } from "@/components/dashboard/payrolls/payroll-form-fields"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
+import { PayrollDialogSteps } from "@/components/dashboard/payrolls/payroll-dialog-steps"
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { FieldGroup } from "@/components/ui/field"
 import type { Payroll } from "@/lib/types"
+import { cn } from "@/lib/utils"
 
 const initialState: UpdatePayrollState = {}
 
@@ -36,19 +32,10 @@ export function EditPayrollDialog({
 }: EditPayrollDialogProps) {
   const router = useRouter()
   const [state, setState] = React.useState<UpdatePayrollState>(initialState)
+  const [step, setStep] = React.useState<1 | 2>(1)
   const [isPending, startTransition] = React.useTransition()
-  const formRef = React.useRef<HTMLFormElement>(null)
 
-  React.useEffect(() => {
-    if (open) {
-      formRef.current?.reset()
-    }
-  }, [open, payroll])
-
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const formData = new FormData(event.currentTarget)
-
+  function handleSubmit(formData: FormData) {
     startTransition(async () => {
       const result = await updatePayrollAction(initialState, formData)
       setState(result)
@@ -60,38 +47,37 @@ export function EditPayrollDialog({
     })
   }
 
+  function handleOpenChange(nextOpen: boolean) {
+    onOpenChange(nextOpen)
+    if (!nextOpen) {
+      setStep(1)
+      setState(initialState)
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent
+        className={cn(
+          step === 2
+            ? "flex max-h-[min(92vh,48rem)] flex-col sm:max-w-5xl"
+            : "sm:max-w-lg"
+        )}
+      >
         <DialogHeader>
           <DialogTitle>Edit Payroll</DialogTitle>
-          <DialogDescription>
-            Update the payroll period, DTR cut-off, and payout date.
-          </DialogDescription>
         </DialogHeader>
-        <form ref={formRef} onSubmit={handleSubmit} key={payroll.id}>
-          <input type="hidden" name="id" value={payroll.id} />
-          <FieldGroup>
-            {state.error ? (
-              <Alert variant="destructive">
-                <AlertDescription>{state.error}</AlertDescription>
-              </Alert>
-            ) : null}
-            <PayrollFormFields payroll={payroll} idPrefix={payroll.id} />
-            <DialogFooter className="px-0">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isPending}>
-                {isPending ? "Saving…" : "Save Changes"}
-              </Button>
-            </DialogFooter>
-          </FieldGroup>
-        </form>
+        <PayrollDialogSteps
+          key={open ? payroll.id : "edit-closed"}
+          mode="edit"
+          payroll={payroll}
+          error={state.error}
+          isPending={isPending}
+          submitLabel="Save Changes"
+          onSubmit={handleSubmit}
+          onCancel={() => handleOpenChange(false)}
+          onStepChange={setStep}
+        />
       </DialogContent>
     </Dialog>
   )

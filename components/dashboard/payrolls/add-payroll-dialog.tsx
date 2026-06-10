@@ -7,19 +7,15 @@ import {
   addPayrollAction,
   type AddPayrollState,
 } from "@/app/dashboard/payrolls/actions"
-import { PayrollFormFields } from "@/components/dashboard/payrolls/payroll-form-fields"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
+import { PayrollDialogSteps } from "@/components/dashboard/payrolls/payroll-dialog-steps"
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { FieldGroup } from "@/components/ui/field"
+import { cn } from "@/lib/utils"
 
 const initialState: AddPayrollState = {}
 
@@ -31,57 +27,52 @@ export function AddPayrollDialog({ children }: AddPayrollDialogProps) {
   const router = useRouter()
   const [open, setOpen] = React.useState(false)
   const [state, setState] = React.useState<AddPayrollState>(initialState)
+  const [step, setStep] = React.useState<1 | 2>(1)
   const [isPending, startTransition] = React.useTransition()
-  const formRef = React.useRef<HTMLFormElement>(null)
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const formData = new FormData(event.currentTarget)
-
+  function handleSubmit(formData: FormData) {
     startTransition(async () => {
       const result = await addPayrollAction(initialState, formData)
       setState(result)
 
       if (result.success) {
         setOpen(false)
-        formRef.current?.reset()
         router.refresh()
       }
     })
   }
 
+  function handleOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen)
+    if (!nextOpen) {
+      setStep(1)
+      setState(initialState)
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent
+        className={cn(
+          step === 2
+            ? "flex max-h-[min(92vh,48rem)] flex-col sm:max-w-5xl"
+            : "sm:max-w-lg"
+        )}
+      >
         <DialogHeader>
           <DialogTitle>Add Payroll</DialogTitle>
-          <DialogDescription>
-            Set the payroll period, DTR cut-off, and payout date.
-          </DialogDescription>
         </DialogHeader>
-        <form ref={formRef} onSubmit={handleSubmit}>
-          <FieldGroup>
-            {state.error ? (
-              <Alert variant="destructive">
-                <AlertDescription>{state.error}</AlertDescription>
-              </Alert>
-            ) : null}
-            <PayrollFormFields />
-            <DialogFooter className="px-0">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isPending}>
-                {isPending ? "Saving…" : "Save Payroll"}
-              </Button>
-            </DialogFooter>
-          </FieldGroup>
-        </form>
+        <PayrollDialogSteps
+          key={open ? "add-open" : "add-closed"}
+          mode="add"
+          error={state.error}
+          isPending={isPending}
+          submitLabel="Save Payroll"
+          onSubmit={handleSubmit}
+          onCancel={() => handleOpenChange(false)}
+          onStepChange={setStep}
+        />
       </DialogContent>
     </Dialog>
   )
