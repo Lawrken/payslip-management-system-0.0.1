@@ -14,7 +14,7 @@ const VALID_DTR_DAY_STATUSES = new Set<DtrDayStatus>(
   DTR_DAY_STATUS_OPTIONS.map((option) => option.value)
 )
 
-export function isValidDtrDayStatus(status: string): status is DtrDayStatus {
+function isValidDtrDayStatus(status: string): status is DtrDayStatus {
   return VALID_DTR_DAY_STATUSES.has(status as DtrDayStatus)
 }
 
@@ -33,7 +33,7 @@ function normalizePayrollDtrDay(day: Partial<PayrollDtrDay> & { date: string; st
   }
 }
 
-export function buildDefaultDtrDays(
+function buildDefaultDtrDays(
   start: string,
   end: string
 ): PayrollDtrDay[] {

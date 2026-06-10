@@ -17,6 +17,8 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "payslip.return": "Payslip returned",
   "payslip.email_send": "Payslip email sent",
   "payslip.bulk_send": "Payslips sent",
+  "schedule.create": "Schedule created",
+  "schedule.update": "Schedule updated",
 }
 
 export const AUDIT_ACTIONS = Object.keys(AUDIT_ACTION_LABELS) as AuditAction[]

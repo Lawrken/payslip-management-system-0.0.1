@@ -18,6 +18,7 @@ import type {
 } from "@/lib/employee-options"
 import type {
   AuditAction,
+  EmployeeScheduleDay,
   PayrollDtrDay,
   PayslipPayrollInputs,
   PayslipStatus,
@@ -100,6 +101,32 @@ export const payslips = pgTable(
   (table) => [
     index("payslips_payroll_id_idx").on(table.payrollId),
     index("payslips_employee_id_idx").on(table.employeeId),
+  ]
+)
+
+export const employeeSchedules = pgTable(
+  "employee_schedules",
+  {
+    id: text("id").primaryKey(),
+    payrollId: text("payroll_id")
+      .notNull()
+      .references(() => payrolls.id, { onDelete: "cascade" }),
+    employeeId: text("employee_id").notNull(),
+    days: jsonb("days").$type<EmployeeScheduleDay[]>().notNull().default([]),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("employee_schedules_payroll_id_idx").on(table.payrollId),
+    index("employee_schedules_employee_id_idx").on(table.employeeId),
+    index("employee_schedules_payroll_employee_idx").on(
+      table.payrollId,
+      table.employeeId
+    ),
   ]
 )
 

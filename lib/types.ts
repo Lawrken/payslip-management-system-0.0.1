@@ -60,6 +60,40 @@ export type PayrollDtrDay = {
   holidayName: string
 }
 
+export type ShiftType =
+  | "scheduledShift"
+  | "vacationLeave"
+  | "sickLeave"
+  | "restDay"
+  | "float"
+  | "notYetHired"
+  | "vacationLeaveWithoutPay"
+  | "specialHoliday"
+  | "legalHoliday"
+
+export type EmployeeScheduleDay = {
+  date: string
+  shiftType: ShiftType | ""
+  shiftIn: string
+  shiftOut: string
+  logIn: string
+  logOut: string
+}
+
+export type EmployeeSchedule = {
+  id: string
+  payrollId: string
+  employeeId: string
+  days: EmployeeScheduleDay[]
+}
+
+export type EmployeeScheduleRow = {
+  employeeId: string
+  employeeName: string
+  employeeNumber: string
+  status: "modified" | "notModified"
+}
+
 export type Payroll = {
   id: string
   /** Display label, e.g. "March 16-31, 2026" */
@@ -187,6 +221,8 @@ export type AuditAction =
   | "payslip.return"
   | "payslip.email_send"
   | "payslip.bulk_send"
+  | "schedule.create"
+  | "schedule.update"
 
 export type AuditLog = {
   id: string
