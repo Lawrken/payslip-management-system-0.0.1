@@ -7,10 +7,21 @@ import {
   addEmployee,
   deleteEmployee,
   getEmployeeById,
+  type NewEmployeeInput,
   updateEmployee,
 } from "@/lib/employees"
 import { createAuditLog } from "@/lib/audit-logs"
 import { requireDashboardSession } from "@/lib/authorization"
+import {
+  ACCOUNTS,
+  DEPARTMENTS,
+  EMPLOYEE_STATUSES,
+  isEmployeeDivisor,
+  isEmployeeOption,
+  POSITION_TITLES,
+  PROGRAMS,
+} from "@/lib/employee-options"
+import { parseDecimalInput } from "@/lib/payroll-calculator"
 import { createUserAccount, syncEmployeeUserIdentity } from "@/lib/users"
 
 type EmployeeFormState = {
@@ -29,6 +40,13 @@ function parseEmployeeFormData(formData: FormData) {
     name: String(formData.get("name") ?? "").trim(),
     employeeId: String(formData.get("employeeId") ?? "").trim(),
     email: String(formData.get("email") ?? "").trim(),
+    employeeStatus: String(formData.get("employeeStatus") ?? "").trim(),
+    positionTitle: String(formData.get("positionTitle") ?? "").trim(),
+    department: String(formData.get("department") ?? "").trim(),
+    program: String(formData.get("program") ?? "").trim(),
+    account: String(formData.get("account") ?? "").trim(),
+    divisor: Number(String(formData.get("divisor") ?? "").trim()),
+    basicPay: parseDecimalInput(String(formData.get("basicPay") ?? "")),
     tin: String(formData.get("tin") ?? "").trim(),
     sssNo: String(formData.get("sssNo") ?? "").trim(),
     phicNo: String(formData.get("phicNo") ?? "").trim(),
@@ -53,6 +71,11 @@ function validateEmployeeFields(
     !fields.name ||
     !fields.employeeId ||
     !fields.email ||
+    !fields.employeeStatus ||
+    !fields.positionTitle ||
+    !fields.department ||
+    !fields.program ||
+    !fields.account ||
     !fields.tin ||
     !fields.sssNo ||
     !fields.phicNo ||
@@ -63,6 +86,24 @@ function validateEmployeeFields(
 
   if (!isValidEmail(fields.email)) {
     return { error: "Enter a valid email address." } as const
+  }
+
+  if (
+    !isEmployeeOption(fields.employeeStatus, EMPLOYEE_STATUSES) ||
+    !isEmployeeOption(fields.positionTitle, POSITION_TITLES) ||
+    !isEmployeeOption(fields.department, DEPARTMENTS) ||
+    !isEmployeeOption(fields.program, PROGRAMS) ||
+    !isEmployeeOption(fields.account, ACCOUNTS)
+  ) {
+    return { error: "Choose a valid employee profile option." } as const
+  }
+
+  if (!isEmployeeDivisor(fields.divisor)) {
+    return { error: "Choose a valid divisor." } as const
+  }
+
+  if (Number.isNaN(fields.basicPay)) {
+    return { error: "Basic Pay must be a non-negative number." } as const
   }
 
   for (const field of numericIdFields) {
@@ -91,9 +132,10 @@ export async function addEmployeeAction(
   if (validationError) {
     return validationError
   }
+  const employeeInput = fields as NewEmployeeInput
 
   const result = await db.transaction(async (tx) => {
-    const employee = await addEmployee(fields, tx)
+    const employee = await addEmployee(employeeInput, tx)
 
     if ("error" in employee) {
       return { error: employee.error }
@@ -170,10 +212,11 @@ export async function updateEmployeeAction(
   if (validationError) {
     return validationError
   }
+  const employeeInput = fields as NewEmployeeInput
 
   const result = await db.transaction(async (tx) => {
     const previousEmployee = await getEmployeeById(id, tx)
-    const employee = await updateEmployee({ id, ...fields }, tx)
+    const employee = await updateEmployee({ id, ...employeeInput }, tx)
 
     if ("error" in employee) {
       return { error: employee.error }

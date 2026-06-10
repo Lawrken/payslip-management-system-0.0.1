@@ -1,3 +1,12 @@
+import type {
+  Account,
+  Department,
+  EmployeeDivisor,
+  EmployeeStatus,
+  PositionTitle,
+  Program,
+} from "@/lib/employee-options"
+
 export type Role = "admin" | "superAdmin" | "employee"
 
 export type User = {
@@ -30,6 +39,13 @@ export type Employee = {
   name: string
   employeeId: string
   email: string
+  employeeStatus: EmployeeStatus
+  positionTitle: PositionTitle
+  department: Department
+  program: Program
+  account: Account
+  divisor: EmployeeDivisor
+  basicPay: number
   tin: string
   sssNo: string
   phicNo: string

@@ -1,5 +1,21 @@
-import { index, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core"
+import {
+  index,
+  integer,
+  jsonb,
+  numeric,
+  pgTable,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core"
 
+import type {
+  Account,
+  Department,
+  EmployeeDivisor,
+  EmployeeStatus,
+  PositionTitle,
+  Program,
+} from "@/lib/employee-options"
 import type {
   AuditAction,
   PayslipPayrollInputs,
@@ -28,6 +44,13 @@ export const employees = pgTable("employees", {
   name: text("name").notNull(),
   employeeId: text("employee_id").notNull().unique(),
   email: text("email").notNull().unique(),
+  employeeStatus: text("employee_status").$type<EmployeeStatus>().notNull(),
+  positionTitle: text("position_title").$type<PositionTitle>().notNull(),
+  department: text("department").$type<Department>().notNull(),
+  program: text("program").$type<Program>().notNull(),
+  account: text("account").$type<Account>().notNull(),
+  divisor: integer("divisor").$type<EmployeeDivisor>().notNull(),
+  basicPay: numeric("basic_pay", { mode: "number" }).notNull(),
   tin: text("tin").notNull(),
   sssNo: text("sss_no").notNull(),
   phicNo: text("phic_no").notNull(),
