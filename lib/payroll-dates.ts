@@ -47,6 +47,12 @@ export function formatDisplayDate(isoDate: string): string {
   return `${month}/${day}/${year}`
 }
 
+export function formatLongDisplayDate(isoDate: string): string {
+  const date = parseIsoDate(isoDate)
+  const month = MONTH_NAMES[date.getMonth()]
+  return `${month} ${date.getDate()}, ${date.getFullYear()}`
+}
+
 function isValidCalendarDate(year: number, month: number, day: number): boolean {
   const date = new Date(year, month - 1, day)
   return (
@@ -101,4 +107,36 @@ export function isValidDateRange(start: string, end: string): boolean {
     return false
   }
   return end >= start
+}
+
+const DAY_OF_WEEK_NAMES = [
+  "Sun",
+  "Mon",
+  "Tue",
+  "Wed",
+  "Thu",
+  "Fri",
+  "Sat",
+] as const
+
+export function formatDayOfWeek(isoDate: string): string {
+  const date = parseIsoDate(isoDate)
+  return DAY_OF_WEEK_NAMES[date.getDay()]
+}
+
+export function enumerateIsoDates(start: string, end: string): string[] {
+  if (!isValidDateRange(start, end)) {
+    return []
+  }
+
+  const dates: string[] = []
+  const current = parseIsoDate(start)
+  const endDate = parseIsoDate(end)
+
+  while (current <= endDate) {
+    dates.push(formatIsoDate(current))
+    current.setDate(current.getDate() + 1)
+  }
+
+  return dates
 }

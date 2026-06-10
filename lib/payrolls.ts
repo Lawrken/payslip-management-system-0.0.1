@@ -2,20 +2,29 @@ import { eq } from "drizzle-orm"
 
 import { db, type DatabaseClient } from "@/db"
 import { payrolls } from "@/db/schema"
+import { resolveDtrDays, validateDtrDays } from "@/lib/dtr-days"
 import {
   dateRangesOverlap,
   formatPayrollPeriodLabel,
   isValidDateRange,
 } from "@/lib/payroll-dates"
 import { createPayslipsForPayroll } from "@/lib/payslips"
-import type { Payroll } from "@/lib/types"
+import type { Payroll, PayrollDtrDay } from "@/lib/types"
+
+function normalizePayroll(payroll: Payroll): Payroll {
+  return {
+    ...payroll,
+    dtrDays: resolveDtrDays(payroll),
+  }
+}
 
 export async function getPayrolls(
   client: DatabaseClient = db
 ): Promise<Payroll[]> {
-  return client.query.payrolls.findMany({
+  const rows = await client.query.payrolls.findMany({
     orderBy: (table, { desc }) => [desc(table.payrollPeriodEnd)],
   })
+  return rows.map(normalizePayroll)
 }
 
 export async function getPayrollById(
@@ -25,7 +34,7 @@ export async function getPayrollById(
   const payroll = await client.query.payrolls.findFirst({
     where: eq(payrolls.id, id),
   })
-  return payroll ?? null
+  return payroll ? normalizePayroll(payroll) : null
 }
 
 export async function getLatestPayroll(): Promise<Payroll | null> {
@@ -33,8 +42,12 @@ export async function getLatestPayroll(): Promise<Payroll | null> {
   return payroll ?? null
 }
 
-export type NewPayrollInput = Omit<Payroll, "id" | "payrollPeriodLabel"> & {
+export type NewPayrollInput = Omit<
+  Payroll,
+  "id" | "payrollPeriodLabel" | "dtrDays"
+> & {
   payrollPeriodLabel?: string
+  dtrDays: PayrollDtrDay[]
 }
 
 export type UpdatePayrollInput = NewPayrollInput & { id: string }
@@ -56,6 +69,15 @@ function validatePayrollDates(input: NewPayrollInput): { error: string } | null 
 
   if (!isValidDateRange(input.dtrCutOffStart, input.dtrCutOffEnd)) {
     return { error: "DTR cut-off end must be on or after the start date." }
+  }
+
+  const dtrDaysError = validateDtrDays(
+    input.dtrCutOffStart,
+    input.dtrCutOffEnd,
+    input.dtrDays
+  )
+  if (dtrDaysError) {
+    return dtrDaysError
   }
 
   return null
@@ -90,6 +112,7 @@ function buildPayroll(id: string, input: NewPayrollInput): Payroll {
     payrollPeriodEnd: input.payrollPeriodEnd,
     dtrCutOffStart: input.dtrCutOffStart,
     dtrCutOffEnd: input.dtrCutOffEnd,
+    dtrDays: input.dtrDays,
     payoutDate: input.payoutDate,
   }
 }

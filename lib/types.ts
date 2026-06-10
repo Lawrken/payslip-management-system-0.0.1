@@ -52,6 +52,14 @@ export type Employee = {
   hdmfNo: string
 }
 
+export type DtrDayStatus = "regular" | "specialHoliday" | "legalHoliday"
+
+export type PayrollDtrDay = {
+  date: string
+  status: DtrDayStatus
+  holidayName: string
+}
+
 export type Payroll = {
   id: string
   /** Display label, e.g. "March 16-31, 2026" */
@@ -61,6 +69,7 @@ export type Payroll = {
   dtrCutOffStart: string
   dtrCutOffEnd: string
   payoutDate: string
+  dtrDays: PayrollDtrDay[]
 }
 
 export type PayslipStatus =

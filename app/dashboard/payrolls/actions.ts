@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { db } from "@/db"
+import { parseDtrDaysFromFormData } from "@/lib/dtr-days"
 import {
   addPayroll,
   deletePayroll,
@@ -21,12 +22,18 @@ export type AddPayrollState = PayrollFormState
 export type UpdatePayrollState = PayrollFormState
 
 function parsePayrollFormData(formData: FormData) {
+  const dtrDays = parseDtrDaysFromFormData(formData)
+  if ("error" in dtrDays) {
+    return dtrDays
+  }
+
   return {
     payrollPeriodStart: String(formData.get("payrollPeriodStart") ?? "").trim(),
     payrollPeriodEnd: String(formData.get("payrollPeriodEnd") ?? "").trim(),
     dtrCutOffStart: String(formData.get("dtrCutOffStart") ?? "").trim(),
     dtrCutOffEnd: String(formData.get("dtrCutOffEnd") ?? "").trim(),
     payoutDate: String(formData.get("payoutDate") ?? "").trim(),
+    dtrDays,
   }
 }
 
@@ -40,6 +47,10 @@ export async function addPayrollAction(
   }
 
   const fields = parsePayrollFormData(formData)
+  if ("error" in fields) {
+    return { error: fields.error }
+  }
+
   const result = await db.transaction(async (tx) => {
     const payroll = await addPayroll(fields, tx)
 
@@ -85,6 +96,10 @@ export async function updatePayrollAction(
 
   if (!id) {
     return { error: "Payroll not found." }
+  }
+
+  if ("error" in fields) {
+    return { error: fields.error }
   }
 
   const result = await db.transaction(async (tx) => {

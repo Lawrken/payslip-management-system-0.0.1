@@ -1,0 +1,1 @@
+ALTER TABLE "payrolls" ADD COLUMN "dtr_days" jsonb DEFAULT '[]'::jsonb NOT NULL;

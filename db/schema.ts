@@ -18,6 +18,7 @@ import type {
 } from "@/lib/employee-options"
 import type {
   AuditAction,
+  PayrollDtrDay,
   PayslipPayrollInputs,
   PayslipStatus,
   PayslipTotals,
@@ -70,6 +71,7 @@ export const payrolls = pgTable("payrolls", {
   payrollPeriodEnd: text("payroll_period_end").notNull(),
   dtrCutOffStart: text("dtr_cut_off_start").notNull(),
   dtrCutOffEnd: text("dtr_cut_off_end").notNull(),
+  dtrDays: jsonb("dtr_days").$type<PayrollDtrDay[]>().notNull().default([]),
   payoutDate: text("payout_date").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
