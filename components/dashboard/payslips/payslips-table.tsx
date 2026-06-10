@@ -4,6 +4,10 @@ import * as React from "react"
 
 import { PayslipRowActions } from "@/components/dashboard/payslips/payslip-row-actions"
 import {
+  SortableTableHead,
+  useTableSort,
+} from "@/components/dashboard/shared/table-sort"
+import {
   Table,
   TableBody,
   TableCell,
@@ -17,11 +21,12 @@ import {
   isDraftStatus,
   isReturnedStatus,
 } from "@/lib/payslip-status"
+import { applyDirection, compareStrings } from "@/lib/table-sort"
+import type { SortDirection } from "@/lib/table-sort"
 import { cn } from "@/lib/utils"
 import type { Payslip } from "@/lib/types"
 
 type SortKey = "employeeName" | "employeeId" | "status"
-type SortDir = "asc" | "desc"
 
 type PayslipsTableProps = {
   payslips: Payslip[]
@@ -29,22 +34,20 @@ type PayslipsTableProps = {
   emptyMessage?: string
 }
 
-function SortIndicator({
-  active,
-  dir,
-}: {
-  active: boolean
-  dir: SortDir
-}) {
-  if (!active) {
-    return null
+function comparePayslips(
+  a: Payslip,
+  b: Payslip,
+  key: SortKey,
+  dir: SortDirection
+) {
+  if (key === "status") {
+    return comparePayslipStatus(a.status, b.status, dir)
   }
-
-  return (
-    <span className="ml-1 text-muted-foreground" aria-hidden="true">
-      {dir === "asc" ? "↑" : "↓"}
-    </span>
-  )
+  const result =
+    key === "employeeName"
+      ? compareStrings(a.employeeName, b.employeeName)
+      : compareStrings(a.employeeId, b.employeeId)
+  return applyDirection(result, dir)
 }
 
 export function PayslipsTable({
@@ -52,38 +55,15 @@ export function PayslipsTable({
   onEdit,
   emptyMessage = "No payslips yet.",
 }: PayslipsTableProps) {
-  const [sortKey, setSortKey] = React.useState<SortKey>("status")
-  const [sortDir, setSortDir] = React.useState<SortDir>("asc")
-
-  function handleSort(key: SortKey) {
-    if (sortKey === key) {
-      setSortDir((dir) => (dir === "asc" ? "desc" : "asc"))
-      return
-    }
-    setSortKey(key)
-    setSortDir("asc")
-  }
-
-  const sortedPayslips = React.useMemo(() => {
-    const copy = [...payslips]
-
-    copy.sort((a, b) => {
-      let result = 0
-
-      if (sortKey === "employeeName") {
-        result = a.employeeName.localeCompare(b.employeeName)
-      } else if (sortKey === "employeeId") {
-        result = a.employeeId.localeCompare(b.employeeId)
-      } else {
-        result = comparePayslipStatus(a.status, b.status, sortDir)
-        return result
-      }
-
-      return sortDir === "asc" ? result : -result
-    })
-
-    return copy
-  }, [payslips, sortKey, sortDir])
+  const { sortKey, sortDir, handleSort, sortedItems } = useTableSort<
+    Payslip,
+    SortKey
+  >({
+    items: payslips,
+    defaultKey: "status",
+    defaultDir: "asc",
+    compare: comparePayslips,
+  })
 
   if (payslips.length === 0) {
     return (
@@ -91,51 +71,33 @@ export function PayslipsTable({
     )
   }
 
-  const headerButtonClassName =
-    "inline-flex items-center font-medium hover:text-foreground"
-
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>
-            <button
-              type="button"
-              className={headerButtonClassName}
-              onClick={() => handleSort("employeeName")}
-            >
-              Employee Name
-              <SortIndicator
-                active={sortKey === "employeeName"}
-                dir={sortDir}
-              />
-            </button>
-          </TableHead>
-          <TableHead>
-            <button
-              type="button"
-              className={headerButtonClassName}
-              onClick={() => handleSort("employeeId")}
-            >
-              Employee ID
-              <SortIndicator active={sortKey === "employeeId"} dir={sortDir} />
-            </button>
-          </TableHead>
-          <TableHead>
-            <button
-              type="button"
-              className={headerButtonClassName}
-              onClick={() => handleSort("status")}
-            >
-              Status
-              <SortIndicator active={sortKey === "status"} dir={sortDir} />
-            </button>
-          </TableHead>
+          <SortableTableHead
+            label="Employee Name"
+            active={sortKey === "employeeName"}
+            direction={sortDir}
+            onSort={() => handleSort("employeeName")}
+          />
+          <SortableTableHead
+            label="Employee ID"
+            active={sortKey === "employeeId"}
+            direction={sortDir}
+            onSort={() => handleSort("employeeId")}
+          />
+          <SortableTableHead
+            label="Status"
+            active={sortKey === "status"}
+            direction={sortDir}
+            onSort={() => handleSort("status")}
+          />
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {sortedPayslips.map((payslip) => (
+        {sortedItems.map((payslip) => (
           <TableRow key={payslip.id}>
             <TableCell className="font-medium">{payslip.employeeName}</TableCell>
             <TableCell>{payslip.employeeId}</TableCell>

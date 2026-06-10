@@ -1,17 +1,28 @@
+"use client"
+
+import * as React from "react"
+
+import {
+  SortableTableHead,
+  useTableSort,
+} from "@/components/dashboard/shared/table-sort"
 import {
   AUDIT_ACTION_LABELS,
   AUDIT_ACTOR_ROLE_LABELS,
-} from "@/lib/audit-logs"
+} from "@/lib/audit-log-options"
+import { applyDirection, compareDates, compareStrings } from "@/lib/table-sort"
+import type { SortDirection } from "@/lib/table-sort"
 import { cn } from "@/lib/utils"
 import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
 import type { AuditAction, AuditLog } from "@/lib/types"
+
+type SortKey = "createdAt" | "actorEmployeeId" | "action" | "targetLabel" | "details"
 
 type LogsTableProps = {
   logs: AuditLog[]
@@ -41,10 +52,42 @@ function isSuccessAction(action: AuditAction) {
   )
 }
 
+function compareLogs(
+  a: AuditLog,
+  b: AuditLog,
+  key: SortKey,
+  dir: SortDirection
+) {
+  let result = 0
+
+  if (key === "createdAt") {
+    result = compareDates(a.createdAt, b.createdAt)
+  } else if (key === "action") {
+    result = compareStrings(
+      AUDIT_ACTION_LABELS[a.action] ?? a.action,
+      AUDIT_ACTION_LABELS[b.action] ?? b.action
+    )
+  } else {
+    result = compareStrings(a[key], b[key])
+  }
+
+  return applyDirection(result, dir)
+}
+
 export function LogsTable({
   logs,
   emptyMessage = "No logs match the filters.",
 }: LogsTableProps) {
+  const { sortKey, sortDir, handleSort, sortedItems } = useTableSort<
+    AuditLog,
+    SortKey
+  >({
+    items: logs,
+    defaultKey: "createdAt",
+    defaultDir: "desc",
+    compare: compareLogs,
+  })
+
   if (logs.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">{emptyMessage}</p>
@@ -55,15 +98,44 @@ export function LogsTable({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[10.5rem]">Date</TableHead>
-          <TableHead className="w-[8.5rem]">Actor</TableHead>
-          <TableHead className="w-[9.5rem]">Action</TableHead>
-          <TableHead className="w-[26%]">Target</TableHead>
-          <TableHead>Details</TableHead>
+          <SortableTableHead
+            label="Date"
+            active={sortKey === "createdAt"}
+            direction={sortDir}
+            onSort={() => handleSort("createdAt")}
+            className="w-[10.5rem]"
+          />
+          <SortableTableHead
+            label="Actor"
+            active={sortKey === "actorEmployeeId"}
+            direction={sortDir}
+            onSort={() => handleSort("actorEmployeeId")}
+            className="w-[8.5rem]"
+          />
+          <SortableTableHead
+            label="Action"
+            active={sortKey === "action"}
+            direction={sortDir}
+            onSort={() => handleSort("action")}
+            className="w-[9.5rem]"
+          />
+          <SortableTableHead
+            label="Target"
+            active={sortKey === "targetLabel"}
+            direction={sortDir}
+            onSort={() => handleSort("targetLabel")}
+            className="w-[26%]"
+          />
+          <SortableTableHead
+            label="Details"
+            active={sortKey === "details"}
+            direction={sortDir}
+            onSort={() => handleSort("details")}
+          />
         </TableRow>
       </TableHeader>
       <TableBody>
-        {logs.map((log) => (
+        {sortedItems.map((log) => (
           <TableRow key={log.id}>
             <TableCell className="align-top whitespace-nowrap text-muted-foreground">
               {formatLogDate(log.createdAt)}
