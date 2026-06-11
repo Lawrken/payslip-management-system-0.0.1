@@ -183,6 +183,7 @@ export type Payslip = {
 
 export type PayslipEmailData = Payslip & {
   employeeEmail: string
+  employeeDivisor: EmployeeDivisor
   tin: string
   sssNo: string
   phicNo: string

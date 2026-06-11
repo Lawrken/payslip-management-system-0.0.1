@@ -97,6 +97,7 @@ function mapPayslipEmailRow(row: {
   return {
     ...mapPayslipRow(row),
     employeeEmail: row.employee.email,
+    employeeDivisor: row.employee.divisor,
     tin: row.employee.tin,
     sssNo: row.employee.sssNo,
     phicNo: row.employee.phicNo,

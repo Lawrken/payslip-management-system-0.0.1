@@ -141,7 +141,7 @@ function renderMutedCell(content = "-") {
 }
 
 function renderPayDetailsTable(data: PayslipEmailData) {
-  const calculation = calculatePayslipTotals(data.inputs)
+  const calculation = calculatePayslipTotals(data.inputs, data.employeeDivisor)
   const rows = PAY_DETAILS_FIELDS.flatMap((field) => {
     const value = fieldValue(data.inputs, field)
     const amount = calculation.lineAmounts[field.key] ?? 0
