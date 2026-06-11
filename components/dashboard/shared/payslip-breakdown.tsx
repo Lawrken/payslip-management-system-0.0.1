@@ -19,8 +19,12 @@ function formatMoney(value: number) {
 
 function formatFieldValue(
   field: PayslipFieldDefinition,
-  value: number
+  value: unknown
 ): string {
+  if (typeof value !== "number") {
+    return "—"
+  }
+
   switch (field.inputKind) {
     case "peso":
       return `₱${formatMoney(value)}`
@@ -43,20 +47,11 @@ function BreakdownSection({
   fields: PayslipFieldDefinition[]
   inputs: PayslipPayrollInputs
 }) {
-  const rows = fields.filter((field) => {
-    const value = inputs[field.key as keyof PayslipPayrollInputs]
-    return typeof value === "number" && value > 0
-  })
-
-  if (rows.length === 0) {
-    return null
-  }
-
   return (
     <section className="flex flex-col gap-2">
       <h3 className="text-sm font-medium">{title}</h3>
       <dl className="grid gap-1.5 sm:grid-cols-2">
-        {rows.map((field) => {
+        {fields.map((field) => {
           const value = inputs[field.key as keyof PayslipPayrollInputs]
           return (
             <div
@@ -65,7 +60,7 @@ function BreakdownSection({
             >
               <dt className="text-muted-foreground">{field.label}</dt>
               <dd className="shrink-0 font-medium tabular-nums">
-                {formatFieldValue(field, value as number)}
+                {formatFieldValue(field, value)}
               </dd>
             </div>
           )
@@ -76,23 +71,6 @@ function BreakdownSection({
 }
 
 export function PayslipBreakdown({ inputs }: PayslipBreakdownProps) {
-  const hasAnyData = [
-    ...PAY_DETAILS_FIELDS,
-    ...DEDUCTION_FIELDS,
-    ...NON_TAXABLE_FIELDS,
-  ].some((field) => {
-    const value = inputs[field.key as keyof PayslipPayrollInputs]
-    return typeof value === "number" && value > 0
-  })
-
-  if (!hasAnyData) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        No payroll data entered yet.
-      </p>
-    )
-  }
-
   return (
     <div className="flex flex-col gap-6">
       <BreakdownSection
