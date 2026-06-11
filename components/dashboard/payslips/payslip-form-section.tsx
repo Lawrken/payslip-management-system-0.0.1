@@ -1,20 +1,17 @@
 "use client"
 
 import { DecimalInput } from "@/components/dashboard/shared/decimal-input"
-import {
-  Field,
-  FieldLabel,
-  FieldLegend,
-  FieldSet,
-} from "@/components/ui/field"
+import { Field, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field"
 import type { PayslipFieldDefinition } from "@/lib/payslip-fields"
 import type { PayslipPayrollInputs } from "@/lib/types"
+import { cn } from "@/lib/utils"
 
 type PayslipFormSectionProps = {
   title: string
   fields: PayslipFieldDefinition[]
   values: PayslipPayrollInputs
   fieldDrafts?: Partial<Record<keyof PayslipPayrollInputs, string>>
+  readOnlyFields?: ReadonlySet<keyof PayslipPayrollInputs>
   onChange: (key: keyof PayslipPayrollInputs, value: string) => void
 }
 
@@ -23,6 +20,7 @@ export function PayslipFormSection({
   fields,
   values,
   fieldDrafts,
+  readOnlyFields,
   onChange,
 }: PayslipFormSectionProps) {
   return (
@@ -33,8 +31,10 @@ export function PayslipFormSection({
           const key = field.key as keyof PayslipPayrollInputs
           const value = values[key]
           const draft = fieldDrafts?.[key]
-          const displayValue =
-            draft !== undefined
+          const isReadOnly = readOnlyFields?.has(key) ?? false
+          const displayValue = isReadOnly
+            ? String(value)
+            : draft !== undefined
               ? draft
               : value === 0
                 ? ""
@@ -47,6 +47,12 @@ export function PayslipFormSection({
                 id={field.key}
                 name={field.key}
                 value={displayValue}
+                readOnly={isReadOnly}
+                aria-readonly={isReadOnly}
+                className={cn(
+                  isReadOnly &&
+                    "cursor-not-allowed bg-muted text-muted-foreground"
+                )}
                 onChange={(event) =>
                   onChange(
                     field.key as keyof PayslipPayrollInputs,

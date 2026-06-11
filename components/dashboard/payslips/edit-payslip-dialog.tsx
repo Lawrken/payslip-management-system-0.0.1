@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -31,11 +32,15 @@ import {
   calculatePayslipTotals,
   createEmptyPayslipInputs,
   createPayslipInputsWithBasicPay,
+  DERIVED_PAYSLIP_FIELD_KEYS,
   parseDecimalInput,
 } from "@/lib/payroll-calculator"
 import type { Employee, Payslip, PayslipPayrollInputs } from "@/lib/types"
 
 const initialState: PayslipFormState = {}
+const READ_ONLY_PAYSLIP_FIELDS = new Set<keyof PayslipPayrollInputs>(
+  DERIVED_PAYSLIP_FIELD_KEYS
+)
 
 type EditPayslipDialogProps = {
   employees: Employee[]
@@ -86,7 +91,14 @@ export function EditPayslipDialog({
   const [isPending, startTransition] = React.useTransition()
   const formRef = React.useRef<HTMLFormElement>(null)
 
-  const totals = React.useMemo(() => calculatePayslipTotals(inputs), [inputs])
+  const selectedEmployee = React.useMemo(
+    () => employees.find((employee) => employee.employeeId === employeeId),
+    [employees, employeeId]
+  )
+  const totals = React.useMemo(
+    () => calculatePayslipTotals(inputs, selectedEmployee?.divisor),
+    [inputs, selectedEmployee?.divisor]
+  )
 
   const canGoPrev = activeIndex > 0
   const canGoNext = activeIndex >= 0 && activeIndex < payslips.length - 1
@@ -167,10 +179,10 @@ export function EditPayslipDialog({
 
     onActiveIndexChange(-1)
     setEmployeeId(nextEmployeeId)
-    const selectedEmployee = employees.find(
+    const nextEmployee = employees.find(
       (employee) => employee.employeeId === nextEmployeeId
     )
-    setInputs(createPayslipInputsWithBasicPay(selectedEmployee?.basicPay ?? 0))
+    setInputs(createPayslipInputsWithBasicPay(nextEmployee?.basicPay ?? 0))
     setFieldDrafts({})
   }
 
@@ -254,6 +266,11 @@ export function EditPayslipDialog({
         <DialogHeader className="shrink-0 space-y-0 border-b px-6 py-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <DialogTitle className="shrink-0">Edit Payslip</DialogTitle>
+            <DialogDescription className="sr-only">
+              Edit manual payslip inputs. Attendance, overtime, holiday, and
+              night differential fields are calculated from the employee
+              schedule.
+            </DialogDescription>
             <div className="flex w-full min-w-0 overflow-hidden rounded-md border border-input shadow-xs lg:max-w-xl dark:bg-input/30">
               <Button
                 type="button"
@@ -314,6 +331,7 @@ export function EditPayslipDialog({
                     fields={PAY_DETAILS_FIELDS}
                     values={inputs}
                     fieldDrafts={fieldDrafts}
+                    readOnlyFields={READ_ONLY_PAYSLIP_FIELDS}
                     onChange={handleFieldChange}
                   />
                   <PayslipFormSection
