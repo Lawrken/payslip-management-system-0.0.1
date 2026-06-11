@@ -10,7 +10,10 @@ import {
   upsertEmployeeSchedule,
 } from "@/lib/employee-schedules"
 import { getPayrollById } from "@/lib/payrolls"
-import { getPayslipsByPayrollId } from "@/lib/payslips"
+import {
+  getPayslipsByPayrollId,
+  refreshPayslipFromSchedule,
+} from "@/lib/payslips"
 import { parseScheduleDaysFromFormData } from "@/lib/schedule-days"
 
 export type SaveEmployeeScheduleState = {
@@ -62,6 +65,15 @@ export async function saveEmployeeScheduleAction(
       return { error: schedule.error }
     }
 
+    const refreshedPayslip = await refreshPayslipFromSchedule(
+      payrollId,
+      employeeId,
+      tx
+    )
+    if ("error" in refreshedPayslip) {
+      return { error: refreshedPayslip.error }
+    }
+
     await createAuditLog({
       actor: session,
       action: existing ? "schedule.update" : "schedule.create",
@@ -82,6 +94,8 @@ export async function saveEmployeeScheduleAction(
   }
 
   revalidatePath("/dashboard/schedule")
+  revalidatePath("/dashboard/payslips")
+  revalidatePath("/dashboard/review")
   revalidatePath("/dashboard/logs")
   return { success: true }
 }

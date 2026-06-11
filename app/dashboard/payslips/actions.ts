@@ -11,10 +11,7 @@ import {
   getPayslipById,
   updatePayslip,
 } from "@/lib/payslips"
-import {
-  calculatePayslipTotals,
-  parsePayslipInputsFromFormData,
-} from "@/lib/payroll-calculator"
+import { parsePayslipInputsFromFormData } from "@/lib/payroll-calculator"
 
 export type PayslipFormState = {
   error?: string
@@ -44,8 +41,6 @@ export async function addPayslipAction(
   if ("error" in parsedInputs) {
     return { error: parsedInputs.error }
   }
-
-  calculatePayslipTotals(parsedInputs)
 
   const result = await db.transaction(async (tx) => {
     const payslip = await addPayslip(
@@ -108,8 +103,6 @@ export async function updatePayslipAction(
   if ("error" in parsedInputs) {
     return { error: parsedInputs.error }
   }
-
-  calculatePayslipTotals(parsedInputs)
 
   const result = await db.transaction(async (tx) => {
     const payslip = await updatePayslip(

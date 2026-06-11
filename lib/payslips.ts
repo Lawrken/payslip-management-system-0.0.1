@@ -8,14 +8,18 @@ import {
   payslips,
 } from "@/db/schema"
 import { normalizeEmployeeId } from "@/lib/auth-helpers"
+import { getScheduleByPayrollAndEmployee } from "@/lib/employee-schedules"
 import { findEmployeeByEmployeeId, getEmployees } from "@/lib/employees"
 import {
   calculatePayslipTotals,
   createEmptyPayslipInputs,
   createPayslipInputsWithBasicPay,
+  derivePayslipInputsFromSchedule,
 } from "@/lib/payroll-calculator"
 import type {
+  Employee,
   EmployeePayslip,
+  Payroll,
   Payslip,
   PayslipEmailData,
   PayslipPayrollInputs,
@@ -24,8 +28,11 @@ import type {
 
 const VISIBLE_EMPLOYEE_PAYSLIP_STATUSES: PayslipStatus[] = ["approved", "sent"]
 
-function buildPayslipTotals(inputs: PayslipPayrollInputs) {
-  const totals = calculatePayslipTotals(inputs)
+function buildPayslipTotals(
+  inputs: PayslipPayrollInputs,
+  divisor?: Employee["divisor"]
+) {
+  const totals = calculatePayslipTotals(inputs, divisor)
   return {
     taxableEarnings: totals.taxableEarnings,
     totalDeductions: totals.totalDeductions,
@@ -41,7 +48,9 @@ function mapPayslipRow(row: {
   employee: typeof employeesTable.$inferSelect | null
 }): Payslip {
   const inputs = row.payslipInput?.inputs ?? createEmptyPayslipInputs()
-  const totals = row.payslipInput?.totals ?? buildPayslipTotals(inputs)
+  const totals =
+    row.payslipInput?.totals ??
+    buildPayslipTotals(inputs, row.employee?.divisor)
 
   return {
     id: row.payslip.id,
@@ -52,6 +61,31 @@ function mapPayslipRow(row: {
     inputs,
     totals,
   }
+}
+
+async function resolveDerivedPayslipInputs({
+  employee,
+  payroll,
+  inputs,
+  client,
+}: {
+  employee: Employee
+  payroll: Payroll
+  inputs: PayslipPayrollInputs
+  client: DatabaseClient
+}) {
+  const schedule = await getScheduleByPayrollAndEmployee(
+    payroll.id,
+    employee.employeeId,
+    client
+  )
+
+  return derivePayslipInputsFromSchedule({
+    employee,
+    payroll,
+    scheduleDays: schedule?.days ?? [],
+    existingInputs: inputs,
+  })
 }
 
 function mapPayslipEmailRow(row: {
@@ -275,6 +309,13 @@ export async function createPayslipsForPayroll(
   payrollId: string,
   client: DatabaseClient = db
 ): Promise<number> {
+  const payroll = await client.query.payrolls.findFirst({
+    where: eq(payrollsTable.id, payrollId),
+  })
+  if (!payroll) {
+    return 0
+  }
+
   const employees = await getEmployees(client)
   const existing = await getPayslipsByPayrollId(payrollId, client)
   const existingEmployeeIds = new Set(
@@ -297,14 +338,18 @@ export async function createPayslipsForPayroll(
   await client.insert(payslips).values(rows)
   await client.insert(payslipInputs).values(
     rows.map((row, index) => {
-      const inputs = createPayslipInputsWithBasicPay(
-        newPayslips[index].basicPay
-      )
+      const employee = newPayslips[index]
+      const inputs = derivePayslipInputsFromSchedule({
+        employee,
+        payroll,
+        scheduleDays: [],
+        existingInputs: createPayslipInputsWithBasicPay(employee.basicPay),
+      })
 
       return {
         payslipId: row.id,
         inputs,
-        totals: buildPayslipTotals(inputs),
+        totals: buildPayslipTotals(inputs, employee.divisor),
         updatedAt: new Date(),
       }
     })
@@ -350,11 +395,15 @@ export async function addPayslip(
     }
   }
 
-  const status: PayslipStatus = hasPayslipData(input.inputs)
-    ? "pending"
-    : "draft"
   const id = crypto.randomUUID()
-  const totals = buildPayslipTotals(input.inputs)
+  const inputs = await resolveDerivedPayslipInputs({
+    employee,
+    payroll,
+    inputs: input.inputs,
+    client,
+  })
+  const status: PayslipStatus = hasPayslipData(inputs) ? "pending" : "draft"
+  const totals = buildPayslipTotals(inputs, employee.divisor)
 
   await client.insert(payslips).values({
     id,
@@ -365,7 +414,7 @@ export async function addPayslip(
   })
   await client.insert(payslipInputs).values({
     payslipId: id,
-    inputs: input.inputs,
+    inputs,
     totals,
     updatedAt: new Date(),
   })
@@ -376,7 +425,7 @@ export async function addPayslip(
     employeeId,
     employeeName: employee.name,
     status,
-    inputs: input.inputs,
+    inputs,
     totals,
   }
 }
@@ -425,8 +474,14 @@ export async function updatePayslip(
     }
   }
 
-  const status = resolveStatusAfterSave(existing.status, input.inputs)
-  const totals = buildPayslipTotals(input.inputs)
+  const inputs = await resolveDerivedPayslipInputs({
+    employee,
+    payroll,
+    inputs: input.inputs,
+    client,
+  })
+  const status = resolveStatusAfterSave(existing.status, inputs)
+  const totals = buildPayslipTotals(inputs, employee.divisor)
 
   await client
     .update(payslips)
@@ -440,7 +495,7 @@ export async function updatePayslip(
   await client
     .update(payslipInputs)
     .set({
-      inputs: input.inputs,
+      inputs,
       totals,
       updatedAt: new Date(),
     })
@@ -452,7 +507,67 @@ export async function updatePayslip(
     employeeId,
     employeeName: employee.name,
     status,
-    inputs: input.inputs,
+    inputs,
+    totals,
+  }
+}
+
+export async function refreshPayslipFromSchedule(
+  payrollId: string,
+  employeeId: string,
+  client: DatabaseClient = db
+): Promise<Payslip | { error: string }> {
+  const normalizedEmployeeId = normalizeEmployeeId(employeeId)
+  const payroll = await client.query.payrolls.findFirst({
+    where: eq(payrollsTable.id, payrollId),
+  })
+  const employee = await findEmployeeByEmployeeId(normalizedEmployeeId, client)
+  const existing = await client.query.payslips.findFirst({
+    where: and(
+      eq(payslips.payrollId, payrollId),
+      eq(payslips.employeeId, normalizedEmployeeId)
+    ),
+  })
+
+  if (!payroll) {
+    return { error: "Payroll not found." }
+  }
+
+  if (!employee) {
+    return { error: "Employee not found." }
+  }
+
+  if (!existing) {
+    return { error: "Employee payslip not found for this payroll period." }
+  }
+
+  const current = await getPayslipById(existing.id, client)
+  if (!current) {
+    return { error: "Payslip not found." }
+  }
+
+  const inputs = await resolveDerivedPayslipInputs({
+    employee,
+    payroll,
+    inputs: current.inputs,
+    client,
+  })
+  const status = resolveStatusAfterSave(current.status, inputs)
+  const totals = buildPayslipTotals(inputs, employee.divisor)
+
+  await client
+    .update(payslips)
+    .set({ status, updatedAt: new Date() })
+    .where(eq(payslips.id, current.id))
+  await client
+    .update(payslipInputs)
+    .set({ inputs, totals, updatedAt: new Date() })
+    .where(eq(payslipInputs.payslipId, current.id))
+
+  return {
+    ...current,
+    status,
+    inputs,
     totals,
   }
 }
