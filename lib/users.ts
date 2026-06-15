@@ -282,6 +282,22 @@ export async function resetUserPassword(
   return { user, initialPassword }
 }
 
+export async function deleteUserAccount(
+  employeeId: string,
+  client: DatabaseClient = db
+): Promise<{ success: true } | { error: string }> {
+  const normalizedId = normalizeEmployeeId(employeeId)
+  const existing = await client.query.users.findFirst({
+    where: eq(users.employeeId, normalizedId),
+  })
+  if (!existing) {
+    return { error: "User account not found." }
+  }
+
+  await client.delete(users).where(eq(users.employeeId, normalizedId))
+  return { success: true }
+}
+
 export async function changeUserPassword(input: {
   employeeId: string
   currentPassword: string

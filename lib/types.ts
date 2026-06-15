@@ -211,6 +211,7 @@ export type AuditAction =
   | "employee.update"
   | "employee.delete"
   | "user.create"
+  | "user.delete"
   | "user.password_reset"
   | "payroll.create"
   | "payroll.update"
