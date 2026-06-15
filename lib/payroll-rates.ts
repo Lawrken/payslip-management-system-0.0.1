@@ -5,6 +5,7 @@ export const HOURS_PER_DAY = 8
 export type PayrollRateKey =
   | "regOt"
   | "nd"
+  | "ndOt"
   | "rdOt"
   | "rdOtOver8"
   | "rdotNd"
@@ -20,7 +21,8 @@ export type PayrollRateKey =
 /** Multipliers applied to hourly rate × hours */
 export const PAYROLL_RATE_MULTIPLIERS: Record<PayrollRateKey, number> = {
   regOt: 1.25,
-  nd: 0.125,
+  nd: 0.1,
+  ndOt: 0.125,
   rdOt: 1.3,
   rdOtOver8: 1.69,
   rdotNd: 0.13,

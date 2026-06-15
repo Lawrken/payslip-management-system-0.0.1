@@ -25,6 +25,7 @@ export const DERIVED_PAYSLIP_FIELD_KEYS = [
   "tardiness",
   "undertime",
   "nd",
+  "ndOt",
   "regOt",
   "rdOt",
   "rdOtOver8",
@@ -218,18 +219,71 @@ function hasShiftPair(day: EmployeeScheduleDay): boolean {
   return Boolean(day.shiftIn && day.shiftOut)
 }
 
-function countOvertimeHours(day: EmployeeScheduleDay): number {
-  if (!hasLogPair(day) || !day.shiftOut) {
-    return 0
+type ShiftLogTimeline = {
+  shiftIn: number
+  shiftOut: number
+  logIn: number
+  logOut: number
+}
+
+function normalizeEndMinute(start: number, end: number): number {
+  return end <= start ? end + 24 * 60 : end
+}
+
+function findNearestMinute(value: number, target: number): number {
+  const candidates = [value - 24 * 60, value, value + 24 * 60]
+  return candidates.reduce((nearest, candidate) => {
+    return Math.abs(candidate - target) < Math.abs(nearest - target)
+      ? candidate
+      : nearest
+  })
+}
+
+function getShiftLogTimeline(
+  day: EmployeeScheduleDay
+): ShiftLogTimeline | null {
+  if (!hasLogPair(day) || !hasShiftPair(day)) {
+    return null
   }
 
-  const logOut = parseMinutes(day.logOut)
+  const shiftIn = parseMinutes(day.shiftIn)
   const shiftOut = parseMinutes(day.shiftOut)
-  if (logOut === null || shiftOut === null) {
+  const logIn = parseMinutes(day.logIn)
+  const logOut = parseMinutes(day.logOut)
+  if (
+    shiftIn === null ||
+    shiftOut === null ||
+    logIn === null ||
+    logOut === null
+  ) {
+    return null
+  }
+
+  const normalizedShiftOut = normalizeEndMinute(shiftIn, shiftOut)
+  const normalizedLogIn = findNearestMinute(logIn, shiftIn)
+  let normalizedLogOut = findNearestMinute(logOut, normalizedShiftOut)
+  if (normalizedLogOut <= normalizedLogIn) {
+    normalizedLogOut += 24 * 60
+  }
+
+  return {
+    shiftIn,
+    shiftOut: normalizedShiftOut,
+    logIn: normalizedLogIn,
+    logOut: normalizedLogOut,
+  }
+}
+
+function countOvertimeHours(day: EmployeeScheduleDay): number {
+  const timeline = getShiftLogTimeline(day)
+  if (!timeline) {
     return 0
   }
 
-  const overtimeMinutes = logOut > shiftOut ? logOut - shiftOut : 0
+  const overtimeMinutes =
+    timeline.logOut > timeline.shiftOut
+      ? timeline.logOut - timeline.shiftOut
+      : 0
   return floorToHalfHour(overtimeMinutes)
 }
 
@@ -256,24 +310,24 @@ function countHolidayOver8Hours(day: EmployeeScheduleDay): number {
 }
 
 function countNightDifferentialHours(day: EmployeeScheduleDay): number {
-  if (!hasLogPair(day)) {
-    return 0
-  }
-
   const start = parseMinutes(day.logIn)
   const end = parseMinutes(day.logOut)
   if (start === null || end === null) {
     return 0
   }
 
-  const adjustedEnd = end <= start ? end + 24 * 60 : end
+  const timeline = getShiftLogTimeline(day)
+  const adjustedStart = timeline?.logIn ?? start
+  const adjustedEnd = timeline?.logOut ?? normalizeEndMinute(start, end)
   const nightWindows: [number, number][] = [
+    [-24 * 60, NIGHT_DIFFERENTIAL_END_MINUTE - 24 * 60],
+    [NIGHT_DIFFERENTIAL_START_MINUTE - 24 * 60, 0],
     [0, NIGHT_DIFFERENTIAL_END_MINUTE],
     [NIGHT_DIFFERENTIAL_START_MINUTE, 24 * 60 + NIGHT_DIFFERENTIAL_END_MINUTE],
   ]
 
   const nightMinutes = nightWindows.reduce((sum, [windowStart, windowEnd]) => {
-    const overlapStart = Math.max(start, windowStart)
+    const overlapStart = Math.max(adjustedStart, windowStart)
     const overlapEnd = Math.min(adjustedEnd, windowEnd)
     return sum + Math.max(0, overlapEnd - overlapStart)
   }, 0)
@@ -320,17 +374,18 @@ export function derivePayslipInputsFromSchedule({
     }
 
     if (isWorkRequired(day) && hasShiftPair(day)) {
-      const shiftIn = parseMinutes(day.shiftIn)
-      const shiftOut = parseMinutes(day.shiftOut)
-      const logIn = parseMinutes(day.logIn)
-      const logOut = parseMinutes(day.logOut)
+      const timeline = getShiftLogTimeline(day)
 
-      if (shiftIn !== null && logIn !== null && logIn > shiftIn) {
-        inputs.tardiness += roundMoney((logIn - shiftIn) * perMinuteRate)
+      if (timeline && timeline.logIn > timeline.shiftIn) {
+        inputs.tardiness += roundMoney(
+          (timeline.logIn - timeline.shiftIn) * perMinuteRate
+        )
       }
 
-      if (shiftOut !== null && logOut !== null && logOut < shiftOut) {
-        inputs.undertime += roundMoney((shiftOut - logOut) * perMinuteRate)
+      if (timeline && timeline.logOut < timeline.shiftOut) {
+        inputs.undertime += roundMoney(
+          (timeline.shiftOut - timeline.logOut) * perMinuteRate
+        )
       }
     }
 
@@ -352,6 +407,7 @@ export function derivePayslipInputsFromSchedule({
   inputs.tardiness = roundMoney(inputs.tardiness)
   inputs.undertime = roundMoney(inputs.undertime)
   inputs.nd = roundHours(inputs.nd)
+  inputs.ndOt = roundHours(inputs.ndOt)
   inputs.regOt = roundHours(inputs.regOt)
   inputs.legal = roundHours(inputs.legal)
   inputs.legalOver8 = roundHours(inputs.legalOver8)

@@ -120,6 +120,7 @@ export type PayslipPayrollInputs = {
   tardiness: number
   undertime: number
   nd: number
+  ndOt: number
   regOt: number
   rdOt: number
   rdOtOver8: number
