@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import * as React from "react"
+import { toast } from "sonner"
 
 import {
   updatePayrollAction,
@@ -42,6 +43,9 @@ export function EditPayrollDialog({
 
       if (result.success) {
         onOpenChange(false)
+        toast.success("Payroll updated", {
+          description: payroll.payrollPeriodLabel,
+        })
         router.refresh()
       }
     })

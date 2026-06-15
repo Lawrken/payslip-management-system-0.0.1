@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import * as React from "react"
+import { toast } from "sonner"
 
 import { deletePayslipAction } from "@/app/dashboard/payslips/actions"
 import {
@@ -38,6 +39,9 @@ export function PayslipRowActions({ payslip, onEdit }: PayslipRowActionsProps) {
     }
 
     setDeleteOpen(false)
+    toast.success("Payslip deleted", {
+      description: `${payslip.employeeName} (${payslip.employeeId})`,
+    })
     router.refresh()
   }
 

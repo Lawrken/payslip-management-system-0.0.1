@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { useActionState } from "react"
+import { toast } from "sonner"
 
 import {
   changePasswordAction,
@@ -39,6 +40,9 @@ export function ChangePasswordCard({ employeeId }: ChangePasswordCardProps) {
   React.useEffect(() => {
     if (state.success) {
       formRef.current?.reset()
+      toast.success("Password changed", {
+        description: "Use the new password the next time you sign in.",
+      })
     }
   }, [state.success])
 

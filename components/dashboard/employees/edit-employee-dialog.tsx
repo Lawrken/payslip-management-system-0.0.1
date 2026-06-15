@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import * as React from "react"
+import { toast } from "sonner"
 
 import {
   updateEmployeeAction,
@@ -53,6 +54,9 @@ export function EditEmployeeDialog({
       if (result.success) {
         onOpenChange(false)
         setState(initialState)
+        toast.success("Employee updated", {
+          description: `${employee.name} (${employee.employeeId}) was saved.`,
+        })
         router.refresh()
       }
     })

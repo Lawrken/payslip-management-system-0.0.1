@@ -4,6 +4,7 @@ import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useRouter } from "next/navigation"
 import * as React from "react"
+import { toast } from "sonner"
 
 import {
   addPayslipAction,
@@ -218,6 +219,12 @@ export function EditPayslipDialog({
       setState(result)
 
       if (result.success) {
+        toast.success(isCreateMode ? "Payslip created" : "Payslip updated", {
+          description:
+            selectedEmployee !== undefined
+              ? `${selectedEmployee.name} (${selectedEmployee.employeeId})`
+              : undefined,
+        })
         handleClose()
         router.refresh()
       }

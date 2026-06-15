@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import * as React from "react"
+import { toast } from "sonner"
 
 import { bulkEmailAction } from "@/app/dashboard/review/actions"
 import {
@@ -50,6 +51,9 @@ export function BulkEmailDialog({
     }
 
     if (result.failedCount && result.failedCount > 0) {
+      toast.success("Bulk email partially sent", {
+        description: `Sent ${result.count ?? 0}; ${result.failedCount} failed and stayed ready for retry.`,
+      })
       setSummary(
         `Sent ${result.count ?? 0} payslip email${result.count === 1 ? "" : "s"}. ${result.failedCount} failed and stayed ready for retry.`
       )
@@ -58,6 +62,9 @@ export function BulkEmailDialog({
     }
 
     setOpen(false)
+    toast.success("Bulk email sent", {
+      description: `Sent ${result.count ?? 0} payslip email${result.count === 1 ? "" : "s"}.`,
+    })
     router.refresh()
   }
 

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import * as React from "react"
+import { toast } from "sonner"
 
 import { deletePayrollAction } from "@/app/dashboard/payrolls/actions"
 import { EditPayrollDialog } from "@/components/dashboard/payrolls/edit-payroll-dialog"
@@ -39,6 +40,9 @@ export function PayrollRowActions({ payroll }: PayrollRowActionsProps) {
     }
 
     setDeleteOpen(false)
+    toast.success("Payroll deleted", {
+      description: payroll.payrollPeriodLabel,
+    })
     router.refresh()
   }
 

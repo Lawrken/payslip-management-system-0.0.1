@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import * as React from "react"
+import { toast } from "sonner"
 
 import { deleteEmployeeAction } from "@/app/dashboard/employees/actions"
 import { EditEmployeeDialog } from "@/components/dashboard/employees/edit-employee-dialog"
@@ -39,6 +40,9 @@ export function EmployeeRowActions({ employee }: EmployeeRowActionsProps) {
     }
 
     setDeleteOpen(false)
+    toast.success("Employee deleted", {
+      description: `${employee.name} (${employee.employeeId}) was removed.`,
+    })
     router.refresh()
   }
 

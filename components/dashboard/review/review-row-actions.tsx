@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import * as React from "react"
+import { toast } from "sonner"
 
 import { sendPayslipEmailAction } from "@/app/dashboard/review/actions"
 import {
@@ -41,6 +42,9 @@ export function ReviewRowActions({ payslip, onReview }: ReviewRowActionsProps) {
     }
 
     setSendOpen(false)
+    toast.success("Payslip email sent", {
+      description: `${payslip.employeeName} (${payslip.employeeId})`,
+    })
     router.refresh()
   }
 

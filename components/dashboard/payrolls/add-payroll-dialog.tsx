@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import * as React from "react"
+import { toast } from "sonner"
 
 import {
   addPayrollAction,
@@ -37,6 +38,7 @@ export function AddPayrollDialog({ children }: AddPayrollDialogProps) {
 
       if (result.success) {
         setOpen(false)
+        toast.success("Payroll created")
         router.refresh()
       }
     })

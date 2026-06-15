@@ -8,6 +8,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useRouter } from "next/navigation"
 import * as React from "react"
+import { toast } from "sonner"
 
 import {
   adminApprovePayslipAction,
@@ -150,6 +151,9 @@ export function ReviewPayslipDialog({
       }
 
       setError(null)
+      toast.success(role === "admin" ? "Payslip checked" : "Payslip approved", {
+        description: `${activePayslip.employeeName} (${activePayslip.employeeId})`,
+      })
       if (hasNextInQueue) {
         onActiveIndexChange(nextIndex)
       } else {
@@ -173,6 +177,9 @@ export function ReviewPayslipDialog({
       }
 
       handleClose()
+      toast.success("Payslip returned", {
+        description: `${activePayslip.employeeName} (${activePayslip.employeeId})`,
+      })
       router.refresh()
     })
   }

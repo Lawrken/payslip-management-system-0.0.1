@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import * as React from "react"
+import { toast } from "sonner"
 
 import {
   saveEmployeeScheduleAction,
@@ -67,6 +68,9 @@ function EditEmployeeScheduleDialogContent({
 
       if (result.success) {
         onOpenChange(false)
+        toast.success("Schedule saved", {
+          description: `${employeeName} (${employeeId}) for ${payroll.payrollPeriodLabel}.`,
+        })
         router.refresh()
       }
     })

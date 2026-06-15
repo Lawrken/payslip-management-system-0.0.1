@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import * as React from "react"
+import { toast } from "sonner"
 
 import {
   deleteUserAction,
@@ -79,6 +80,9 @@ export function UserRowActions({
       const result = await resetUserPasswordAction(user.employeeId)
       setState(result)
       if (result.success) {
+        toast.success("Password reset", {
+          description: `${user.email} can sign in with the restored initial password.`,
+        })
         router.refresh()
       }
     })
@@ -90,6 +94,9 @@ export function UserRowActions({
       setDeleteState(result)
       if (result.success) {
         setDeleteOpen(false)
+        toast.success("User deleted", {
+          description: `${user.email} was removed.`,
+        })
         router.refresh()
       }
     })
