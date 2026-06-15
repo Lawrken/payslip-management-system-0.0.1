@@ -44,6 +44,7 @@ export const PROGRAMS = [
   "BPO (CHN)",
   "BPO (US)",
   "BPO (US) Logistics",
+  "Dreame",
   "GMCC",
   "Hankoko",
   "Human Resource",
