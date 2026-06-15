@@ -276,6 +276,36 @@ export async function getVisiblePayslipsByEmployeeId(
   })
 }
 
+export async function getVisibleEmployeePayslipDetailsByEmployeeId(
+  employeeId: string
+): Promise<PayslipEmailData[]> {
+  const normalizedId = normalizeEmployeeId(employeeId)
+  const rows = await db
+    .select({
+      payslip: payslips,
+      payslipInput: payslipInputs,
+      employee: employeesTable,
+      payroll: payrollsTable,
+    })
+    .from(payslips)
+    .innerJoin(payrollsTable, eq(payrollsTable.id, payslips.payrollId))
+    .innerJoin(
+      employeesTable,
+      eq(employeesTable.employeeId, payslips.employeeId)
+    )
+    .leftJoin(payslipInputs, eq(payslipInputs.payslipId, payslips.id))
+    .where(
+      and(
+        eq(payslips.employeeId, normalizedId),
+        inArray(payslips.status, VISIBLE_EMPLOYEE_PAYSLIP_STATUSES)
+      )
+    )
+
+  return rows.map(mapPayslipEmailRow).sort((a, b) => {
+    return b.payrollPeriodEnd.localeCompare(a.payrollPeriodEnd)
+  })
+}
+
 function hasPayslipData(inputs: PayslipPayrollInputs): boolean {
   return Object.values(inputs).some(
     (value) => typeof value === "number" && value > 0
