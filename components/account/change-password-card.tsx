@@ -30,7 +30,7 @@ type ChangePasswordCardProps = {
   employeeId: string
 }
 
-export function ChangePasswordCard({ employeeId }: ChangePasswordCardProps) {
+export function ChangePasswordForm() {
   const [state, formAction, isPending] = useActionState(
     changePasswordAction,
     initialState
@@ -47,6 +47,60 @@ export function ChangePasswordCard({ employeeId }: ChangePasswordCardProps) {
   }, [state.success])
 
   return (
+    <form ref={formRef} action={formAction}>
+      <FieldGroup className="gap-4">
+        {state.error ? (
+          <Alert variant="destructive">
+            <AlertDescription>{state.error}</AlertDescription>
+          </Alert>
+        ) : null}
+        {state.success ? (
+          <Alert>
+            <AlertDescription>Password changed.</AlertDescription>
+          </Alert>
+        ) : null}
+        <Field>
+          <FieldLabel htmlFor="currentPassword">Current Password</FieldLabel>
+          <Input
+            id="currentPassword"
+            name="currentPassword"
+            type="password"
+            autoComplete="current-password"
+            required
+          />
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="newPassword">New Password</FieldLabel>
+          <Input
+            id="newPassword"
+            name="newPassword"
+            type="password"
+            autoComplete="new-password"
+            minLength={8}
+            required
+          />
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="confirmPassword">Confirm Password</FieldLabel>
+          <Input
+            id="confirmPassword"
+            name="confirmPassword"
+            type="password"
+            autoComplete="new-password"
+            minLength={8}
+            required
+          />
+        </Field>
+        <Button type="submit" disabled={isPending} className="w-fit">
+          {isPending ? "Changing..." : "Change Password"}
+        </Button>
+      </FieldGroup>
+    </form>
+  )
+}
+
+export function ChangePasswordCard({ employeeId }: ChangePasswordCardProps) {
+  return (
     <Card size="sm">
       <CardHeader>
         <CardTitle>Change Password</CardTitle>
@@ -55,55 +109,7 @@ export function ChangePasswordCard({ employeeId }: ChangePasswordCardProps) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form ref={formRef} action={formAction}>
-          <FieldGroup className="gap-4">
-            {state.error ? (
-              <Alert variant="destructive">
-                <AlertDescription>{state.error}</AlertDescription>
-              </Alert>
-            ) : null}
-            {state.success ? (
-              <Alert>
-                <AlertDescription>Password changed.</AlertDescription>
-              </Alert>
-            ) : null}
-            <Field>
-              <FieldLabel htmlFor="currentPassword">Current Password</FieldLabel>
-              <Input
-                id="currentPassword"
-                name="currentPassword"
-                type="password"
-                autoComplete="current-password"
-                required
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="newPassword">New Password</FieldLabel>
-              <Input
-                id="newPassword"
-                name="newPassword"
-                type="password"
-                autoComplete="new-password"
-                minLength={8}
-                required
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="confirmPassword">Confirm Password</FieldLabel>
-              <Input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                autoComplete="new-password"
-                minLength={8}
-                required
-              />
-            </Field>
-            <Button type="submit" disabled={isPending} className="w-fit">
-              {isPending ? "Changing…" : "Change Password"}
-            </Button>
-          </FieldGroup>
-        </form>
+        <ChangePasswordForm />
       </CardContent>
     </Card>
   )
