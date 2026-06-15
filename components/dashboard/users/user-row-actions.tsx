@@ -4,7 +4,9 @@ import { useRouter } from "next/navigation"
 import * as React from "react"
 
 import {
+  deleteUserAction,
   resetUserPasswordAction,
+  type DeleteUserState,
   type ResetUserPasswordState,
 } from "@/app/dashboard/users/actions"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -24,10 +26,12 @@ import type { Role, UserAccount } from "@/lib/types"
 
 type UserRowActionsProps = {
   user: UserAccount
+  currentEmployeeId: string
   currentRole: Role
 }
 
 const initialState: ResetUserPasswordState = {}
+const initialDeleteState: DeleteUserState = {}
 
 function canResetUser(currentRole: Role, user: UserAccount) {
   if (!user.hasInitialPassword) {
@@ -39,19 +43,53 @@ function canResetUser(currentRole: Role, user: UserAccount) {
   return user.role === "employee"
 }
 
-export function UserRowActions({ user, currentRole }: UserRowActionsProps) {
+function canDeleteUser(
+  currentRole: Role,
+  user: UserAccount,
+  currentEmployeeId: string
+) {
+  if (user.employeeId === currentEmployeeId) {
+    return false
+  }
+  if (currentRole === "superAdmin") {
+    return true
+  }
+  return user.role === "employee"
+}
+
+export function UserRowActions({
+  user,
+  currentEmployeeId,
+  currentRole,
+}: UserRowActionsProps) {
   const router = useRouter()
-  const [open, setOpen] = React.useState(false)
+  const [resetOpen, setResetOpen] = React.useState(false)
+  const [deleteOpen, setDeleteOpen] = React.useState(false)
   const [state, setState] = React.useState<ResetUserPasswordState>(initialState)
+  const [deleteState, setDeleteState] =
+    React.useState<DeleteUserState>(initialDeleteState)
   const [copyStatus, setCopyStatus] = React.useState("")
-  const [isPending, startTransition] = React.useTransition()
+  const [isResetPending, startResetTransition] = React.useTransition()
+  const [isDeletePending, startDeleteTransition] = React.useTransition()
   const canReset = canResetUser(currentRole, user)
+  const canDelete = canDeleteUser(currentRole, user, currentEmployeeId)
 
   function handleReset() {
-    startTransition(async () => {
+    startResetTransition(async () => {
       const result = await resetUserPasswordAction(user.employeeId)
       setState(result)
       if (result.success) {
+        router.refresh()
+      }
+    })
+  }
+
+  function handleDelete() {
+    startDeleteTransition(async () => {
+      const result = await deleteUserAction(user.employeeId)
+      setDeleteState(result)
+      if (result.success) {
+        setDeleteOpen(false)
         router.refresh()
       }
     })
@@ -66,11 +104,11 @@ export function UserRowActions({ user, currentRole }: UserRowActionsProps) {
   }
 
   return (
-    <div className="flex justify-end">
+    <div className="flex justify-end gap-2">
       <AlertDialog
-        open={open}
+        open={resetOpen}
         onOpenChange={(nextOpen) => {
-          setOpen(nextOpen)
+          setResetOpen(nextOpen)
           if (nextOpen) {
             setState(initialState)
             setCopyStatus("")
@@ -129,15 +167,62 @@ export function UserRowActions({ user, currentRole }: UserRowActionsProps) {
             <AlertDialogCancel>Close</AlertDialogCancel>
             {!state.success ? (
               <AlertDialogAction
-                disabled={isPending}
+                disabled={isResetPending}
                 onClick={(event) => {
                   event.preventDefault()
                   handleReset()
                 }}
               >
-                {isPending ? "Resetting..." : "Reset Password"}
+                {isResetPending ? "Resetting..." : "Reset Password"}
               </AlertDialogAction>
             ) : null}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog
+        open={deleteOpen}
+        onOpenChange={(nextOpen) => {
+          setDeleteOpen(nextOpen)
+          if (nextOpen) {
+            setDeleteState(initialDeleteState)
+          }
+        }}
+      >
+        <AlertDialogTrigger asChild>
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            disabled={!canDelete}
+          >
+            Delete
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete user?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove the login account for {user.email}.
+              The employee record and payroll history will remain.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {deleteState.error ? (
+            <Alert variant="destructive">
+              <AlertDescription>{deleteState.error}</AlertDescription>
+            </Alert>
+          ) : null}
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={isDeletePending}
+              onClick={(event) => {
+                event.preventDefault()
+                handleDelete()
+              }}
+            >
+              {isDeletePending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

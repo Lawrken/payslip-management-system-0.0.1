@@ -125,7 +125,11 @@ export function UsersTable({
             <TableCell>{ROLE_LABELS[user.role]}</TableCell>
             <TableCell>{formatDate(user.passwordChangedAt)}</TableCell>
             <TableCell>
-              <UserRowActions user={user} currentRole={currentRole} />
+              <UserRowActions
+                user={user}
+                currentEmployeeId={currentEmployeeId}
+                currentRole={currentRole}
+              />
             </TableCell>
           </TableRow>
         ))}
