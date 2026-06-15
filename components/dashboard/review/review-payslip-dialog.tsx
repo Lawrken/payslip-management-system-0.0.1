@@ -74,8 +74,7 @@ export function ReviewPayslipDialog({
   const canGoPrev = activeIndex > 0
   const canGoNext = activeIndex >= 0 && activeIndex < payslips.length - 1
 
-  const canAdminAct =
-    role === "admin" && activePayslip?.status === "pending"
+  const canAdminAct = role === "admin" && activePayslip?.status === "pending"
   const canSuperAdminAct =
     role === "superAdmin" && activePayslip?.status === "adminApproved"
   const hasActions = canAdminAct || canSuperAdminAct
@@ -210,6 +209,10 @@ export function ReviewPayslipDialog({
     return null
   }
 
+  const activeEmployee = employees.find(
+    (employee) => employee.employeeId === activePayslip.employeeId
+  )
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
@@ -282,7 +285,10 @@ export function ReviewPayslipDialog({
             </p>
           ) : null}
 
-          <PayslipBreakdown inputs={activePayslip.inputs} />
+          <PayslipBreakdown
+            inputs={activePayslip.inputs}
+            divisor={activeEmployee?.divisor}
+          />
         </div>
 
         <div className="shrink-0 border-t bg-popover px-6 py-4">
@@ -307,9 +313,7 @@ export function ReviewPayslipDialog({
                 <Button
                   type="button"
                   onClick={handleApprove}
-                  disabled={
-                    isPending || !payslipHasData(activePayslip.inputs)
-                  }
+                  disabled={isPending || !payslipHasData(activePayslip.inputs)}
                 >
                   {isPending
                     ? "Saving…"
