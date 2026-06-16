@@ -98,3 +98,16 @@ export async function saveEmployeeScheduleAction(
   revalidatePath("/dashboard/logs")
   return { success: true }
 }
+
+export async function getEmployeeScheduleAction(
+  payrollId: string,
+  employeeId: string
+) {
+  const session = await requireDashboardSession()
+  if ("error" in session) {
+    return session
+  }
+
+  const schedule = await getScheduleByPayrollAndEmployee(payrollId, employeeId)
+  return { schedule }
+}

@@ -1,4 +1,7 @@
+import "server-only"
+
 import { and, asc, count, desc, eq, ilike, ne, or, type SQL } from "drizzle-orm"
+import { cache } from "react"
 
 import { db, type DatabaseClient } from "@/db"
 import { employees } from "@/db/schema"
@@ -34,7 +37,7 @@ export async function getEmployees(
   })
 }
 
-export async function getEmployeeOptions(
+async function getEmployeeOptionsUncached(
   client: DatabaseClient = db
 ): Promise<EmployeeOption[]> {
   return client.query.employees.findMany({
@@ -46,6 +49,8 @@ export async function getEmployeeOptions(
     orderBy: (table, { asc }) => [asc(table.name)],
   })
 }
+
+export const getEmployeeOptions = cache(getEmployeeOptionsUncached)
 
 export type EmployeeListSort =
   | "name"

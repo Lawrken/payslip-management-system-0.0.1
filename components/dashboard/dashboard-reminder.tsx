@@ -19,10 +19,10 @@ import {
   formatDtrCutOffRange,
 } from "@/lib/payroll-dates"
 import { cn } from "@/lib/utils"
-import type { Payroll, Role } from "@/lib/types"
+import type { PayrollSummary, Role } from "@/lib/types"
 
 type DashboardReminderProps = {
-  payroll: Payroll
+  payroll: PayrollSummary
   summary: DashboardSummary
   role: Role
   reviewHref: string

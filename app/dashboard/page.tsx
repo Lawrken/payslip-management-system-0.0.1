@@ -8,7 +8,8 @@ import {
   buildPayrollTotalsChartDataFromMetrics,
   buildStatusChartData,
 } from "@/lib/dashboard-summary"
-import { getLatestPayroll, getPayrolls } from "@/lib/payrolls"
+import { redirectWithDefaultPayrollId } from "@/lib/dashboard-routing"
+import { getPayrollSummaries } from "@/lib/payrolls"
 import { getPayrollPayslipMetrics } from "@/lib/payslips"
 
 export const dynamic = "force-dynamic"
@@ -26,13 +27,12 @@ async function DashboardPageInner({ searchParams }: DashboardPageProps) {
   }
 
   const params = await searchParams
-  const [payrolls, latestPayroll] = await Promise.all([
-    getPayrolls(),
-    getLatestPayroll(),
-  ])
+  const payrolls = await getPayrollSummaries()
+  const latestPayrollId = payrolls[0]?.id ?? null
+  redirectWithDefaultPayrollId("/dashboard", params, latestPayrollId)
+
   const selectedPayroll =
     payrolls.find((payroll) => payroll.id === params.payrollId) ??
-    latestPayroll ??
     payrolls[0] ??
     null
   const metrics = selectedPayroll
@@ -50,7 +50,7 @@ async function DashboardPageInner({ searchParams }: DashboardPageProps) {
     <DashboardPageContent
       session={session}
       payrolls={payrolls}
-      defaultPayrollId={latestPayroll?.id ?? null}
+      selectedPayrollId={selectedPayroll?.id ?? ""}
       summary={summary}
       totalsChartData={totalsChartData}
       statusChartData={statusChartData}

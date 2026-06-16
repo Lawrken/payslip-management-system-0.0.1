@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 import { db } from "@/db"
 import { createAuditLog } from "@/lib/audit-logs"
 import { requireDashboardSession } from "@/lib/authorization"
+import { findEmployeeByEmployeeId } from "@/lib/employees"
 import {
   addPayslip,
   deletePayslip,
@@ -140,6 +141,34 @@ export async function updatePayslipAction(
   revalidatePath("/dashboard/review")
   revalidatePath("/dashboard/logs")
   return { success: true }
+}
+
+export async function getPayslipByIdAction(id: string) {
+  const session = await requireDashboardSession()
+  if ("error" in session) {
+    return session
+  }
+
+  const payslip = await getPayslipById(id)
+  if (!payslip) {
+    return { error: "Payslip not found." }
+  }
+
+  return { payslip }
+}
+
+export async function getEmployeeByEmployeeIdAction(employeeId: string) {
+  const session = await requireDashboardSession()
+  if ("error" in session) {
+    return session
+  }
+
+  const employee = await findEmployeeByEmployeeId(employeeId)
+  if (!employee) {
+    return { error: "Employee not found." }
+  }
+
+  return { employee }
 }
 
 export async function deletePayslipAction(id: string) {

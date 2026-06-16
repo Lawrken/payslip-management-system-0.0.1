@@ -4,11 +4,10 @@ import { logoutAction } from "@/app/account/actions"
 import { ThemeSelector } from "@/components/theme-selector"
 import { ChangePasswordDialog } from "@/components/payslips/change-password-dialog"
 import { EmployeePayslipsWorkspace } from "@/components/payslips/employee-payslips-workspace"
-import type { EmployeePayslipPreviewItem } from "@/components/payslips/employee-payslip-viewer"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { getVisibleEmployeePayslipDetailsByEmployeeId } from "@/lib/payslips"
 import { requireEmployeeSession } from "@/lib/authorization"
+import { getVisibleEmployeePayslipListItems } from "@/lib/payslips"
 import { getUserAccount } from "@/lib/users"
 
 export const dynamic = "force-dynamic"
@@ -19,29 +18,10 @@ export default async function EmployeePayslipsPage() {
     redirect("/login")
   }
 
-  const [payslips, account] = await Promise.all([
-    getVisibleEmployeePayslipDetailsByEmployeeId(session.employeeId),
+  const [payslipPeriods, account] = await Promise.all([
+    getVisibleEmployeePayslipListItems(session.employeeId),
     getUserAccount(session.employeeId),
   ])
-  const previewPayslips: EmployeePayslipPreviewItem[] = payslips.map(
-    (payslip) => ({
-      id: payslip.id,
-      employeeId: payslip.employeeId,
-      employeeName: payslip.employeeName,
-      employeeDivisor: payslip.employeeDivisor,
-      tin: payslip.tin,
-      sssNo: payslip.sssNo,
-      phicNo: payslip.phicNo,
-      hdmfNo: payslip.hdmfNo,
-      payrollPeriodLabel: payslip.payrollPeriodLabel,
-      dtrCutOffStart: payslip.dtrCutOffStart,
-      dtrCutOffEnd: payslip.dtrCutOffEnd,
-      payoutDate: payslip.payoutDate,
-      status: payslip.status,
-      inputs: payslip.inputs,
-      totals: payslip.totals,
-    })
-  )
   const shouldChangePassword = account?.passwordChangedAt === null
 
   return (
@@ -57,7 +37,7 @@ export default async function EmployeePayslipsPage() {
       ) : null}
 
       <EmployeePayslipsWorkspace
-        payslips={previewPayslips}
+        payslipPeriods={payslipPeriods}
         signedInLabel={account?.email ?? session.employeeId}
         headerActions={
           <>

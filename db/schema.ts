@@ -1,4 +1,5 @@
 import {
+  boolean,
   index,
   integer,
   jsonb,
@@ -64,7 +65,8 @@ export const employees = pgTable("employees", {
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
-})
+},
+(table) => [index("employees_name_idx").on(table.name)])
 
 export const payrolls = pgTable("payrolls", {
   id: text("id").primaryKey(),
@@ -81,7 +83,10 @@ export const payrolls = pgTable("payrolls", {
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
-})
+},
+(table) => [
+  index("payrolls_payroll_period_end_idx").on(table.payrollPeriodEnd),
+])
 
 export const payslips = pgTable(
   "payslips",
@@ -119,6 +124,7 @@ export const employeeSchedules = pgTable(
       .references(() => payrolls.id, { onDelete: "cascade" }),
     employeeId: text("employee_id").notNull(),
     days: jsonb("days").$type<EmployeeScheduleDay[]>().notNull().default([]),
+    isComplete: boolean("is_complete").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

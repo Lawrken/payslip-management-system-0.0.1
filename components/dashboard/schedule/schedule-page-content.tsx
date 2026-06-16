@@ -5,18 +5,22 @@ import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import * as React from "react"
 
+import { getEmployeeScheduleAction } from "@/app/dashboard/schedule/actions"
 import { EmployeeScheduleTable } from "@/components/dashboard/schedule/employee-schedule-table"
 import { EmployeeCombobox } from "@/components/dashboard/shared/employee-combobox"
 import { PaginationControls } from "@/components/dashboard/shared/pagination-controls"
 import { PayrollPeriodCombobox } from "@/components/dashboard/shared/payroll-period-combobox"
 import { PayrollPeriodStrip } from "@/components/dashboard/shared/payroll-period-strip"
 import type { EmployeeOption } from "@/lib/employees"
-import type {
-  ScheduleRowSort,
-} from "@/lib/employee-schedules"
+import type { ScheduleRowSort } from "@/lib/employee-schedules"
 import type { PaginatedResult } from "@/lib/pagination"
 import type { SortDirection } from "@/lib/table-sort"
-import type { EmployeeScheduleRow, Payroll } from "@/lib/types"
+import type {
+  EmployeeSchedule,
+  EmployeeScheduleRow,
+  Payroll,
+  PayrollSummary,
+} from "@/lib/types"
 
 const EditEmployeeScheduleDialog = dynamic(
   () =>
@@ -30,9 +34,10 @@ const EditEmployeeScheduleDialog = dynamic(
 
 type SchedulePageContentProps = {
   scheduleRows: PaginatedResult<EmployeeScheduleRow>
-  payrolls: Payroll[]
+  payrolls: PayrollSummary[]
+  selectedPayroll: Payroll | null
   employeeOptions: EmployeeOption[]
-  defaultPayrollId: string | null
+  selectedPayrollId: string
   employeeId: string
   status: string
   sortKey: ScheduleRowSort
@@ -42,8 +47,9 @@ type SchedulePageContentProps = {
 export function SchedulePageContent({
   scheduleRows,
   payrolls,
+  selectedPayroll,
   employeeOptions,
-  defaultPayrollId,
+  selectedPayrollId,
   employeeId,
   status,
   sortKey,
@@ -51,37 +57,45 @@ export function SchedulePageContent({
 }: SchedulePageContentProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const payrollIdFromUrl = searchParams.get("payrollId")
 
   const [dialogOpen, setDialogOpen] = React.useState(false)
   const [activeEmployeeId, setActiveEmployeeId] = React.useState<string | null>(
     null
   )
+  const [activeSchedule, setActiveSchedule] =
+    React.useState<EmployeeSchedule | null>(null)
+  const [isLoadingSchedule, setIsLoadingSchedule] = React.useState(false)
 
-  const selectedPayrollId = React.useMemo(() => {
-    if (
-      payrollIdFromUrl &&
-      payrolls.some((payroll) => payroll.id === payrollIdFromUrl)
-    ) {
-      return payrollIdFromUrl
-    }
-    return defaultPayrollId ?? payrolls[0]?.id ?? ""
-  }, [payrollIdFromUrl, payrolls, defaultPayrollId])
-
-  const selectedPayroll = payrolls.find(
-    (payroll) => payroll.id === selectedPayrollId
+  const activeRow = scheduleRows.items.find(
+    (row) => row.employeeId === activeEmployeeId
   )
 
   React.useEffect(() => {
-    if (!selectedPayrollId || payrollIdFromUrl === selectedPayrollId) {
+    if (!dialogOpen || !selectedPayroll || !activeEmployeeId) {
       return
     }
-    const params = new URLSearchParams(searchParams.toString())
-    params.set("payrollId", selectedPayrollId)
-    router.replace(`/dashboard/schedule?${params.toString()}`, {
-      scroll: false,
+
+    let cancelled = false
+    setIsLoadingSchedule(true)
+    void getEmployeeScheduleAction(
+      selectedPayroll.id,
+      activeEmployeeId
+    ).then((result) => {
+      if (cancelled) {
+        return
+      }
+      setIsLoadingSchedule(false)
+      if ("error" in result) {
+        setActiveSchedule(null)
+        return
+      }
+      setActiveSchedule(result.schedule)
     })
-  }, [selectedPayrollId, payrollIdFromUrl, router, searchParams])
+
+    return () => {
+      cancelled = true
+    }
+  }, [dialogOpen, selectedPayroll, activeEmployeeId])
 
   function handlePayrollChange(payrollId: string) {
     const params = new URLSearchParams(searchParams.toString())
@@ -103,17 +117,6 @@ export function SchedulePageContent({
       scroll: false,
     })
   }
-
-  const activeSchedule = React.useMemo(() => {
-    return (
-      scheduleRows.items.find((row) => row.employeeId === activeEmployeeId)
-        ?.schedule ?? null
-    )
-  }, [activeEmployeeId, scheduleRows.items])
-
-  const activeRow = scheduleRows.items.find(
-    (row) => row.employeeId === activeEmployeeId
-  )
 
   function handleStatusFilterChange(statusValue: string) {
     const params = new URLSearchParams(searchParams.toString())
@@ -151,6 +154,7 @@ export function SchedulePageContent({
 
   function handleEdit(row: EmployeeScheduleRow) {
     setActiveEmployeeId(row.employeeId)
+    setActiveSchedule(null)
     setDialogOpen(true)
   }
 
@@ -224,7 +228,7 @@ export function SchedulePageContent({
           payroll={selectedPayroll}
           employeeId={activeRow.employeeId}
           employeeName={activeRow.employeeName}
-          schedule={activeSchedule}
+          schedule={isLoadingSchedule ? null : activeSchedule}
           open={dialogOpen}
           onOpenChange={setDialogOpen}
         />

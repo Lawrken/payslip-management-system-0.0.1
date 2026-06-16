@@ -1,3 +1,5 @@
+import "server-only"
+
 import { drizzle } from "drizzle-orm/postgres-js"
 import postgres from "postgres"
 
@@ -29,6 +31,9 @@ function getSql() {
     globalThis.__payslipSql ??
     postgres(getDatabaseUrl(), {
       prepare: false,
+      max: 1,
+      idle_timeout: 20,
+      connect_timeout: 10,
     })
 
   if (process.env.NODE_ENV !== "production") {

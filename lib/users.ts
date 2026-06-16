@@ -1,3 +1,5 @@
+import "server-only"
+
 import {
   createCipheriv,
   createDecipheriv,
@@ -107,6 +109,28 @@ function toUserAccount(row: {
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }
+}
+
+export type UserOption = {
+  employeeId: string
+  email: string
+  employeeName: string | null
+}
+
+export async function getUserOptions(
+  client: DatabaseClient = db
+): Promise<UserOption[]> {
+  const rows = await client
+    .select({
+      employeeId: users.employeeId,
+      email: users.email,
+      employeeName: employees.name,
+    })
+    .from(users)
+    .leftJoin(employees, eq(users.employeeId, employees.employeeId))
+    .orderBy(asc(users.employeeId))
+
+  return rows
 }
 
 export async function getUserAccounts(

@@ -5,7 +5,7 @@ import { isRole } from "@/lib/auth-helpers"
 import { requireDashboardSession } from "@/lib/authorization"
 import {
   getPaginatedUserAccounts,
-  getUserAccounts,
+  getUserOptions,
   type UserListSort,
   type UserPasswordStatus,
 } from "@/lib/users"
@@ -69,7 +69,7 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
       sort,
       direction,
     }),
-    getUserAccounts(),
+    getUserOptions(),
   ])
 
   return (

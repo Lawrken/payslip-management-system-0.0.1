@@ -1,7 +1,7 @@
 import { PAYSLIP_STATUS_COLORS } from "@/lib/dashboard-chart-colors"
 import { formatPayslipStatus } from "@/lib/payslip-status"
 import type { PayrollPayslipMetrics } from "@/lib/payslips"
-import type { Payroll, Payslip, PayslipStatus, Role } from "@/lib/types"
+import type { Payroll, PayrollSummary, Payslip, PayslipStatus, Role } from "@/lib/types"
 
 const PAYSLIP_STATUSES: PayslipStatus[] = [
   "draft",
@@ -41,7 +41,7 @@ type DashboardUrgency = {
 }
 
 export type DashboardSummary = {
-  selectedPayroll: Payroll | null
+  selectedPayroll: PayrollSummary | null
   statusCounts: PayslipStatusCount[]
   totalPayslips: number
   reviewQueueCount: number
@@ -312,7 +312,7 @@ export function buildDashboardSummary(input: {
 }
 
 export function buildDashboardSummaryFromMetrics(input: {
-  selectedPayroll: Payroll | null
+  selectedPayroll: PayrollSummary | null
   metrics: PayrollPayslipMetrics | null
   role: Role
 }): DashboardSummary {

@@ -2,27 +2,70 @@
 
 import * as React from "react"
 
+import { getEmployeePayslipDetailAction } from "@/app/payslips/actions"
 import { EmployeePayslipPeriodSelector } from "@/components/payslips/employee-payslip-period-selector"
-import {
-  EmployeePayslipViewer,
-  type EmployeePayslipPreviewItem,
-} from "@/components/payslips/employee-payslip-viewer"
+import { EmployeePayslipViewer } from "@/components/payslips/employee-payslip-viewer"
+import type { EmployeePayslipPreviewItem } from "@/components/payslips/employee-payslip-viewer"
+import type { EmployeePayslipListItem } from "@/lib/types"
 
 type EmployeePayslipsWorkspaceProps = {
-  payslips: EmployeePayslipPreviewItem[]
+  payslipPeriods: EmployeePayslipListItem[]
   signedInLabel: string
   headerActions: React.ReactNode
 }
 
 export function EmployeePayslipsWorkspace({
-  payslips,
+  payslipPeriods,
   signedInLabel,
   headerActions,
 }: EmployeePayslipsWorkspaceProps) {
-  const [selectedId, setSelectedId] = React.useState(payslips[0]?.id ?? "")
+  const [selectedId, setSelectedId] = React.useState(payslipPeriods[0]?.id ?? "")
+  const [selectedPayslip, setSelectedPayslip] =
+    React.useState<EmployeePayslipPreviewItem | null>(null)
+  const [isLoading, setIsLoading] = React.useState(false)
 
-  const selectedPayslip =
-    payslips.find((payslip) => payslip.id === selectedId) ?? payslips[0] ?? null
+  React.useEffect(() => {
+    if (!selectedId) {
+      setSelectedPayslip(null)
+      return
+    }
+
+    let cancelled = false
+    setIsLoading(true)
+    void getEmployeePayslipDetailAction(selectedId).then((result) => {
+      if (cancelled) {
+        return
+      }
+      setIsLoading(false)
+      if ("error" in result) {
+        setSelectedPayslip(null)
+        return
+      }
+
+      const payslip = result.payslip
+      setSelectedPayslip({
+        id: payslip.id,
+        employeeId: payslip.employeeId,
+        employeeName: payslip.employeeName,
+        employeeDivisor: payslip.employeeDivisor,
+        tin: payslip.tin,
+        sssNo: payslip.sssNo,
+        phicNo: payslip.phicNo,
+        hdmfNo: payslip.hdmfNo,
+        payrollPeriodLabel: payslip.payrollPeriodLabel,
+        dtrCutOffStart: payslip.dtrCutOffStart,
+        dtrCutOffEnd: payslip.dtrCutOffEnd,
+        payoutDate: payslip.payoutDate,
+        status: payslip.status,
+        inputs: payslip.inputs,
+        totals: payslip.totals,
+      })
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [selectedId])
 
   return (
     <>
@@ -36,9 +79,9 @@ export function EmployeePayslipsWorkspace({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {payslips.length > 0 ? (
+          {payslipPeriods.length > 0 ? (
             <EmployeePayslipPeriodSelector
-              payslips={payslips}
+              payslips={payslipPeriods}
               value={selectedId}
               onChange={setSelectedId}
               className="w-full sm:w-auto"
@@ -48,7 +91,10 @@ export function EmployeePayslipsWorkspace({
         </div>
       </div>
 
-      <EmployeePayslipViewer payslip={selectedPayslip} />
+      <EmployeePayslipViewer
+        payslip={selectedPayslip}
+        isLoading={isLoading}
+      />
     </>
   )
 }

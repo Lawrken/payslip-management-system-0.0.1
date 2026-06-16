@@ -15,6 +15,10 @@ import {
   returnPayslipAction,
   superAdminApprovePayslipAction,
 } from "@/app/dashboard/review/actions"
+import {
+  getEmployeeByEmployeeIdAction,
+  getPayslipByIdAction,
+} from "@/app/dashboard/payslips/actions"
 import { EmployeeCombobox } from "@/components/dashboard/shared/employee-combobox"
 import { PayslipBreakdown } from "@/components/dashboard/shared/payslip-breakdown"
 import { PayslipSummary } from "@/components/dashboard/payslips/payslip-summary"
@@ -27,7 +31,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import type { Employee, Payslip, PayslipPayrollInputs, Role } from "@/lib/types"
+import type { EmployeeOption } from "@/lib/employees"
+import type { EmployeeDivisor } from "@/lib/employee-options"
+import type { Payslip, PayslipListItem, PayslipPayrollInputs, Role } from "@/lib/types"
 
 function payslipHasData(inputs: PayslipPayrollInputs): boolean {
   return Object.values(inputs).some(
@@ -36,8 +42,9 @@ function payslipHasData(inputs: PayslipPayrollInputs): boolean {
 }
 
 type ReviewPayslipDialogProps = {
-  employees: Employee[]
-  payslips: Payslip[]
+  employeeOptions: EmployeeOption[]
+  payslipListItems: PayslipListItem[]
+  activePayslipId: string | null
   activeIndex: number
   onActiveIndexChange: (index: number) => void
   open: boolean
@@ -59,8 +66,9 @@ function isEditableElement(element: Element | null): boolean {
 }
 
 export function ReviewPayslipDialog({
-  employees,
-  payslips,
+  employeeOptions,
+  payslipListItems,
+  activePayslipId,
   activeIndex,
   onActiveIndexChange,
   open,
@@ -68,17 +76,56 @@ export function ReviewPayslipDialog({
   role,
 }: ReviewPayslipDialogProps) {
   const router = useRouter()
-  const activePayslip = activeIndex >= 0 ? payslips[activeIndex] : null
+  const activeListItem =
+    activeIndex >= 0 ? payslipListItems[activeIndex] : null
+  const [activePayslip, setActivePayslip] = React.useState<Payslip | null>(null)
+  const [employeeDivisor, setEmployeeDivisor] =
+    React.useState<EmployeeDivisor | undefined>(undefined)
   const [error, setError] = React.useState<string | null>(null)
   const [isPending, startTransition] = React.useTransition()
+  const [isLoadingPayslip, setIsLoadingPayslip] = React.useState(false)
 
   const canGoPrev = activeIndex > 0
-  const canGoNext = activeIndex >= 0 && activeIndex < payslips.length - 1
+  const canGoNext = activeIndex >= 0 && activeIndex < payslipListItems.length - 1
 
   const canAdminAct = role === "admin" && activePayslip?.status === "pending"
   const canSuperAdminAct =
     role === "superAdmin" && activePayslip?.status === "adminApproved"
   const hasActions = canAdminAct || canSuperAdminAct
+
+  React.useEffect(() => {
+    if (!open || !activePayslipId) {
+      return
+    }
+
+    let cancelled = false
+    setIsLoadingPayslip(true)
+    void getPayslipByIdAction(activePayslipId).then((result) => {
+      if (cancelled) {
+        return
+      }
+      setIsLoadingPayslip(false)
+      if ("error" in result) {
+        setError(result.error)
+        setActivePayslip(null)
+        return
+      }
+      setActivePayslip(result.payslip)
+      void getEmployeeByEmployeeIdAction(result.payslip.employeeId).then(
+        (employeeResult) => {
+          if (cancelled || "error" in employeeResult) {
+            setEmployeeDivisor(undefined)
+            return
+          }
+          setEmployeeDivisor(employeeResult.employee.divisor)
+        }
+      )
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [open, activePayslipId])
 
   const viewOnlyMessage = React.useMemo(() => {
     if (!activePayslip || hasActions) {
@@ -122,7 +169,7 @@ export function ReviewPayslipDialog({
   }
 
   function handleEmployeeChange(nextEmployeeId: string) {
-    const matchIndex = payslips.findIndex(
+    const matchIndex = payslipListItems.findIndex(
       (payslip) => payslip.employeeId === nextEmployeeId
     )
     if (matchIndex >= 0) {
@@ -137,7 +184,7 @@ export function ReviewPayslipDialog({
     }
 
     const nextIndex = activeIndex + 1
-    const hasNextInQueue = nextIndex < payslips.length
+    const hasNextInQueue = nextIndex < payslipListItems.length
 
     startTransition(async () => {
       const result =
@@ -200,7 +247,7 @@ export function ReviewPayslipDialog({
       } else if (
         event.key === "ArrowRight" &&
         activeIndex >= 0 &&
-        activeIndex < payslips.length - 1
+        activeIndex < payslipListItems.length - 1
       ) {
         event.preventDefault()
         setError(null)
@@ -210,15 +257,11 @@ export function ReviewPayslipDialog({
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [open, activeIndex, payslips.length, onActiveIndexChange])
+  }, [open, activeIndex, payslipListItems.length, onActiveIndexChange])
 
-  if (!activePayslip) {
+  if (!activeListItem) {
     return null
   }
-
-  const activeEmployee = employees.find(
-    (employee) => employee.employeeId === activePayslip.employeeId
-  )
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -229,7 +272,7 @@ export function ReviewPayslipDialog({
       >
         <DialogHeader className="shrink-0 gap-0 border-b px-6 py-4">
           <DialogTitle className="sr-only">
-            Review payslip for {activePayslip.employeeName}
+            Review payslip for {activeListItem.employeeName}
           </DialogTitle>
           <div className="flex items-center gap-3">
             <div className="flex min-w-0 flex-1 items-center gap-1">
@@ -239,16 +282,16 @@ export function ReviewPayslipDialog({
                 size="icon"
                 className="shrink-0"
                 onClick={goToPrev}
-                disabled={!canGoPrev || isPending}
+                disabled={!canGoPrev || isPending || isLoadingPayslip}
                 aria-label="Previous payslip"
               >
                 <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} />
               </Button>
               <EmployeeCombobox
-                employees={employees}
-                value={activePayslip.employeeId}
+                employees={employeeOptions}
+                value={activeListItem.employeeId}
                 onChange={handleEmployeeChange}
-                disabled={isPending}
+                disabled={isPending || isLoadingPayslip}
                 label=""
                 className="min-w-0 flex-1"
               />
@@ -258,7 +301,7 @@ export function ReviewPayslipDialog({
                 size="icon"
                 className="shrink-0"
                 onClick={goToNext}
-                disabled={!canGoNext || isPending}
+                disabled={!canGoNext || isPending || isLoadingPayslip}
                 aria-label="Next payslip"
               >
                 <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} />
@@ -292,10 +335,14 @@ export function ReviewPayslipDialog({
             </p>
           ) : null}
 
-          <PayslipBreakdown
-            inputs={activePayslip.inputs}
-            divisor={activeEmployee?.divisor}
-          />
+          {isLoadingPayslip || !activePayslip ? (
+            <p className="text-sm text-muted-foreground">Loading payslip…</p>
+          ) : (
+            <PayslipBreakdown
+              inputs={activePayslip.inputs}
+              divisor={employeeDivisor}
+            />
+          )}
         </div>
 
         <div className="shrink-0 border-t bg-popover px-6 py-4">
@@ -306,21 +353,36 @@ export function ReviewPayslipDialog({
                 : "flex flex-col gap-4"
             }
           >
-            <PayslipSummary totals={activePayslip.totals} variant="inline" />
+            <PayslipSummary
+              totals={
+                activePayslip?.totals ?? {
+                  taxableEarnings: 0,
+                  totalDeductions: 0,
+                  nonTaxableEarnings: 0,
+                  grossPay: 0,
+                  netPay: 0,
+                }
+              }
+              variant="inline"
+            />
             {hasActions ? (
               <div className="flex shrink-0 flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={handleReturn}
-                  disabled={isPending}
+                  disabled={isPending || !activePayslip}
                 >
                   {isPending ? "Saving…" : "Return"}
                 </Button>
                 <Button
                   type="button"
                   onClick={handleApprove}
-                  disabled={isPending || !payslipHasData(activePayslip.inputs)}
+                  disabled={
+                    isPending ||
+                    !activePayslip ||
+                    !payslipHasData(activePayslip.inputs)
+                  }
                 >
                   {isPending
                     ? "Saving…"

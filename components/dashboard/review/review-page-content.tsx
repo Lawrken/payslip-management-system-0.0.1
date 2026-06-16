@@ -9,10 +9,16 @@ import { PaginationControls } from "@/components/dashboard/shared/pagination-con
 import { ReviewTable } from "@/components/dashboard/review/review-table"
 import { PayrollPeriodCombobox } from "@/components/dashboard/shared/payroll-period-combobox"
 import { PayrollPeriodStrip } from "@/components/dashboard/shared/payroll-period-strip"
+import type { EmployeeOption } from "@/lib/employees"
 import type { PaginatedResult } from "@/lib/pagination"
 import type { PayslipListSort } from "@/lib/payslips"
 import type { SortDirection } from "@/lib/table-sort"
-import type { Employee, Payroll, Payslip, PayslipStatus, Role } from "@/lib/types"
+import type {
+  PayrollSummary,
+  PayslipListItem,
+  PayslipStatus,
+  Role,
+} from "@/lib/types"
 
 const ReviewPayslipDialog = dynamic(
   () =>
@@ -25,10 +31,10 @@ const ReviewPayslipDialog = dynamic(
 )
 
 type ReviewPageContentProps = {
-  payslips: PaginatedResult<Payslip>
-  employees: Employee[]
-  payrolls: Payroll[]
-  defaultPayrollId: string | null
+  payslips: PaginatedResult<PayslipListItem>
+  employeeOptions: EmployeeOption[]
+  payrolls: PayrollSummary[]
+  selectedPayrollId: string
   role: Role
   employeeId: string
   status: string
@@ -39,9 +45,9 @@ type ReviewPageContentProps = {
 
 export function ReviewPageContent({
   payslips,
-  employees,
+  employeeOptions,
   payrolls,
-  defaultPayrollId,
+  selectedPayrollId,
   role,
   employeeId,
   status,
@@ -51,37 +57,15 @@ export function ReviewPageContent({
 }: ReviewPageContentProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const payrollIdFromUrl = searchParams.get("payrollId")
 
   const [dialogOpen, setDialogOpen] = React.useState(false)
   const [activePayslipId, setActivePayslipId] = React.useState<string | null>(
     null
   )
 
-  const selectedPayrollId = React.useMemo(() => {
-    if (
-      payrollIdFromUrl &&
-      payrolls.some((payroll) => payroll.id === payrollIdFromUrl)
-    ) {
-      return payrollIdFromUrl
-    }
-    return defaultPayrollId ?? payrolls[0]?.id ?? ""
-  }, [payrollIdFromUrl, payrolls, defaultPayrollId])
-
   const selectedPayroll = payrolls.find(
     (payroll) => payroll.id === selectedPayrollId
   )
-
-  React.useEffect(() => {
-    if (!selectedPayrollId || payrollIdFromUrl === selectedPayrollId) {
-      return
-    }
-    const params = new URLSearchParams(searchParams.toString())
-    params.set("payrollId", selectedPayrollId)
-    router.replace(`/dashboard/review?${params.toString()}`, {
-      scroll: false,
-    })
-  }, [selectedPayrollId, payrollIdFromUrl, router, searchParams])
 
   function handlePayrollChange(payrollId: string) {
     const params = new URLSearchParams(searchParams.toString())
@@ -145,7 +129,7 @@ export function ReviewPageContent({
     return payslips.items.findIndex((payslip) => payslip.id === activePayslipId)
   }, [payslips.items, activePayslipId])
 
-  function handleReview(payslip: Payslip) {
+  function handleReview(payslip: PayslipListItem) {
     setActivePayslipId(payslip.id)
     setDialogOpen(true)
   }
@@ -180,7 +164,7 @@ export function ReviewPageContent({
             className="w-full lg:w-80"
           />
           <EmployeeCombobox
-            employees={employees}
+            employees={employeeOptions}
             value={employeeId}
             onChange={handleEmployeeFilterChange}
             variant="filter"
@@ -209,8 +193,9 @@ export function ReviewPageContent({
       />
 
       <ReviewPayslipDialog
-        employees={employees}
-        payslips={payslips.items}
+        employeeOptions={employeeOptions}
+        payslipListItems={payslips.items}
+        activePayslipId={activePayslipId}
         activeIndex={activeIndex}
         onActiveIndexChange={(index) => {
           const payslip = payslips.items[index]

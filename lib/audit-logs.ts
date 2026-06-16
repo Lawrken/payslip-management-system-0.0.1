@@ -47,41 +47,6 @@ function parseDateEnd(value: string) {
   return Number.isNaN(date.getTime()) ? null : date
 }
 
-export async function getAuditLogs(
-  query: AuditLogQuery = {}
-): Promise<AuditLog[]> {
-  const conditions = []
-
-  if (query.dateFrom) {
-    const dateFrom = parseDateStart(query.dateFrom)
-    if (dateFrom) {
-      conditions.push(gte(auditLogs.createdAt, dateFrom))
-    }
-  }
-
-  if (query.dateTo) {
-    const dateTo = parseDateEnd(query.dateTo)
-    if (dateTo) {
-      conditions.push(lte(auditLogs.createdAt, dateTo))
-    }
-  }
-
-  if (query.actorRole) {
-    conditions.push(eq(auditLogs.actorRole, query.actorRole))
-  }
-
-  if (query.action) {
-    conditions.push(eq(auditLogs.action, query.action))
-  }
-
-  return db
-    .select()
-    .from(auditLogs)
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(desc(auditLogs.createdAt))
-    .limit(200)
-}
-
 export type AuditLogListSort =
   | "createdAt"
   | "actorEmployeeId"

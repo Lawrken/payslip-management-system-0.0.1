@@ -4,7 +4,7 @@ import { ArrowDown01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import * as React from "react"
 
-import type { EmployeePayslipPreviewItem } from "@/components/payslips/employee-payslip-viewer"
+import type { EmployeePayslipListItem } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import {
   Command,
@@ -26,7 +26,7 @@ import {
 import { cn } from "@/lib/utils"
 
 type EmployeePayslipPeriodSelectorProps = {
-  payslips: EmployeePayslipPreviewItem[]
+  payslips: EmployeePayslipListItem[]
   value: string
   onChange: (payslipId: string) => void
   className?: string

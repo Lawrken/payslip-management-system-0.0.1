@@ -50,6 +50,7 @@ export type EmployeePayslipPreviewItem = {
 
 type EmployeePayslipViewerProps = {
   payslip: EmployeePayslipPreviewItem | null
+  isLoading?: boolean
 }
 
 function getDownloadFilename(response: Response, payslip: EmployeePayslipPreviewItem) {
@@ -67,6 +68,7 @@ function getDownloadFilename(response: Response, payslip: EmployeePayslipPreview
 
 export function EmployeePayslipViewer({
   payslip,
+  isLoading = false,
 }: EmployeePayslipViewerProps) {
   const [downloadOpen, setDownloadOpen] = React.useState(false)
   const [password, setPassword] = React.useState("")
@@ -117,6 +119,14 @@ export function EmployeePayslipViewer({
     } finally {
       setIsDownloading(false)
     }
+  }
+
+  if (isLoading) {
+    return (
+      <section className="w-full py-6">
+        <p className="text-sm text-muted-foreground">Loading payslip…</p>
+      </section>
+    )
   }
 
   if (!payslip) {

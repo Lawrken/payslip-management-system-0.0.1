@@ -19,20 +19,20 @@ import {
 import type { PayslipListSort } from "@/lib/payslips"
 import type { SortDirection } from "@/lib/table-sort"
 import { cn } from "@/lib/utils"
-import type { Payslip } from "@/lib/types"
+import type { PayslipListItem } from "@/lib/types"
 
 type PayslipsTableProps = {
-  payslips: Payslip[]
+  payslips: PayslipListItem[]
   status: string
   sortKey: PayslipListSort
   sortDir: SortDirection
   onSort: (key: PayslipListSort) => void
   onStatusFilterChange: (status: string) => void
-  onEdit: (payslip: Payslip) => void
+  onEdit: (payslip: PayslipListItem) => void
   emptyMessage?: string
 }
 
-const payslipStatuses: Payslip["status"][] = [
+const payslipStatuses: PayslipListItem["status"][] = [
   "draft",
   "pending",
   "adminApproved",

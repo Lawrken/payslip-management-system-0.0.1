@@ -11,10 +11,11 @@ import { PayrollPeriodCombobox } from "@/components/dashboard/shared/payroll-per
 import { PayrollPeriodStrip } from "@/components/dashboard/shared/payroll-period-strip"
 import { PayslipsTable } from "@/components/dashboard/payslips/payslips-table"
 import { Button } from "@/components/ui/button"
+import type { EmployeeOption } from "@/lib/employees"
 import type { PaginatedResult } from "@/lib/pagination"
 import type { PayslipListSort } from "@/lib/payslips"
 import type { SortDirection } from "@/lib/table-sort"
-import type { Employee, Payroll, Payslip } from "@/lib/types"
+import type { PayrollSummary, PayslipListItem } from "@/lib/types"
 
 const EditPayslipDialog = dynamic(
   () =>
@@ -27,10 +28,10 @@ const EditPayslipDialog = dynamic(
 )
 
 type PayslipsPageContentProps = {
-  payslips: PaginatedResult<Payslip>
-  employees: Employee[]
-  payrolls: Payroll[]
-  defaultPayrollId: string | null
+  payslips: PaginatedResult<PayslipListItem>
+  employeeOptions: EmployeeOption[]
+  payrolls: PayrollSummary[]
+  selectedPayrollId: string
   status: string
   sortKey: PayslipListSort
   sortDir: SortDirection
@@ -38,16 +39,15 @@ type PayslipsPageContentProps = {
 
 export function PayslipsPageContent({
   payslips,
-  employees,
+  employeeOptions,
   payrolls,
-  defaultPayrollId,
+  selectedPayrollId,
   status,
   sortKey,
   sortDir,
 }: PayslipsPageContentProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const payrollIdFromUrl = searchParams.get("payrollId")
   const selectedEmployeeId = searchParams.get("employeeId") ?? ""
 
   const [dialogOpen, setDialogOpen] = React.useState(false)
@@ -55,30 +55,9 @@ export function PayslipsPageContent({
     null
   )
 
-  const selectedPayrollId = React.useMemo(() => {
-    if (
-      payrollIdFromUrl &&
-      payrolls.some((payroll) => payroll.id === payrollIdFromUrl)
-    ) {
-      return payrollIdFromUrl
-    }
-    return defaultPayrollId ?? payrolls[0]?.id ?? ""
-  }, [payrollIdFromUrl, payrolls, defaultPayrollId])
-
   const selectedPayroll = payrolls.find(
     (payroll) => payroll.id === selectedPayrollId
   )
-
-  React.useEffect(() => {
-    if (!selectedPayrollId || payrollIdFromUrl === selectedPayrollId) {
-      return
-    }
-    const params = new URLSearchParams(searchParams.toString())
-    params.set("payrollId", selectedPayrollId)
-    router.replace(`/dashboard/payslips?${params.toString()}`, {
-      scroll: false,
-    })
-  }, [selectedPayrollId, payrollIdFromUrl, router, searchParams])
 
   function handlePayrollChange(payrollId: string) {
     const params = new URLSearchParams(searchParams.toString())
@@ -149,7 +128,7 @@ export function PayslipsPageContent({
     setActivePayslipId(payslips.items[index]?.id ?? null)
   }
 
-  function handleEdit(payslip: Payslip) {
+  function handleEdit(payslip: PayslipListItem) {
     setActivePayslipId(payslip.id)
     setDialogOpen(true)
   }
@@ -186,16 +165,17 @@ export function PayslipsPageContent({
           />
           <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
             <EmployeeCombobox
-              employees={employees}
+              employees={employeeOptions}
               value={selectedEmployeeId}
               onChange={handleEmployeeFilterChange}
               variant="filter"
             />
             {selectedPayrollId ? (
               <EditPayslipDialog
-                employees={employees}
-                payslips={payslips.items}
+                employeeOptions={employeeOptions}
+                payslipListItems={payslips.items}
                 payrollId={selectedPayrollId}
+                activePayslipId={activePayslipId}
                 activeIndex={activeIndex}
                 onActiveIndexChange={handleActiveIndexChange}
                 open={dialogOpen}

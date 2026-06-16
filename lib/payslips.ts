@@ -1,3 +1,5 @@
+import "server-only"
+
 import { and, asc, count, desc, eq, inArray, ne, sql } from "drizzle-orm"
 
 import { db, type DatabaseClient } from "@/db"
@@ -25,8 +27,10 @@ import {
 import type {
   Employee,
   EmployeePayslip,
+  EmployeePayslipListItem,
   Payroll,
   Payslip,
+  PayslipListItem,
   PayslipPayrollInputs,
   PayslipPdfData,
   PayslipStatus,
@@ -76,6 +80,19 @@ function mapPayslipRow(row: {
     status: row.payslip.status,
     inputs,
     totals,
+  }
+}
+
+function mapPayslipListItem(row: {
+  payslip: typeof payslips.$inferSelect
+  employee: typeof employeesTable.$inferSelect | null
+}): PayslipListItem {
+  return {
+    id: row.payslip.id,
+    payrollId: row.payslip.payrollId,
+    employeeId: row.payslip.employeeId,
+    employeeName: row.employee?.name ?? row.payslip.employeeId,
+    status: row.payslip.status,
   }
 }
 
@@ -143,32 +160,6 @@ function mapEmployeePayslipRow(row: {
   }
 }
 
-async function getPayslipRows() {
-  return db
-    .select({
-      payslip: payslips,
-      payslipInput: payslipInputs,
-      employee: employeesTable,
-    })
-    .from(payslips)
-    .leftJoin(payslipInputs, eq(payslipInputs.payslipId, payslips.id))
-    .leftJoin(
-      employeesTable,
-      eq(employeesTable.employeeId, payslips.employeeId)
-    )
-}
-
-export async function getPayslips(): Promise<Payslip[]> {
-  const rows = await getPayslipRows()
-  return rows.map(mapPayslipRow).sort((a, b) => {
-    const payrollSort = a.payrollId.localeCompare(b.payrollId)
-    if (payrollSort !== 0) {
-      return payrollSort
-    }
-    return a.employeeName.localeCompare(b.employeeName)
-  })
-}
-
 export type PayslipListSort = "employeeName" | "employeeId" | "status"
 
 export type PayslipListQuery = PaginationInput & {
@@ -210,6 +201,45 @@ function buildPayslipWhere(query: PayslipListQuery) {
   }
 
   return conditions.length > 0 ? and(...conditions) : undefined
+}
+
+export async function getPaginatedPayslipListItems(
+  query: PayslipListQuery = {},
+  client: DatabaseClient = db
+): Promise<PaginatedResult<PayslipListItem>> {
+  const pagination = normalizePagination(query)
+  const where = buildPayslipWhere(query)
+  const sort = query.sort ?? "employeeName"
+  const direction = query.direction === "desc" ? "desc" : "asc"
+  const orderBy =
+    direction === "desc"
+      ? desc(getPayslipSortColumn(sort))
+      : asc(getPayslipSortColumn(sort))
+
+  const [totalRow] = await client
+    .select({ count: count() })
+    .from(payslips)
+    .where(where)
+  const rows = await client
+    .select({
+      payslip: payslips,
+      employee: employeesTable,
+    })
+    .from(payslips)
+    .leftJoin(
+      employeesTable,
+      eq(employeesTable.employeeId, payslips.employeeId)
+    )
+    .where(where)
+    .orderBy(orderBy, asc(payslips.employeeId))
+    .limit(pagination.pageSize)
+    .offset(pagination.offset)
+
+  return buildPaginatedResult(
+    rows.map(mapPayslipListItem),
+    totalRow?.count ?? 0,
+    pagination
+  )
 }
 
 export async function getPaginatedPayslips(
@@ -497,24 +527,24 @@ export async function getVisiblePayslipsByEmployeeId(
   })
 }
 
-export async function getVisibleEmployeePayslipDetailsByEmployeeId(
-  employeeId: string
-): Promise<PayslipPdfData[]> {
+export async function getVisibleEmployeePayslipListItems(
+  employeeId: string,
+  client: DatabaseClient = db
+): Promise<EmployeePayslipListItem[]> {
   const normalizedId = normalizeEmployeeId(employeeId)
-  const rows = await db
+  const rows = await client
     .select({
-      payslip: payslips,
-      payslipInput: payslipInputs,
-      employee: employeesTable,
-      payroll: payrollsTable,
+      payslipId: payslips.id,
+      status: payslips.status,
+      payrollPeriodLabel: payrollsTable.payrollPeriodLabel,
+      payrollPeriodStart: payrollsTable.payrollPeriodStart,
+      payrollPeriodEnd: payrollsTable.payrollPeriodEnd,
+      dtrCutOffStart: payrollsTable.dtrCutOffStart,
+      dtrCutOffEnd: payrollsTable.dtrCutOffEnd,
+      payoutDate: payrollsTable.payoutDate,
     })
     .from(payslips)
     .innerJoin(payrollsTable, eq(payrollsTable.id, payslips.payrollId))
-    .innerJoin(
-      employeesTable,
-      eq(employeesTable.employeeId, payslips.employeeId)
-    )
-    .leftJoin(payslipInputs, eq(payslipInputs.payslipId, payslips.id))
     .where(
       and(
         eq(payslips.employeeId, normalizedId),
@@ -522,9 +552,18 @@ export async function getVisibleEmployeePayslipDetailsByEmployeeId(
       )
     )
 
-  return rows.map(mapPayslipPdfRow).sort((a, b) => {
-    return b.payrollPeriodEnd.localeCompare(a.payrollPeriodEnd)
-  })
+  return rows
+    .map((row) => ({
+      id: row.payslipId,
+      payrollPeriodLabel: row.payrollPeriodLabel,
+      payrollPeriodStart: row.payrollPeriodStart,
+      payrollPeriodEnd: row.payrollPeriodEnd,
+      dtrCutOffStart: row.dtrCutOffStart,
+      dtrCutOffEnd: row.dtrCutOffEnd,
+      payoutDate: row.payoutDate,
+      status: row.status,
+    }))
+    .sort((a, b) => b.payrollPeriodEnd.localeCompare(a.payrollPeriodEnd))
 }
 
 function hasPayslipData(inputs: PayslipPayrollInputs): boolean {
@@ -569,9 +608,12 @@ export async function createPayslipsForPayroll(
   }
 
   const employees = await getEmployees(client)
-  const existing = await getPayslipsByPayrollId(payrollId, client)
+  const existingRows = await client
+    .select({ employeeId: payslips.employeeId })
+    .from(payslips)
+    .where(eq(payslips.payrollId, payrollId))
   const existingEmployeeIds = new Set(
-    existing.map((payslip) => payslip.employeeId)
+    existingRows.map((row) => row.employeeId)
   )
   const newPayslips = employees.filter(
     (employee) => !existingEmployeeIds.has(employee.employeeId)

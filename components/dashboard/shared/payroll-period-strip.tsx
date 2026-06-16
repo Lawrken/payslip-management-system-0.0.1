@@ -2,10 +2,10 @@ import {
   formatDisplayDate,
   formatDtrCutOffRange,
 } from "@/lib/payroll-dates"
-import type { Payroll } from "@/lib/types"
+import type { Payroll, PayrollSummary } from "@/lib/types"
 
 type PayrollPeriodStripProps = {
-  payroll: Payroll
+  payroll: Payroll | PayrollSummary
 }
 
 export function PayrollPeriodStrip({ payroll }: PayrollPeriodStripProps) {

@@ -120,6 +120,23 @@ function rowTextY(y: number, rowHeight: number, fontSize: number) {
   return y + (rowHeight - fontSize) / 2
 }
 
+const LOGO_PATH = path.join(process.cwd(), "public", "helport.png")
+let cachedLogoBuffer: Buffer | null | undefined
+
+function getLogoBuffer() {
+  if (cachedLogoBuffer !== undefined) {
+    return cachedLogoBuffer
+  }
+
+  if (!fs.existsSync(LOGO_PATH)) {
+    cachedLogoBuffer = null
+    return cachedLogoBuffer
+  }
+
+  cachedLogoBuffer = fs.readFileSync(LOGO_PATH)
+  return cachedLogoBuffer
+}
+
 function drawSampleHeader(
   doc: PDFKit.PDFDocument,
   data: PayslipPdfData,
@@ -127,16 +144,11 @@ function drawSampleHeader(
 ) {
   // Outer Border is drawn separately
 
-  const logoPath = path.join(process.cwd(), "public", "helport.png")
   const logoTop = y + 5
+  const logoBuffer = getLogoBuffer()
 
-  if (fs.existsSync(logoPath)) {
-    const logoBuffer = fs.readFileSync(logoPath)
-    const arrayBuffer = logoBuffer.buffer.slice(
-      logoBuffer.byteOffset,
-      logoBuffer.byteOffset + logoBuffer.byteLength
-    )
-    doc.image(arrayBuffer, PAGE_MARGIN + 10, logoTop, { height: LOGO_HEIGHT })
+  if (logoBuffer) {
+    doc.image(logoBuffer, PAGE_MARGIN + 10, logoTop, { height: LOGO_HEIGHT })
   }
 
   const payrollTitleY = logoTop + LOGO_HEIGHT + 6

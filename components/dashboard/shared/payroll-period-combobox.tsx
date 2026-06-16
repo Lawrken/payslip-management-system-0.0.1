@@ -23,10 +23,10 @@ import {
   formatDtrCutOffRange,
 } from "@/lib/payroll-dates"
 import { cn } from "@/lib/utils"
-import type { Payroll } from "@/lib/types"
+import type { PayrollSummary } from "@/lib/types"
 
 type PayrollPeriodComboboxProps = {
-  payrolls: Payroll[]
+  payrolls: PayrollSummary[]
   value: string
   onChange: (payrollId: string) => void
   disabled?: boolean

@@ -1,15 +1,17 @@
-import { eq } from "drizzle-orm"
+import "server-only"
+
+import { and, eq, gte, lte, ne } from "drizzle-orm"
+import { cache } from "react"
 
 import { db, type DatabaseClient } from "@/db"
 import { payrolls } from "@/db/schema"
 import { resolveDtrDays, validateDtrDays } from "@/lib/dtr-days"
 import {
-  dateRangesOverlap,
   formatPayrollPeriodLabel,
   isValidDateRange,
 } from "@/lib/payroll-dates"
 import { createPayslipsForPayroll } from "@/lib/payslips"
-import type { Payroll, PayrollDtrDay } from "@/lib/types"
+import type { Payroll, PayrollDtrDay, PayrollSummary } from "@/lib/types"
 
 function normalizePayroll(payroll: Payroll): Payroll {
   return {
@@ -17,6 +19,46 @@ function normalizePayroll(payroll: Payroll): Payroll {
     dtrDays: resolveDtrDays(payroll),
   }
 }
+
+function toPayrollSummary(payroll: {
+  id: string
+  payrollPeriodLabel: string
+  payrollPeriodStart: string
+  payrollPeriodEnd: string
+  dtrCutOffStart: string
+  dtrCutOffEnd: string
+  payoutDate: string
+}): PayrollSummary {
+  return {
+    id: payroll.id,
+    payrollPeriodLabel: payroll.payrollPeriodLabel,
+    payrollPeriodStart: payroll.payrollPeriodStart,
+    payrollPeriodEnd: payroll.payrollPeriodEnd,
+    dtrCutOffStart: payroll.dtrCutOffStart,
+    dtrCutOffEnd: payroll.dtrCutOffEnd,
+    payoutDate: payroll.payoutDate,
+  }
+}
+
+async function getPayrollSummariesUncached(
+  client: DatabaseClient = db
+): Promise<PayrollSummary[]> {
+  const rows = await client.query.payrolls.findMany({
+    columns: {
+      id: true,
+      payrollPeriodLabel: true,
+      payrollPeriodStart: true,
+      payrollPeriodEnd: true,
+      dtrCutOffStart: true,
+      dtrCutOffEnd: true,
+      payoutDate: true,
+    },
+    orderBy: (table, { desc }) => [desc(table.payrollPeriodEnd)],
+  })
+  return rows.map(toPayrollSummary)
+}
+
+export const getPayrollSummaries = cache(getPayrollSummariesUncached)
 
 export async function getPayrolls(
   client: DatabaseClient = db
@@ -33,13 +75,6 @@ export async function getPayrollById(
 ): Promise<Payroll | null> {
   const payroll = await client.query.payrolls.findFirst({
     where: eq(payrolls.id, id),
-  })
-  return payroll ? normalizePayroll(payroll) : null
-}
-
-export async function getLatestPayroll(): Promise<Payroll | null> {
-  const payroll = await db.query.payrolls.findFirst({
-    orderBy: (table, { desc }) => [desc(table.payrollPeriodEnd)],
   })
   return payroll ? normalizePayroll(payroll) : null
 }
@@ -93,17 +128,15 @@ async function hasOverlappingPayrollPeriod(
   excludeId?: string,
   client: DatabaseClient = db
 ): Promise<boolean> {
-  const existingPayrolls = await getPayrolls(client)
-  return existingPayrolls.some(
-    (payroll) =>
-      payroll.id !== excludeId &&
-      dateRangesOverlap(
-        payroll.payrollPeriodStart,
-        payroll.payrollPeriodEnd,
-        start,
-        end
-      )
-  )
+  const overlap = await client.query.payrolls.findFirst({
+    where: and(
+      excludeId ? ne(payrolls.id, excludeId) : undefined,
+      lte(payrolls.payrollPeriodStart, end),
+      gte(payrolls.payrollPeriodEnd, start)
+    ),
+    columns: { id: true },
+  })
+  return Boolean(overlap)
 }
 
 function buildPayroll(id: string, input: NewPayrollInput): Payroll {

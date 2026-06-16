@@ -1,13 +1,17 @@
+import "server-only"
+
+import { cache } from "react"
+
+import { getSession } from "@/lib/session"
+import type { Session } from "@/lib/types"
 import {
   isAdmin,
   isDashboardRole,
   isEmployee,
   isSuperAdmin,
 } from "@/lib/auth-helpers"
-import { getSession } from "@/lib/session"
-import type { Session } from "@/lib/types"
 
-export async function requireDashboardSession(): Promise<
+async function requireDashboardSessionUncached(): Promise<
   Session | { error: string }
 > {
   const session = await getSession()
@@ -17,7 +21,7 @@ export async function requireDashboardSession(): Promise<
   return session
 }
 
-export async function requireAdminSession(): Promise<
+async function requireAdminSessionUncached(): Promise<
   Session | { error: string }
 > {
   const session = await getSession()
@@ -27,7 +31,7 @@ export async function requireAdminSession(): Promise<
   return session
 }
 
-export async function requireSuperAdminSession(): Promise<
+async function requireSuperAdminSessionUncached(): Promise<
   Session | { error: string }
 > {
   const session = await getSession()
@@ -37,7 +41,7 @@ export async function requireSuperAdminSession(): Promise<
   return session
 }
 
-export async function requireEmployeeSession(): Promise<
+async function requireEmployeeSessionUncached(): Promise<
   Session | { error: string }
 > {
   const session = await getSession()
@@ -46,3 +50,8 @@ export async function requireEmployeeSession(): Promise<
   }
   return session
 }
+
+export const requireDashboardSession = cache(requireDashboardSessionUncached)
+export const requireAdminSession = cache(requireAdminSessionUncached)
+export const requireSuperAdminSession = cache(requireSuperAdminSessionUncached)
+export const requireEmployeeSession = cache(requireEmployeeSessionUncached)

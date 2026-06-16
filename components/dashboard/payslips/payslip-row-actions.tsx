@@ -17,11 +17,11 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
-import type { Payslip } from "@/lib/types"
+import type { PayslipListItem } from "@/lib/types"
 
 type PayslipRowActionsProps = {
-  payslip: Payslip
-  onEdit: (payslip: Payslip) => void
+  payslip: PayslipListItem
+  onEdit: (payslip: PayslipListItem) => void
 }
 
 export function PayslipRowActions({ payslip, onEdit }: PayslipRowActionsProps) {

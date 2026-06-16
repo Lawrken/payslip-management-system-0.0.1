@@ -23,7 +23,7 @@ import type {
   PayrollTotalsChartRow,
   StatusChartDatum,
 } from "@/lib/dashboard-summary"
-import type { Payroll, Session } from "@/lib/types"
+import type { PayrollSummary, Session } from "@/lib/types"
 
 const DashboardCharts = dynamic(
   () =>
@@ -37,8 +37,8 @@ const DashboardCharts = dynamic(
 
 type DashboardPageContentProps = {
   session: Session
-  payrolls: Payroll[]
-  defaultPayrollId: string | null
+  payrolls: PayrollSummary[]
+  selectedPayrollId: string
   summary: DashboardSummary
   totalsChartData: PayrollTotalsChartRow[]
   statusChartData: StatusChartDatum[]
@@ -47,39 +47,17 @@ type DashboardPageContentProps = {
 export function DashboardPageContent({
   session,
   payrolls,
-  defaultPayrollId,
+  selectedPayrollId,
   summary,
   totalsChartData,
   statusChartData,
 }: DashboardPageContentProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const payrollIdFromUrl = searchParams.get("payrollId")
-
-  const selectedPayrollId = React.useMemo(() => {
-    if (
-      payrollIdFromUrl &&
-      payrolls.some((payroll) => payroll.id === payrollIdFromUrl)
-    ) {
-      return payrollIdFromUrl
-    }
-    return defaultPayrollId ?? payrolls[0]?.id ?? ""
-  }, [payrollIdFromUrl, payrolls, defaultPayrollId])
 
   const selectedPayroll = payrolls.find(
     (payroll) => payroll.id === selectedPayrollId
   )
-
-  React.useEffect(() => {
-    if (!selectedPayrollId || payrollIdFromUrl === selectedPayrollId) {
-      return
-    }
-    const params = new URLSearchParams(searchParams.toString())
-    params.set("payrollId", selectedPayrollId)
-    router.replace(`/dashboard?${params.toString()}`, {
-      scroll: false,
-    })
-  }, [selectedPayrollId, payrollIdFromUrl, router, searchParams])
 
   function handlePayrollChange(payrollId: string) {
     const params = new URLSearchParams(searchParams.toString())

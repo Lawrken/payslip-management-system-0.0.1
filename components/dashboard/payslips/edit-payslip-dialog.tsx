@@ -8,6 +8,8 @@ import { toast } from "sonner"
 
 import {
   addPayslipAction,
+  getEmployeeByEmployeeIdAction,
+  getPayslipByIdAction,
   updatePayslipAction,
   type PayslipFormState,
 } from "@/app/dashboard/payslips/actions"
@@ -24,6 +26,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import type { EmployeeOption } from "@/lib/employees"
 import {
   DEDUCTION_FIELDS,
   NON_TAXABLE_FIELDS,
@@ -36,7 +39,12 @@ import {
   DERIVED_PAYSLIP_FIELD_KEYS,
   parseDecimalInput,
 } from "@/lib/payroll-calculator"
-import type { Employee, Payslip, PayslipPayrollInputs } from "@/lib/types"
+import type {
+  Employee,
+  Payslip,
+  PayslipListItem,
+  PayslipPayrollInputs,
+} from "@/lib/types"
 
 const initialState: PayslipFormState = {}
 const READ_ONLY_PAYSLIP_FIELDS = new Set<keyof PayslipPayrollInputs>(
@@ -44,9 +52,10 @@ const READ_ONLY_PAYSLIP_FIELDS = new Set<keyof PayslipPayrollInputs>(
 )
 
 type EditPayslipDialogProps = {
-  employees: Employee[]
-  payslips: Payslip[]
+  employeeOptions: EmployeeOption[]
+  payslipListItems: PayslipListItem[]
   payrollId: string
+  activePayslipId: string | null
   activeIndex: number
   onActiveIndexChange: (index: number) => void
   open: boolean
@@ -68,9 +77,10 @@ function isEditableElement(element: Element | null): boolean {
 }
 
 export function EditPayslipDialog({
-  employees,
-  payslips,
+  employeeOptions,
+  payslipListItems,
   payrollId,
+  activePayslipId,
   activeIndex,
   onActiveIndexChange,
   open,
@@ -78,9 +88,12 @@ export function EditPayslipDialog({
   children,
 }: EditPayslipDialogProps) {
   const router = useRouter()
-  const activePayslip = activeIndex >= 0 ? payslips[activeIndex] : null
   const isCreateMode = activeIndex === -1
 
+  const [loadedPayslip, setLoadedPayslip] = React.useState<Payslip | null>(null)
+  const [selectedEmployee, setSelectedEmployee] = React.useState<Employee | null>(
+    null
+  )
   const [employeeId, setEmployeeId] = React.useState("")
   const [inputs, setInputs] = React.useState<PayslipPayrollInputs>(
     createEmptyPayslipInputs
@@ -90,22 +103,22 @@ export function EditPayslipDialog({
   >({})
   const [state, setState] = React.useState<PayslipFormState>(initialState)
   const [isPending, startTransition] = React.useTransition()
+  const [isLoadingPayslip, setIsLoadingPayslip] = React.useState(false)
   const formRef = React.useRef<HTMLFormElement>(null)
 
-  const selectedEmployee = React.useMemo(
-    () => employees.find((employee) => employee.employeeId === employeeId),
-    [employees, employeeId]
-  )
   const totals = React.useMemo(
     () => calculatePayslipTotals(inputs, selectedEmployee?.divisor),
     [inputs, selectedEmployee?.divisor]
   )
 
   const canGoPrev = activeIndex > 0
-  const canGoNext = activeIndex >= 0 && activeIndex < payslips.length - 1
+  const canGoNext =
+    activeIndex >= 0 && activeIndex < payslipListItems.length - 1
 
   function resetForm() {
     setState(initialState)
+    setLoadedPayslip(null)
+    setSelectedEmployee(null)
     setEmployeeId("")
     setInputs(createEmptyPayslipInputs())
     setFieldDrafts({})
@@ -128,15 +141,48 @@ export function EditPayslipDialog({
       return
     }
 
-    const timeoutId = window.setTimeout(() => {
-      setState(initialState)
-      if (activePayslip) {
-        syncFromPayslip(activePayslip)
-      }
-    }, 0)
+    let cancelled = false
+    setState(initialState)
 
-    return () => window.clearTimeout(timeoutId)
-  }, [open, activePayslip])
+    if (isCreateMode) {
+      setLoadedPayslip(null)
+      setSelectedEmployee(null)
+      setEmployeeId("")
+      setInputs(createEmptyPayslipInputs())
+      setFieldDrafts({})
+      return
+    }
+
+    if (!activePayslipId) {
+      return
+    }
+
+    setIsLoadingPayslip(true)
+    void getPayslipByIdAction(activePayslipId).then((result) => {
+      if (cancelled) {
+        return
+      }
+      setIsLoadingPayslip(false)
+      if ("error" in result) {
+        setState({ error: result.error })
+        return
+      }
+      setLoadedPayslip(result.payslip)
+      syncFromPayslip(result.payslip)
+      void getEmployeeByEmployeeIdAction(result.payslip.employeeId).then(
+        (employeeResult) => {
+          if (cancelled || "error" in employeeResult) {
+            return
+          }
+          setSelectedEmployee(employeeResult.employee)
+        }
+      )
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [open, activePayslipId, isCreateMode])
 
   function handleClose() {
     onOpenChange(false)
@@ -169,8 +215,18 @@ export function EditPayslipDialog({
     }
   }
 
-  function handleEmployeeChange(nextEmployeeId: string) {
-    const matchIndex = payslips.findIndex(
+  async function loadEmployee(nextEmployeeId: string) {
+    const result = await getEmployeeByEmployeeIdAction(nextEmployeeId)
+    if ("error" in result) {
+      setSelectedEmployee(null)
+      return null
+    }
+    setSelectedEmployee(result.employee)
+    return result.employee
+  }
+
+  async function handleEmployeeChange(nextEmployeeId: string) {
+    const matchIndex = payslipListItems.findIndex(
       (payslip) => payslip.employeeId === nextEmployeeId
     )
     if (matchIndex >= 0) {
@@ -180,10 +236,9 @@ export function EditPayslipDialog({
 
     onActiveIndexChange(-1)
     setEmployeeId(nextEmployeeId)
-    const nextEmployee = employees.find(
-      (employee) => employee.employeeId === nextEmployeeId
-    )
-    setInputs(createPayslipInputsWithBasicPay(nextEmployee?.basicPay ?? 0))
+    setLoadedPayslip(null)
+    const employee = await loadEmployee(nextEmployeeId)
+    setInputs(createPayslipInputsWithBasicPay(employee?.basicPay ?? 0))
     setFieldDrafts({})
   }
 
@@ -221,7 +276,7 @@ export function EditPayslipDialog({
       if (result.success) {
         toast.success(isCreateMode ? "Payslip created" : "Payslip updated", {
           description:
-            selectedEmployee !== undefined
+            selectedEmployee !== null
               ? `${selectedEmployee.name} (${selectedEmployee.employeeId})`
               : undefined,
         })
@@ -246,7 +301,7 @@ export function EditPayslipDialog({
       } else if (
         event.key === "ArrowRight" &&
         activeIndex >= 0 &&
-        activeIndex < payslips.length - 1
+        activeIndex < payslipListItems.length - 1
       ) {
         event.preventDefault()
         onActiveIndexChange(activeIndex + 1)
@@ -255,7 +310,7 @@ export function EditPayslipDialog({
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [open, activeIndex, payslips.length, onActiveIndexChange])
+  }, [open, activeIndex, payslipListItems.length, onActiveIndexChange])
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -285,16 +340,16 @@ export function EditPayslipDialog({
                 size="icon"
                 className="size-9 shrink-0 rounded-none border-r border-input"
                 onClick={goToPrev}
-                disabled={!canGoPrev || isPending}
+                disabled={!canGoPrev || isPending || isLoadingPayslip}
                 aria-label="Previous payslip"
               >
                 <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} />
               </Button>
               <EmployeeCombobox
-                employees={employees}
+                employees={employeeOptions}
                 value={employeeId}
                 onChange={handleEmployeeChange}
-                disabled={isPending}
+                disabled={isPending || isLoadingPayslip}
                 label=""
               />
               <Button
@@ -303,7 +358,7 @@ export function EditPayslipDialog({
                 size="icon"
                 className="size-9 shrink-0 rounded-none border-l border-input"
                 onClick={goToNext}
-                disabled={!canGoNext || isPending}
+                disabled={!canGoNext || isPending || isLoadingPayslip}
                 aria-label="Next payslip"
               >
                 <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} />
@@ -315,12 +370,12 @@ export function EditPayslipDialog({
         <form
           ref={formRef}
           onSubmit={handleSubmit}
-          key={activePayslip?.id ?? "create"}
+          key={loadedPayslip?.id ?? "create"}
           className="flex min-h-0 flex-1 flex-col"
         >
           <input type="hidden" name="payrollId" value={payrollId} />
-          {!isCreateMode && activePayslip ? (
-            <input type="hidden" name="id" value={activePayslip.id} />
+          {!isCreateMode && loadedPayslip ? (
+            <input type="hidden" name="id" value={loadedPayslip.id} />
           ) : null}
 
           <div className="min-h-0 flex-1 overflow-y-auto">
@@ -331,32 +386,38 @@ export function EditPayslipDialog({
                 </Alert>
               ) : null}
 
-              <div className="-mx-4 no-scrollbar max-h-[min(58vh,34rem)] overflow-y-auto px-4">
-                <div className="flex flex-col gap-8">
-                  <PayslipFormSection
-                    title="Pay Details"
-                    fields={PAY_DETAILS_FIELDS}
-                    values={inputs}
-                    fieldDrafts={fieldDrafts}
-                    readOnlyFields={READ_ONLY_PAYSLIP_FIELDS}
-                    onChange={handleFieldChange}
-                  />
-                  <PayslipFormSection
-                    title="Deductions"
-                    fields={DEDUCTION_FIELDS}
-                    values={inputs}
-                    fieldDrafts={fieldDrafts}
-                    onChange={handleFieldChange}
-                  />
-                  <PayslipFormSection
-                    title="Non-Taxable Earnings"
-                    fields={NON_TAXABLE_FIELDS}
-                    values={inputs}
-                    fieldDrafts={fieldDrafts}
-                    onChange={handleFieldChange}
-                  />
+              {isLoadingPayslip ? (
+                <p className="text-sm text-muted-foreground">
+                  Loading payslip…
+                </p>
+              ) : (
+                <div className="-mx-4 no-scrollbar max-h-[min(58vh,34rem)] overflow-y-auto px-4">
+                  <div className="flex flex-col gap-8">
+                    <PayslipFormSection
+                      title="Pay Details"
+                      fields={PAY_DETAILS_FIELDS}
+                      values={inputs}
+                      fieldDrafts={fieldDrafts}
+                      readOnlyFields={READ_ONLY_PAYSLIP_FIELDS}
+                      onChange={handleFieldChange}
+                    />
+                    <PayslipFormSection
+                      title="Deductions"
+                      fields={DEDUCTION_FIELDS}
+                      values={inputs}
+                      fieldDrafts={fieldDrafts}
+                      onChange={handleFieldChange}
+                    />
+                    <PayslipFormSection
+                      title="Non-Taxable Earnings"
+                      fields={NON_TAXABLE_FIELDS}
+                      values={inputs}
+                      fieldDrafts={fieldDrafts}
+                      onChange={handleFieldChange}
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
@@ -372,7 +433,12 @@ export function EditPayslipDialog({
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isPending || !employeeId}>
+                <Button
+                  type="submit"
+                  disabled={
+                    isPending || isLoadingPayslip || !employeeId
+                  }
+                >
                   {isPending ? "Saving…" : "Save Payslip"}
                 </Button>
               </div>

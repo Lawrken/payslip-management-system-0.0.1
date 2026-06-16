@@ -19,17 +19,17 @@ import {
 import type { PayslipListSort } from "@/lib/payslips"
 import type { SortDirection } from "@/lib/table-sort"
 import { cn } from "@/lib/utils"
-import type { Payslip, PayslipStatus } from "@/lib/types"
+import type { PayslipListItem, PayslipStatus } from "@/lib/types"
 
 type ReviewTableProps = {
-  payslips: Payslip[]
+  payslips: PayslipListItem[]
   status: string
   allowedStatuses: PayslipStatus[]
   sortKey: PayslipListSort
   sortDir: SortDirection
   onSort: (key: PayslipListSort) => void
   onStatusFilterChange: (status: string) => void
-  onReview: (payslip: Payslip) => void
+  onReview: (payslip: PayslipListItem) => void
   emptyMessage?: string
 }
 

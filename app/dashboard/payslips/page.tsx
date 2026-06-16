@@ -3,10 +3,11 @@ import { Suspense } from "react"
 
 import { PayslipsPageContent } from "@/components/dashboard/payslips/payslips-page-content"
 import { requireDashboardSession } from "@/lib/authorization"
-import { getEmployees } from "@/lib/employees"
-import { getLatestPayroll, getPayrolls } from "@/lib/payrolls"
+import { redirectWithDefaultPayrollId } from "@/lib/dashboard-routing"
+import { getEmployeeOptions } from "@/lib/employees"
+import { getPayrollSummaries } from "@/lib/payrolls"
 import {
-  getPaginatedPayslips,
+  getPaginatedPayslipListItems,
   type PayslipListSort,
 } from "@/lib/payslips"
 import type { SortDirection } from "@/lib/table-sort"
@@ -63,43 +64,44 @@ async function PayslipsPageInner({ searchParams }: PayslipsPageProps) {
   }
 
   const params = await searchParams
+  const payrolls = await getPayrollSummaries()
+  const latestPayrollId = payrolls[0]?.id ?? null
+  redirectWithDefaultPayrollId("/dashboard/payslips", params, latestPayrollId)
+
   const status = normalizeStatus(params.status)
   const sort = normalizeSort(params.sort)
   const direction = normalizeDirection(params.direction)
-  const [employees, payrolls, latestPayroll] = await Promise.all([
-    getEmployees(),
-    getPayrolls(),
-    getLatestPayroll(),
-  ])
   const selectedPayroll =
     payrolls.find((payroll) => payroll.id === params.payrollId) ??
-    latestPayroll ??
     payrolls[0] ??
     null
-  const payslips = selectedPayroll
-    ? await getPaginatedPayslips({
-        payrollId: selectedPayroll.id,
-        employeeId: params.employeeId,
-        statuses: status ? [status] : undefined,
-        page: params.page,
-        pageSize: params.pageSize,
-        sort,
-        direction,
-      })
-    : {
-        items: [],
-        total: 0,
-        page: 1,
-        pageSize: 50,
-        pageCount: 1,
-      }
+  const [employeeOptions, payslips] = await Promise.all([
+    getEmployeeOptions(),
+    selectedPayroll
+      ? getPaginatedPayslipListItems({
+          payrollId: selectedPayroll.id,
+          employeeId: params.employeeId,
+          statuses: status ? [status] : undefined,
+          page: params.page,
+          pageSize: params.pageSize,
+          sort,
+          direction,
+        })
+      : Promise.resolve({
+          items: [],
+          total: 0,
+          page: 1,
+          pageSize: 50,
+          pageCount: 1,
+        }),
+  ])
 
   return (
     <PayslipsPageContent
       payslips={payslips}
-      employees={employees}
+      employeeOptions={employeeOptions}
       payrolls={payrolls}
-      defaultPayrollId={latestPayroll?.id ?? null}
+      selectedPayrollId={selectedPayroll?.id ?? ""}
       status={status ?? ""}
       sortKey={sort}
       sortDir={direction}

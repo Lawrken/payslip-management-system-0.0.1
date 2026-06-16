@@ -107,6 +107,27 @@ export type Payroll = {
   dtrDays: PayrollDtrDay[]
 }
 
+export type PayrollSummary = Omit<Payroll, "dtrDays">
+
+export type PayslipListItem = {
+  id: string
+  payrollId: string
+  employeeId: string
+  employeeName: string
+  status: PayslipStatus
+}
+
+export type EmployeePayslipListItem = {
+  id: string
+  payrollPeriodLabel: string
+  payrollPeriodStart: string
+  payrollPeriodEnd: string
+  dtrCutOffStart: string
+  dtrCutOffEnd: string
+  payoutDate: string
+  status: PayslipStatus
+}
+
 export type PayslipStatus =
   | "draft"
   | "pending"

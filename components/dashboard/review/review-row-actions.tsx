@@ -1,11 +1,11 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import type { Payslip } from "@/lib/types"
+import type { PayslipListItem } from "@/lib/types"
 
 type ReviewRowActionsProps = {
-  payslip: Payslip
-  onReview: (payslip: Payslip) => void
+  payslip: PayslipListItem
+  onReview: (payslip: PayslipListItem) => void
 }
 
 export function ReviewRowActions({ payslip, onReview }: ReviewRowActionsProps) {
