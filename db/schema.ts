@@ -6,6 +6,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core"
 
 import type {
@@ -101,6 +102,11 @@ export const payslips = pgTable(
   (table) => [
     index("payslips_payroll_id_idx").on(table.payrollId),
     index("payslips_employee_id_idx").on(table.employeeId),
+    index("payslips_payroll_status_idx").on(table.payrollId, table.status),
+    uniqueIndex("payslips_payroll_employee_unique").on(
+      table.payrollId,
+      table.employeeId
+    ),
   ]
 )
 
@@ -123,7 +129,7 @@ export const employeeSchedules = pgTable(
   (table) => [
     index("employee_schedules_payroll_id_idx").on(table.payrollId),
     index("employee_schedules_employee_id_idx").on(table.employeeId),
-    index("employee_schedules_payroll_employee_idx").on(
+    uniqueIndex("employee_schedules_payroll_employee_unique").on(
       table.payrollId,
       table.employeeId
     ),
@@ -160,5 +166,10 @@ export const auditLogs = pgTable(
     index("audit_logs_created_at_idx").on(table.createdAt),
     index("audit_logs_actor_employee_id_idx").on(table.actorEmployeeId),
     index("audit_logs_action_idx").on(table.action),
+    index("audit_logs_actor_role_created_at_idx").on(
+      table.actorRole,
+      table.createdAt
+    ),
+    index("audit_logs_action_created_at_idx").on(table.action, table.createdAt),
   ]
 )

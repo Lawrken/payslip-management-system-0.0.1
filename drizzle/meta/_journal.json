@@ -57,6 +57,13 @@
       "when": 1781060538466,
       "tag": "0007_fresh_yellow_claw",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1781577633376,
+      "tag": "0008_amusing_annihilus",
+      "breakpoints": true
     }
   ]
 }
