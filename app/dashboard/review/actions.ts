@@ -79,7 +79,7 @@ export async function superAdminApprovePayslipAction(
       targetType: "payslip",
       targetId: payslip.id,
       targetLabel: `${payslip.employeeName} (${payslip.employeeId})`,
-      details: "Marked payslip ready for email.",
+      details: "Released payslip to employee.",
       client: tx,
     })
 

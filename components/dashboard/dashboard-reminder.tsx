@@ -195,10 +195,10 @@ export function DashboardReminder({
 
           {isSuperAdmin && totalPayslips > 0 ? (
             <p className="text-sm text-muted-foreground">
-              {summary.approvedCount} of {totalPayslips} ready for email
+              {summary.approvedCount} of {totalPayslips} available to employees
               {!allApproved
-                ? " — bulk email unlocks when all payslips are ready for email."
-                : " — ready for bulk email on the Review page."}
+                ? " after superadmin approval."
+                : " for PDF download from their payslip portal."}
             </p>
           ) : null}
         </div>

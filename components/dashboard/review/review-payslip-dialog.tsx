@@ -326,7 +326,7 @@ export function ReviewPayslipDialog({
                     ? "Saving…"
                     : role === "admin"
                       ? "Mark Checked"
-                      : "Ready for email"}
+                      : "Release"}
                 </Button>
               </div>
             ) : null}

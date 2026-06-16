@@ -16,20 +16,14 @@ export function getPayrollPeriodStatus(
   }
 
   if (payslips.every((payslip) => payslip.status === "sent")) {
-    return { label: "Sent", variant: "success" }
+    return { label: "Released", variant: "success" }
   }
 
   const allApprovedOrSent = payslips.every(
     (payslip) => payslip.status === "approved" || payslip.status === "sent"
   )
-  const hasSent = payslips.some((payslip) => payslip.status === "sent")
-
-  if (allApprovedOrSent && hasSent) {
-    return { label: "In progress", variant: "muted" }
-  }
-
-  if (payslips.every((payslip) => payslip.status === "approved")) {
-    return { label: "Ready for email", variant: "default" }
+  if (allApprovedOrSent) {
+    return { label: "Released", variant: "default" }
   }
 
   return { label: "In progress", variant: "muted" }
@@ -38,8 +32,7 @@ export function getPayrollPeriodStatus(
 const PAYROLL_PERIOD_STATUS_SORT_RANK: Record<string, number> = {
   "No payslips": 0,
   "In progress": 1,
-  "Ready for email": 2,
-  Sent: 3,
+  Released: 2,
 }
 
 export function comparePayrollPeriodStatus(

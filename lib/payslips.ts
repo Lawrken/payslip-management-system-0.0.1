@@ -21,8 +21,8 @@ import type {
   EmployeePayslip,
   Payroll,
   Payslip,
-  PayslipEmailData,
   PayslipPayrollInputs,
+  PayslipPdfData,
   PayslipStatus,
 } from "@/lib/types"
 
@@ -88,15 +88,14 @@ async function resolveDerivedPayslipInputs({
   })
 }
 
-function mapPayslipEmailRow(row: {
+function mapPayslipPdfRow(row: {
   payslip: typeof payslips.$inferSelect
   payslipInput: typeof payslipInputs.$inferSelect | null
   employee: typeof employeesTable.$inferSelect
   payroll: typeof payrollsTable.$inferSelect
-}): PayslipEmailData {
+}): PayslipPdfData {
   return {
     ...mapPayslipRow(row),
-    employeeEmail: row.employee.email,
     employeeDivisor: row.employee.divisor,
     tin: row.employee.tin,
     sssNo: row.employee.sssNo,
@@ -197,6 +196,38 @@ export async function getPayslipsByPayrollId(
   return rows.map(mapPayslipRow)
 }
 
+export async function getVisibleEmployeePayslipDetailsByEmployeeAndId(
+  employeeId: string,
+  id: string,
+  client: DatabaseClient = db
+): Promise<PayslipPdfData | null> {
+  const normalizedId = normalizeEmployeeId(employeeId)
+  const [row] = await client
+    .select({
+      payslip: payslips,
+      payslipInput: payslipInputs,
+      employee: employeesTable,
+      payroll: payrollsTable,
+    })
+    .from(payslips)
+    .innerJoin(payrollsTable, eq(payrollsTable.id, payslips.payrollId))
+    .innerJoin(
+      employeesTable,
+      eq(employeesTable.employeeId, payslips.employeeId)
+    )
+    .leftJoin(payslipInputs, eq(payslipInputs.payslipId, payslips.id))
+    .where(
+      and(
+        eq(payslips.id, id),
+        eq(payslips.employeeId, normalizedId),
+        inArray(payslips.status, VISIBLE_EMPLOYEE_PAYSLIP_STATUSES)
+      )
+    )
+    .limit(1)
+
+  return row ? mapPayslipPdfRow(row) : null
+}
+
 export async function getVisiblePayslipsByEmployeeId(
   employeeId: string
 ): Promise<EmployeePayslip[]> {
@@ -229,7 +260,7 @@ export async function getVisiblePayslipsByEmployeeId(
 
 export async function getVisibleEmployeePayslipDetailsByEmployeeId(
   employeeId: string
-): Promise<PayslipEmailData[]> {
+): Promise<PayslipPdfData[]> {
   const normalizedId = normalizeEmployeeId(employeeId)
   const rows = await db
     .select({
@@ -252,7 +283,7 @@ export async function getVisibleEmployeePayslipDetailsByEmployeeId(
       )
     )
 
-  return rows.map(mapPayslipEmailRow).sort((a, b) => {
+  return rows.map(mapPayslipPdfRow).sort((a, b) => {
     return b.payrollPeriodEnd.localeCompare(a.payrollPeriodEnd)
   })
 }
@@ -589,7 +620,7 @@ export async function approvePayslipBySuperAdmin(
   }
 
   if (payslip.status !== "adminApproved") {
-    return { error: "Only checked payslips can be marked ready for email." }
+    return { error: "Only checked payslips can be released." }
   }
 
   await client
