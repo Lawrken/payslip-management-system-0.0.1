@@ -4,8 +4,12 @@ import { LogsFilters } from "@/components/dashboard/logs/logs-filters"
 import { LogsTable } from "@/components/dashboard/logs/logs-table"
 import { PaginationControls } from "@/components/dashboard/shared/pagination-controls"
 import { AUDIT_ACTIONS, AUDIT_ACTOR_ROLES } from "@/lib/audit-log-options"
-import { getPaginatedAuditLogs } from "@/lib/audit-logs"
+import {
+  getPaginatedAuditLogs,
+  type AuditLogListSort,
+} from "@/lib/audit-logs"
 import { requireDashboardSession } from "@/lib/authorization"
+import type { SortDirection } from "@/lib/table-sort"
 import type { AuditAction, AuditLogQuery, Role } from "@/lib/types"
 
 export const dynamic = "force-dynamic"
@@ -17,8 +21,19 @@ type LogsPageProps = {
     actorRole?: string
     action?: string
     page?: string
+    pageSize?: string
+    sort?: string
+    direction?: string
   }>
 }
+
+const auditLogSorts: AuditLogListSort[] = [
+  "createdAt",
+  "actorEmployeeId",
+  "action",
+  "targetLabel",
+  "details",
+]
 
 function normalizeAction(action: string | undefined): AuditAction | undefined {
   if (!action) {
@@ -36,6 +51,16 @@ function normalizeActorRole(role: string | undefined): Role | undefined {
   return AUDIT_ACTOR_ROLES.includes(role as Role) ? (role as Role) : undefined
 }
 
+function normalizeSort(value: string | undefined): AuditLogListSort {
+  return auditLogSorts.includes(value as AuditLogListSort)
+    ? (value as AuditLogListSort)
+    : "createdAt"
+}
+
+function normalizeDirection(value: string | undefined): SortDirection {
+  return value === "asc" ? "asc" : "desc"
+}
+
 export default async function LogsPage({ searchParams }: LogsPageProps) {
   const session = await requireDashboardSession()
   if ("error" in session) {
@@ -43,6 +68,8 @@ export default async function LogsPage({ searchParams }: LogsPageProps) {
   }
 
   const params = await searchParams
+  const sort = normalizeSort(params.sort)
+  const direction = normalizeDirection(params.direction)
   const query: AuditLogQuery = {
     dateFrom: params.dateFrom,
     dateTo: params.dateTo,
@@ -52,6 +79,9 @@ export default async function LogsPage({ searchParams }: LogsPageProps) {
   const logs = await getPaginatedAuditLogs({
     ...query,
     page: params.page,
+    pageSize: params.pageSize,
+    sort,
+    direction,
   })
 
   return (
@@ -63,9 +93,14 @@ export default async function LogsPage({ searchParams }: LogsPageProps) {
         </p>
       </div>
 
-      <LogsFilters query={query} />
+      <LogsFilters
+        query={query}
+        sortKey={sort}
+        sortDir={direction}
+        pageSize={logs.pageSize}
+      />
 
-      <LogsTable logs={logs.items} />
+      <LogsTable logs={logs.items} sortKey={sort} sortDir={direction} />
       <PaginationControls
         page={logs.page}
         pageCount={logs.pageCount}

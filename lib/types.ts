@@ -92,6 +92,7 @@ export type EmployeeScheduleRow = {
   employeeName: string
   employeeNumber: string
   status: "modified" | "notModified"
+  schedule?: EmployeeSchedule | null
 }
 
 export type Payroll = {

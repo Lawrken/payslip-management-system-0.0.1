@@ -3,6 +3,7 @@
 import * as React from "react"
 
 import { PayrollRowActions } from "@/components/dashboard/payrolls/payroll-row-actions"
+import { FilterTableHead } from "@/components/dashboard/shared/table-column-filter"
 import {
   SortableTableHead,
   useTableSort,
@@ -27,6 +28,7 @@ import { cn } from "@/lib/utils"
 import type { Payroll } from "@/lib/types"
 
 type SortKey = "payrollPeriodLabel" | "dtrCutOffStart" | "payoutDate" | "status"
+type PayrollStatusFilter = "" | "No payslips" | "In progress" | "Released"
 
 type PayrollsTableProps = {
   payrolls: Payroll[]
@@ -58,11 +60,29 @@ function comparePayrolls(
   return applyDirection(result, dir)
 }
 
+const payrollStatusOptions: { value: PayrollStatusFilter; label: string }[] = [
+  { value: "No payslips", label: "No payslips" },
+  { value: "In progress", label: "In progress" },
+  { value: "Released", label: "Released" },
+]
+
 export function PayrollsTable({
   payrolls,
   metricsByPayrollId,
   emptyMessage = "No payroll periods yet.",
 }: PayrollsTableProps) {
+  const [statusFilter, setStatusFilter] = React.useState<PayrollStatusFilter>("")
+  const filteredPayrolls = React.useMemo(() => {
+    if (!statusFilter) {
+      return payrolls
+    }
+    return payrolls.filter((payroll) => {
+      const periodStatus = getPayrollPeriodStatusFromCounts(
+        metricsByPayrollId[payroll.id]?.statusCounts ?? {}
+      )
+      return periodStatus.label === statusFilter
+    })
+  }, [metricsByPayrollId, payrolls, statusFilter])
   const compare = React.useCallback(
     (a: Payroll, b: Payroll, key: SortKey, dir: SortDirection) =>
       comparePayrolls(a, b, key, dir, metricsByPayrollId),
@@ -73,7 +93,7 @@ export function PayrollsTable({
     Payroll,
     SortKey
   >({
-    items: payrolls,
+    items: filteredPayrolls,
     defaultKey: "payoutDate",
     defaultDir: "desc",
     compare,
@@ -105,47 +125,60 @@ export function PayrollsTable({
             direction={sortDir}
             onSort={() => handleSort("payoutDate")}
           />
-          <SortableTableHead
+          <FilterTableHead
             label="Status"
-            active={sortKey === "status"}
-            direction={sortDir}
-            onSort={() => handleSort("status")}
+            value={statusFilter}
+            onChange={(value) => setStatusFilter(value as PayrollStatusFilter)}
+            options={payrollStatusOptions}
+            searchPlaceholder="Search statuses…"
+            emptyMessage="No status found."
           />
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {sortedItems.map((payroll) => {
-          const periodStatus = getPayrollPeriodStatusFromCounts(
-            metricsByPayrollId[payroll.id]?.statusCounts ?? {}
-          )
+        {sortedItems.length === 0 ? (
+          <TableRow>
+            <TableCell
+              colSpan={5}
+              className="py-6 text-center text-sm text-muted-foreground"
+            >
+              No payroll periods match the selected filters.
+            </TableCell>
+          </TableRow>
+        ) : (
+          sortedItems.map((payroll) => {
+            const periodStatus = getPayrollPeriodStatusFromCounts(
+              metricsByPayrollId[payroll.id]?.statusCounts ?? {}
+            )
 
-          return (
-            <TableRow key={payroll.id}>
-              <TableCell className="font-medium">
-                {payroll.payrollPeriodLabel}
-              </TableCell>
-              <TableCell>
-                {formatDtrCutOffRange(
-                  payroll.dtrCutOffStart,
-                  payroll.dtrCutOffEnd
-                )}
-              </TableCell>
-              <TableCell>{formatDisplayDate(payroll.payoutDate)}</TableCell>
-              <TableCell
-                className={cn(
-                  periodStatus.variant === "muted" && "text-muted-foreground",
-                  periodStatus.variant === "success" && "font-medium"
-                )}
-              >
-                {periodStatus.label}
-              </TableCell>
-              <TableCell>
-                <PayrollRowActions payroll={payroll} />
-              </TableCell>
-            </TableRow>
-          )
-        })}
+            return (
+              <TableRow key={payroll.id}>
+                <TableCell className="font-medium">
+                  {payroll.payrollPeriodLabel}
+                </TableCell>
+                <TableCell>
+                  {formatDtrCutOffRange(
+                    payroll.dtrCutOffStart,
+                    payroll.dtrCutOffEnd
+                  )}
+                </TableCell>
+                <TableCell>{formatDisplayDate(payroll.payoutDate)}</TableCell>
+                <TableCell
+                  className={cn(
+                    periodStatus.variant === "muted" && "text-muted-foreground",
+                    periodStatus.variant === "success" && "font-medium"
+                  )}
+                >
+                  {periodStatus.label}
+                </TableCell>
+                <TableCell>
+                  <PayrollRowActions payroll={payroll} />
+                </TableCell>
+              </TableRow>
+            )
+          })
+        )}
       </TableBody>
     </Table>
   )

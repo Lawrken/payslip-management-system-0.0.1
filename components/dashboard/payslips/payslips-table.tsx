@@ -1,12 +1,8 @@
 "use client"
 
-import * as React from "react"
-
 import { PayslipRowActions } from "@/components/dashboard/payslips/payslip-row-actions"
-import {
-  SortableTableHead,
-  useTableSort,
-} from "@/components/dashboard/shared/table-sort"
+import { FilterTableHead } from "@/components/dashboard/shared/table-column-filter"
+import { SortableTableHead } from "@/components/dashboard/shared/table-sort"
 import {
   Table,
   TableBody,
@@ -16,55 +12,49 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import {
-  comparePayslipStatus,
   formatPayslipStatus,
   isDraftStatus,
   isReturnedStatus,
 } from "@/lib/payslip-status"
-import { applyDirection, compareStrings } from "@/lib/table-sort"
+import type { PayslipListSort } from "@/lib/payslips"
 import type { SortDirection } from "@/lib/table-sort"
 import { cn } from "@/lib/utils"
 import type { Payslip } from "@/lib/types"
 
-type SortKey = "employeeName" | "employeeId" | "status"
-
 type PayslipsTableProps = {
   payslips: Payslip[]
+  status: string
+  sortKey: PayslipListSort
+  sortDir: SortDirection
+  onSort: (key: PayslipListSort) => void
+  onStatusFilterChange: (status: string) => void
   onEdit: (payslip: Payslip) => void
   emptyMessage?: string
 }
 
-function comparePayslips(
-  a: Payslip,
-  b: Payslip,
-  key: SortKey,
-  dir: SortDirection
-) {
-  if (key === "status") {
-    return comparePayslipStatus(a.status, b.status, dir)
-  }
-  const result =
-    key === "employeeName"
-      ? compareStrings(a.employeeName, b.employeeName)
-      : compareStrings(a.employeeId, b.employeeId)
-  return applyDirection(result, dir)
-}
+const payslipStatuses: Payslip["status"][] = [
+  "draft",
+  "pending",
+  "adminApproved",
+  "approved",
+  "returned",
+  "sent",
+]
+const payslipStatusOptions = payslipStatuses.map((status) => ({
+  value: status,
+  label: formatPayslipStatus(status),
+}))
 
 export function PayslipsTable({
   payslips,
+  status,
+  sortKey,
+  sortDir,
+  onSort,
+  onStatusFilterChange,
   onEdit,
   emptyMessage = "No payslips yet.",
 }: PayslipsTableProps) {
-  const { sortKey, sortDir, handleSort, sortedItems } = useTableSort<
-    Payslip,
-    SortKey
-  >({
-    items: payslips,
-    defaultKey: "status",
-    defaultDir: "asc",
-    compare: comparePayslips,
-  })
-
   if (payslips.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">{emptyMessage}</p>
@@ -79,25 +69,27 @@ export function PayslipsTable({
             label="Employee Name"
             active={sortKey === "employeeName"}
             direction={sortDir}
-            onSort={() => handleSort("employeeName")}
+            onSort={() => onSort("employeeName")}
           />
           <SortableTableHead
             label="Employee ID"
             active={sortKey === "employeeId"}
             direction={sortDir}
-            onSort={() => handleSort("employeeId")}
+            onSort={() => onSort("employeeId")}
           />
-          <SortableTableHead
+          <FilterTableHead
             label="Status"
-            active={sortKey === "status"}
-            direction={sortDir}
-            onSort={() => handleSort("status")}
+            value={status}
+            onChange={onStatusFilterChange}
+            options={payslipStatusOptions}
+            searchPlaceholder="Search statuses…"
+            emptyMessage="No status found."
           />
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {sortedItems.map((payslip) => (
+        {payslips.map((payslip) => (
           <TableRow key={payslip.id}>
             <TableCell className="font-medium">{payslip.employeeName}</TableCell>
             <TableCell>{payslip.employeeId}</TableCell>

@@ -12,6 +12,8 @@ import { PayrollPeriodStrip } from "@/components/dashboard/shared/payroll-period
 import { PayslipsTable } from "@/components/dashboard/payslips/payslips-table"
 import { Button } from "@/components/ui/button"
 import type { PaginatedResult } from "@/lib/pagination"
+import type { PayslipListSort } from "@/lib/payslips"
+import type { SortDirection } from "@/lib/table-sort"
 import type { Employee, Payroll, Payslip } from "@/lib/types"
 
 const EditPayslipDialog = dynamic(
@@ -29,6 +31,9 @@ type PayslipsPageContentProps = {
   employees: Employee[]
   payrolls: Payroll[]
   defaultPayrollId: string | null
+  status: string
+  sortKey: PayslipListSort
+  sortDir: SortDirection
 }
 
 export function PayslipsPageContent({
@@ -36,6 +41,9 @@ export function PayslipsPageContent({
   employees,
   payrolls,
   defaultPayrollId,
+  status,
+  sortKey,
+  sortDir,
 }: PayslipsPageContentProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -86,6 +94,13 @@ export function PayslipsPageContent({
     setActivePayslipId(null)
   }
 
+  function replaceParams(params: URLSearchParams) {
+    const query = params.toString()
+    router.replace(query ? `/dashboard/payslips?${query}` : "/dashboard/payslips", {
+      scroll: false,
+    })
+  }
+
   function handleEmployeeFilterChange(employeeId: string) {
     const params = new URLSearchParams(searchParams.toString())
     if (employeeId) {
@@ -98,6 +113,28 @@ export function PayslipsPageContent({
       scroll: false,
     })
     setActivePayslipId(null)
+  }
+
+  function handleStatusFilterChange(statusValue: string) {
+    const params = new URLSearchParams(searchParams.toString())
+    if (statusValue) {
+      params.set("status", statusValue)
+    } else {
+      params.delete("status")
+    }
+    params.delete("page")
+    replaceParams(params)
+    setActivePayslipId(null)
+  }
+
+  function handleSort(key: PayslipListSort) {
+    const params = new URLSearchParams(searchParams.toString())
+    const nextDirection =
+      sortKey === key && sortDir === "asc" ? "desc" : "asc"
+    params.set("sort", key)
+    params.set("direction", nextDirection)
+    params.delete("page")
+    replaceParams(params)
   }
 
   const activeIndex = activePayslipId
@@ -177,9 +214,14 @@ export function PayslipsPageContent({
 
       <PayslipsTable
         payslips={payslips.items}
+        status={status}
         onEdit={handleEdit}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        onSort={handleSort}
+        onStatusFilterChange={handleStatusFilterChange}
         emptyMessage={
-          selectedEmployeeId
+          selectedEmployeeId || status
             ? "No payslips match that employee for this payroll period."
             : "No payslips for this payroll period yet."
         }

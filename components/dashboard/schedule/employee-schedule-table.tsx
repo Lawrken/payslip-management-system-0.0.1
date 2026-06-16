@@ -1,11 +1,7 @@
 "use client"
 
-import * as React from "react"
-
-import {
-  SortableTableHead,
-  useTableSort,
-} from "@/components/dashboard/shared/table-sort"
+import { FilterTableHead } from "@/components/dashboard/shared/table-column-filter"
+import { SortableTableHead } from "@/components/dashboard/shared/table-sort"
 import { Button } from "@/components/ui/button"
 import {
   Table,
@@ -15,56 +11,41 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { applyDirection, compareStrings } from "@/lib/table-sort"
+import type { ScheduleRowSort } from "@/lib/employee-schedules"
 import type { SortDirection } from "@/lib/table-sort"
 import { cn } from "@/lib/utils"
 import type { EmployeeScheduleRow } from "@/lib/types"
 
-type SortKey = "employeeName" | "employeeNumber" | "status"
-
 type EmployeeScheduleTableProps = {
   rows: EmployeeScheduleRow[]
+  status: string
+  sortKey: ScheduleRowSort
+  sortDir: SortDirection
+  onSort: (key: ScheduleRowSort) => void
+  onStatusFilterChange: (status: string) => void
   onEdit: (row: EmployeeScheduleRow) => void
   emptyMessage?: string
-}
-
-function compareScheduleRows(
-  a: EmployeeScheduleRow,
-  b: EmployeeScheduleRow,
-  key: SortKey,
-  dir: SortDirection
-) {
-  if (key === "status") {
-    const result = compareStrings(a.status, b.status)
-    return applyDirection(result, dir)
-  }
-
-  const result =
-    key === "employeeName"
-      ? compareStrings(a.employeeName, b.employeeName)
-      : compareStrings(a.employeeNumber, b.employeeNumber)
-  return applyDirection(result, dir)
 }
 
 function formatScheduleStatus(status: EmployeeScheduleRow["status"]) {
   return status === "modified" ? "Modified" : "Not Modified"
 }
 
+const scheduleStatusOptions = [
+  { value: "modified", label: "Modified" },
+  { value: "notModified", label: "Not Modified" },
+]
+
 export function EmployeeScheduleTable({
   rows,
+  status,
+  sortKey,
+  sortDir,
+  onSort,
+  onStatusFilterChange,
   onEdit,
   emptyMessage = "No employees yet.",
 }: EmployeeScheduleTableProps) {
-  const { sortKey, sortDir, handleSort, sortedItems } = useTableSort<
-    EmployeeScheduleRow,
-    SortKey
-  >({
-    items: rows,
-    defaultKey: "employeeName",
-    defaultDir: "asc",
-    compare: compareScheduleRows,
-  })
-
   if (rows.length === 0) {
     return <p className="text-sm text-muted-foreground">{emptyMessage}</p>
   }
@@ -77,25 +58,27 @@ export function EmployeeScheduleTable({
             label="Employee Name"
             active={sortKey === "employeeName"}
             direction={sortDir}
-            onSort={() => handleSort("employeeName")}
+            onSort={() => onSort("employeeName")}
           />
           <SortableTableHead
             label="Employee ID"
             active={sortKey === "employeeNumber"}
             direction={sortDir}
-            onSort={() => handleSort("employeeNumber")}
+            onSort={() => onSort("employeeNumber")}
           />
-          <SortableTableHead
+          <FilterTableHead
             label="Status"
-            active={sortKey === "status"}
-            direction={sortDir}
-            onSort={() => handleSort("status")}
+            value={status}
+            onChange={onStatusFilterChange}
+            options={scheduleStatusOptions}
+            searchPlaceholder="Search statuses…"
+            emptyMessage="No status found."
           />
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {sortedItems.map((row) => (
+        {rows.map((row) => (
           <TableRow key={row.employeeId}>
             <TableCell className="font-medium">{row.employeeName}</TableCell>
             <TableCell>{row.employeeNumber}</TableCell>

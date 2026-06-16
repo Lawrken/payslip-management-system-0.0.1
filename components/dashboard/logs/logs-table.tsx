@@ -1,16 +1,13 @@
 "use client"
 
-import * as React from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 
-import {
-  SortableTableHead,
-  useTableSort,
-} from "@/components/dashboard/shared/table-sort"
+import { SortableTableHead } from "@/components/dashboard/shared/table-sort"
 import {
   AUDIT_ACTION_LABELS,
   AUDIT_ACTOR_ROLE_LABELS,
 } from "@/lib/audit-log-options"
-import { applyDirection, compareDates, compareStrings } from "@/lib/table-sort"
+import type { AuditLogListSort } from "@/lib/audit-logs"
 import type { SortDirection } from "@/lib/table-sort"
 import { cn } from "@/lib/utils"
 import {
@@ -22,10 +19,10 @@ import {
 } from "@/components/ui/table"
 import type { AuditAction, AuditLog } from "@/lib/types"
 
-type SortKey = "createdAt" | "actorEmployeeId" | "action" | "targetLabel" | "details"
-
 type LogsTableProps = {
   logs: AuditLog[]
+  sortKey: AuditLogListSort
+  sortDir: SortDirection
   emptyMessage?: string
 }
 
@@ -48,41 +45,27 @@ function isSuccessAction(action: AuditAction) {
   return action === "payslip.superadmin_approve"
 }
 
-function compareLogs(
-  a: AuditLog,
-  b: AuditLog,
-  key: SortKey,
-  dir: SortDirection
-) {
-  let result = 0
-
-  if (key === "createdAt") {
-    result = compareDates(a.createdAt, b.createdAt)
-  } else if (key === "action") {
-    result = compareStrings(
-      AUDIT_ACTION_LABELS[a.action] ?? a.action,
-      AUDIT_ACTION_LABELS[b.action] ?? b.action
-    )
-  } else {
-    result = compareStrings(a[key], b[key])
-  }
-
-  return applyDirection(result, dir)
-}
-
 export function LogsTable({
   logs,
+  sortKey,
+  sortDir,
   emptyMessage = "No logs match the filters.",
 }: LogsTableProps) {
-  const { sortKey, sortDir, handleSort, sortedItems } = useTableSort<
-    AuditLog,
-    SortKey
-  >({
-    items: logs,
-    defaultKey: "createdAt",
-    defaultDir: "desc",
-    compare: compareLogs,
-  })
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
+  function handleSort(key: AuditLogListSort) {
+    const params = new URLSearchParams(searchParams.toString())
+    const nextDirection =
+      sortKey === key && sortDir === "asc" ? "desc" : "asc"
+    params.set("sort", key)
+    params.set("direction", nextDirection)
+    params.delete("page")
+    const query = params.toString()
+    router.replace(query ? `/dashboard/logs?${query}` : "/dashboard/logs", {
+      scroll: false,
+    })
+  }
 
   if (logs.length === 0) {
     return (
@@ -131,7 +114,7 @@ export function LogsTable({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {sortedItems.map((log) => (
+        {logs.map((log) => (
           <TableRow key={log.id}>
             <TableCell className="align-top whitespace-nowrap text-muted-foreground">
               {formatLogDate(log.createdAt)}

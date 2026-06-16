@@ -1,13 +1,8 @@
 "use client"
 
-import * as React from "react"
-
 import { EmployeeRowActions } from "@/components/dashboard/employees/employee-row-actions"
 import { FilterTableHead } from "@/components/dashboard/shared/table-column-filter"
-import {
-  SortableTableHead,
-  useTableSort,
-} from "@/components/dashboard/shared/table-sort"
+import { SortableTableHead } from "@/components/dashboard/shared/table-sort"
 import {
   Table,
   TableBody,
@@ -24,36 +19,17 @@ import {
   POSITION_TITLES,
   PROGRAMS,
 } from "@/lib/employee-options"
-import { applyDirection, compareStrings } from "@/lib/table-sort"
+import type { EmployeeListSort } from "@/lib/employees"
 import type { SortDirection } from "@/lib/table-sort"
 import type { Employee } from "@/lib/types"
 
-type SortKey =
-  | "name"
-  | "employeeId"
-  | "email"
-  | "basicPay"
-  | "tin"
-  | "sssNo"
-  | "phicNo"
-  | "hdmfNo"
-
-type EmployeeColumnFilters = {
+export type EmployeeColumnFilters = {
   employeeStatus: string
   positionTitle: string
   department: string
   program: string
   account: string
   divisor: string
-}
-
-const emptyFilters: EmployeeColumnFilters = {
-  employeeStatus: "",
-  positionTitle: "",
-  department: "",
-  program: "",
-  account: "",
-  divisor: "",
 }
 
 function toOptions(values: readonly string[]) {
@@ -72,20 +48,12 @@ const divisorOptions = EMPLOYEE_DIVISORS.map((value) => ({
 
 type EmployeesTableProps = {
   employees: Employee[]
+  filters: EmployeeColumnFilters
+  sortKey: EmployeeListSort
+  sortDir: SortDirection
+  onSort: (key: EmployeeListSort) => void
+  onFilterChange: (key: keyof EmployeeColumnFilters, value: string) => void
   emptyMessage?: string
-}
-
-function compareEmployees(
-  a: Employee,
-  b: Employee,
-  key: SortKey,
-  dir: SortDirection
-) {
-  const result =
-    key === "basicPay"
-      ? a[key] - b[key]
-      : compareStrings(a[key], b[key])
-  return applyDirection(result, dir)
 }
 
 function formatMoney(value: number) {
@@ -95,52 +63,15 @@ function formatMoney(value: number) {
   })
 }
 
-function applyEmployeeFilters(
-  employees: Employee[],
-  filters: EmployeeColumnFilters
-) {
-  return employees.filter(
-    (employee) =>
-      (!filters.employeeStatus ||
-        employee.employeeStatus === filters.employeeStatus) &&
-      (!filters.positionTitle ||
-        employee.positionTitle === filters.positionTitle) &&
-      (!filters.department || employee.department === filters.department) &&
-      (!filters.program || employee.program === filters.program) &&
-      (!filters.account || employee.account === filters.account) &&
-      (!filters.divisor || String(employee.divisor) === filters.divisor)
-  )
-}
-
 export function EmployeesTable({
   employees,
+  filters,
+  sortKey,
+  sortDir,
+  onSort,
+  onFilterChange,
   emptyMessage = "No employees yet.",
 }: EmployeesTableProps) {
-  const [filters, setFilters] =
-    React.useState<EmployeeColumnFilters>(emptyFilters)
-
-  const filteredItems = React.useMemo(
-    () => applyEmployeeFilters(employees, filters),
-    [employees, filters]
-  )
-
-  const { sortKey, sortDir, handleSort, sortedItems } = useTableSort<
-    Employee,
-    SortKey
-  >({
-    items: filteredItems,
-    defaultKey: "name",
-    defaultDir: "asc",
-    compare: compareEmployees,
-  })
-
-  function updateFilter<K extends keyof EmployeeColumnFilters>(
-    key: K,
-    value: string
-  ) {
-    setFilters((current) => ({ ...current, [key]: value }))
-  }
-
   if (employees.length === 0) {
     return <p className="text-sm text-muted-foreground">{emptyMessage}</p>
   }
@@ -153,24 +84,24 @@ export function EmployeesTable({
             label="Employee Name"
             active={sortKey === "name"}
             direction={sortDir}
-            onSort={() => handleSort("name")}
+            onSort={() => onSort("name")}
           />
           <SortableTableHead
             label="Employee ID"
             active={sortKey === "employeeId"}
             direction={sortDir}
-            onSort={() => handleSort("employeeId")}
+            onSort={() => onSort("employeeId")}
           />
           <SortableTableHead
             label="Email"
             active={sortKey === "email"}
             direction={sortDir}
-            onSort={() => handleSort("email")}
+            onSort={() => onSort("email")}
           />
           <FilterTableHead
             label="Employee Status"
             value={filters.employeeStatus}
-            onChange={(value) => updateFilter("employeeStatus", value)}
+            onChange={(value) => onFilterChange("employeeStatus", value)}
             options={statusOptions}
             searchPlaceholder="Search statuses…"
             emptyMessage="No status found."
@@ -178,7 +109,7 @@ export function EmployeesTable({
           <FilterTableHead
             label="Position Title"
             value={filters.positionTitle}
-            onChange={(value) => updateFilter("positionTitle", value)}
+            onChange={(value) => onFilterChange("positionTitle", value)}
             options={positionOptions}
             searchPlaceholder="Search positions…"
             emptyMessage="No position found."
@@ -186,7 +117,7 @@ export function EmployeesTable({
           <FilterTableHead
             label="Department"
             value={filters.department}
-            onChange={(value) => updateFilter("department", value)}
+            onChange={(value) => onFilterChange("department", value)}
             options={departmentOptions}
             searchPlaceholder="Search departments…"
             emptyMessage="No department found."
@@ -194,7 +125,7 @@ export function EmployeesTable({
           <FilterTableHead
             label="Program"
             value={filters.program}
-            onChange={(value) => updateFilter("program", value)}
+            onChange={(value) => onFilterChange("program", value)}
             options={programOptions}
             searchPlaceholder="Search programs…"
             emptyMessage="No program found."
@@ -202,7 +133,7 @@ export function EmployeesTable({
           <FilterTableHead
             label="Account"
             value={filters.account}
-            onChange={(value) => updateFilter("account", value)}
+            onChange={(value) => onFilterChange("account", value)}
             options={accountOptions}
             searchPlaceholder="Search accounts…"
             emptyMessage="No account found."
@@ -210,7 +141,7 @@ export function EmployeesTable({
           <FilterTableHead
             label="Divisor"
             value={filters.divisor}
-            onChange={(value) => updateFilter("divisor", value)}
+            onChange={(value) => onFilterChange("divisor", value)}
             options={divisorOptions}
             searchPlaceholder="Search divisors…"
             emptyMessage="No divisor found."
@@ -219,47 +150,37 @@ export function EmployeesTable({
             label="Basic Pay"
             active={sortKey === "basicPay"}
             direction={sortDir}
-            onSort={() => handleSort("basicPay")}
+            onSort={() => onSort("basicPay")}
           />
           <SortableTableHead
             label="TIN"
             active={sortKey === "tin"}
             direction={sortDir}
-            onSort={() => handleSort("tin")}
+            onSort={() => onSort("tin")}
           />
           <SortableTableHead
             label="SSS NO."
             active={sortKey === "sssNo"}
             direction={sortDir}
-            onSort={() => handleSort("sssNo")}
+            onSort={() => onSort("sssNo")}
           />
           <SortableTableHead
             label="PHIC NO."
             active={sortKey === "phicNo"}
             direction={sortDir}
-            onSort={() => handleSort("phicNo")}
+            onSort={() => onSort("phicNo")}
           />
           <SortableTableHead
             label="HDMF NO."
             active={sortKey === "hdmfNo"}
             direction={sortDir}
-            onSort={() => handleSort("hdmfNo")}
+            onSort={() => onSort("hdmfNo")}
           />
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {filteredItems.length === 0 ? (
-          <TableRow>
-            <TableCell
-              colSpan={15}
-              className="py-8 text-center text-muted-foreground"
-            >
-              No employees match the selected filters.
-            </TableCell>
-          </TableRow>
-        ) : (
-          sortedItems.map((employee) => (
+        {employees.map((employee) => (
             <TableRow key={employee.id}>
               <TableCell className="font-medium">{employee.name}</TableCell>
               <TableCell>{employee.employeeId}</TableCell>
@@ -281,8 +202,7 @@ export function EmployeesTable({
                 <EmployeeRowActions employee={employee} />
               </TableCell>
             </TableRow>
-          ))
-        )}
+          ))}
       </TableBody>
     </Table>
   )

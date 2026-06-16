@@ -6,17 +6,17 @@ import { useRouter, useSearchParams } from "next/navigation"
 import * as React from "react"
 
 import { EmployeeScheduleTable } from "@/components/dashboard/schedule/employee-schedule-table"
+import { EmployeeCombobox } from "@/components/dashboard/shared/employee-combobox"
 import { PaginationControls } from "@/components/dashboard/shared/pagination-controls"
 import { PayrollPeriodCombobox } from "@/components/dashboard/shared/payroll-period-combobox"
 import { PayrollPeriodStrip } from "@/components/dashboard/shared/payroll-period-strip"
-import { isScheduleComplete, mergeScheduleDays } from "@/lib/schedule-days"
-import type { PaginatedResult } from "@/lib/pagination"
+import type { EmployeeOption } from "@/lib/employees"
 import type {
-  EmployeeSchedule,
-  EmployeeScheduleRow,
-  Payroll,
-  Payslip,
-} from "@/lib/types"
+  ScheduleRowSort,
+} from "@/lib/employee-schedules"
+import type { PaginatedResult } from "@/lib/pagination"
+import type { SortDirection } from "@/lib/table-sort"
+import type { EmployeeScheduleRow, Payroll } from "@/lib/types"
 
 const EditEmployeeScheduleDialog = dynamic(
   () =>
@@ -29,17 +29,25 @@ const EditEmployeeScheduleDialog = dynamic(
 )
 
 type SchedulePageContentProps = {
-  payslips: PaginatedResult<Payslip>
+  scheduleRows: PaginatedResult<EmployeeScheduleRow>
   payrolls: Payroll[]
-  schedules: EmployeeSchedule[]
+  employeeOptions: EmployeeOption[]
   defaultPayrollId: string | null
+  employeeId: string
+  status: string
+  sortKey: ScheduleRowSort
+  sortDir: SortDirection
 }
 
 export function SchedulePageContent({
-  payslips,
+  scheduleRows,
   payrolls,
-  schedules,
+  employeeOptions,
   defaultPayrollId,
+  employeeId,
+  status,
+  sortKey,
+  sortDir,
 }: SchedulePageContentProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -89,51 +97,57 @@ export function SchedulePageContent({
     setActiveEmployeeId(null)
   }
 
-  const scheduleRows = React.useMemo((): EmployeeScheduleRow[] => {
-    if (!selectedPayroll) {
-      return []
-    }
-
-    const scheduleByEmployeeId = new Map(
-      schedules
-        .filter((schedule) => schedule.payrollId === selectedPayrollId)
-        .map((schedule) => [schedule.employeeId, schedule])
-    )
-
-    return payslips.items.map((payslip) => {
-      const schedule = scheduleByEmployeeId.get(payslip.employeeId)
-      const days = schedule
-        ? mergeScheduleDays(selectedPayroll, schedule.days)
-        : mergeScheduleDays(selectedPayroll)
-
-      return {
-        employeeId: payslip.employeeId,
-        employeeName: payslip.employeeName,
-        employeeNumber: payslip.employeeId,
-        status:
-          schedule && isScheduleComplete(selectedPayroll, days)
-            ? "modified"
-            : "notModified",
-      }
+  function replaceParams(params: URLSearchParams) {
+    const query = params.toString()
+    router.replace(query ? `/dashboard/schedule?${query}` : "/dashboard/schedule", {
+      scroll: false,
     })
-  }, [payslips.items, schedules, selectedPayroll, selectedPayrollId])
+  }
 
   const activeSchedule = React.useMemo(() => {
-    if (!activeEmployeeId || !selectedPayrollId) {
-      return null
-    }
     return (
-      schedules.find(
-        (schedule) =>
-          schedule.payrollId === selectedPayrollId &&
-          schedule.employeeId === activeEmployeeId
-      ) ?? null
+      scheduleRows.items.find((row) => row.employeeId === activeEmployeeId)
+        ?.schedule ?? null
     )
-  }, [activeEmployeeId, schedules, selectedPayrollId])
+  }, [activeEmployeeId, scheduleRows.items])
 
-  const activeRow = scheduleRows.find(
+  const activeRow = scheduleRows.items.find(
     (row) => row.employeeId === activeEmployeeId
   )
+
+  function handleStatusFilterChange(statusValue: string) {
+    const params = new URLSearchParams(searchParams.toString())
+    if (statusValue) {
+      params.set("status", statusValue)
+    } else {
+      params.delete("status")
+    }
+    params.delete("page")
+    replaceParams(params)
+    setActiveEmployeeId(null)
+  }
+
+  function handleEmployeeFilterChange(nextEmployeeId: string) {
+    const params = new URLSearchParams(searchParams.toString())
+    if (nextEmployeeId) {
+      params.set("employeeId", nextEmployeeId)
+    } else {
+      params.delete("employeeId")
+    }
+    params.delete("page")
+    replaceParams(params)
+    setActiveEmployeeId(null)
+  }
+
+  function handleSort(key: ScheduleRowSort) {
+    const params = new URLSearchParams(searchParams.toString())
+    const nextDirection =
+      sortKey === key && sortDir === "asc" ? "desc" : "asc"
+    params.set("sort", key)
+    params.set("direction", nextDirection)
+    params.delete("page")
+    replaceParams(params)
+  }
 
   function handleEdit(row: EmployeeScheduleRow) {
     setActiveEmployeeId(row.employeeId)
@@ -170,6 +184,12 @@ export function SchedulePageContent({
             onChange={handlePayrollChange}
             className="w-full lg:w-80"
           />
+          <EmployeeCombobox
+            employees={employeeOptions}
+            value={employeeId}
+            onChange={handleEmployeeFilterChange}
+            variant="filter"
+          />
         </div>
 
         {selectedPayroll ? (
@@ -178,15 +198,24 @@ export function SchedulePageContent({
       </div>
 
       <EmployeeScheduleTable
-        rows={scheduleRows}
+        rows={scheduleRows.items}
+        status={status}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        onSort={handleSort}
+        onStatusFilterChange={handleStatusFilterChange}
         onEdit={handleEdit}
-        emptyMessage="No employees for this payroll period yet."
+        emptyMessage={
+          status || employeeId
+            ? "No employees match the selected filters."
+            : "No employees for this payroll period yet."
+        }
       />
       <PaginationControls
-        page={payslips.page}
-        pageCount={payslips.pageCount}
-        total={payslips.total}
-        pageSize={payslips.pageSize}
+        page={scheduleRows.page}
+        pageCount={scheduleRows.pageCount}
+        total={scheduleRows.total}
+        pageSize={scheduleRows.pageSize}
         itemLabel="employees"
       />
 

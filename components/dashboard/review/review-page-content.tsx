@@ -4,12 +4,15 @@ import dynamic from "next/dynamic"
 import { useRouter, useSearchParams } from "next/navigation"
 import * as React from "react"
 
+import { EmployeeCombobox } from "@/components/dashboard/shared/employee-combobox"
 import { PaginationControls } from "@/components/dashboard/shared/pagination-controls"
 import { ReviewTable } from "@/components/dashboard/review/review-table"
 import { PayrollPeriodCombobox } from "@/components/dashboard/shared/payroll-period-combobox"
 import { PayrollPeriodStrip } from "@/components/dashboard/shared/payroll-period-strip"
 import type { PaginatedResult } from "@/lib/pagination"
-import type { Employee, Payroll, Payslip, Role } from "@/lib/types"
+import type { PayslipListSort } from "@/lib/payslips"
+import type { SortDirection } from "@/lib/table-sort"
+import type { Employee, Payroll, Payslip, PayslipStatus, Role } from "@/lib/types"
 
 const ReviewPayslipDialog = dynamic(
   () =>
@@ -27,6 +30,11 @@ type ReviewPageContentProps = {
   payrolls: Payroll[]
   defaultPayrollId: string | null
   role: Role
+  employeeId: string
+  status: string
+  allowedStatuses: PayslipStatus[]
+  sortKey: PayslipListSort
+  sortDir: SortDirection
 }
 
 export function ReviewPageContent({
@@ -35,6 +43,11 @@ export function ReviewPageContent({
   payrolls,
   defaultPayrollId,
   role,
+  employeeId,
+  status,
+  allowedStatuses,
+  sortKey,
+  sortDir,
 }: ReviewPageContentProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -84,6 +97,47 @@ export function ReviewPageContent({
     setActivePayslipId(null)
   }
 
+  function replaceParams(params: URLSearchParams) {
+    const query = params.toString()
+    router.replace(query ? `/dashboard/review?${query}` : "/dashboard/review", {
+      scroll: false,
+    })
+  }
+
+  function handleStatusFilterChange(statusValue: string) {
+    const params = new URLSearchParams(searchParams.toString())
+    if (statusValue) {
+      params.set("status", statusValue)
+    } else {
+      params.delete("status")
+    }
+    params.delete("page")
+    replaceParams(params)
+    setActivePayslipId(null)
+  }
+
+  function handleEmployeeFilterChange(nextEmployeeId: string) {
+    const params = new URLSearchParams(searchParams.toString())
+    if (nextEmployeeId) {
+      params.set("employeeId", nextEmployeeId)
+    } else {
+      params.delete("employeeId")
+    }
+    params.delete("page")
+    replaceParams(params)
+    setActivePayslipId(null)
+  }
+
+  function handleSort(key: PayslipListSort) {
+    const params = new URLSearchParams(searchParams.toString())
+    const nextDirection =
+      sortKey === key && sortDir === "asc" ? "desc" : "asc"
+    params.set("sort", key)
+    params.set("direction", nextDirection)
+    params.delete("page")
+    replaceParams(params)
+  }
+
   const activeIndex = React.useMemo(() => {
     if (!activePayslipId) {
       return -1
@@ -125,6 +179,12 @@ export function ReviewPageContent({
             onChange={handlePayrollChange}
             className="w-full lg:w-80"
           />
+          <EmployeeCombobox
+            employees={employees}
+            value={employeeId}
+            onChange={handleEmployeeFilterChange}
+            variant="filter"
+          />
         </div>
 
         {selectedPayroll ? (
@@ -134,8 +194,18 @@ export function ReviewPageContent({
 
       <ReviewTable
         payslips={payslips.items}
+        status={status}
+        allowedStatuses={allowedStatuses}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        onSort={handleSort}
+        onStatusFilterChange={handleStatusFilterChange}
         onReview={handleReview}
-        emptyMessage={reviewEmptyMessage}
+        emptyMessage={
+          status || employeeId
+            ? "No review items match the selected filters."
+            : reviewEmptyMessage
+        }
       />
 
       <ReviewPayslipDialog

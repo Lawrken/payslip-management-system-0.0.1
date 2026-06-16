@@ -1,8 +1,16 @@
-import { asc, count, desc, eq, ilike, ne, or } from "drizzle-orm"
+import { and, asc, count, desc, eq, ilike, ne, or, type SQL } from "drizzle-orm"
 
 import { db, type DatabaseClient } from "@/db"
 import { employees } from "@/db/schema"
 import { normalizeEmployeeId } from "@/lib/auth-helpers"
+import type {
+  Account,
+  Department,
+  EmployeeDivisor,
+  EmployeeStatus,
+  PositionTitle,
+  Program,
+} from "@/lib/employee-options"
 import {
   buildPaginatedResult,
   normalizePagination,
@@ -44,6 +52,10 @@ export type EmployeeListSort =
   | "employeeId"
   | "email"
   | "basicPay"
+  | "tin"
+  | "sssNo"
+  | "phicNo"
+  | "hdmfNo"
   | "employeeStatus"
   | "positionTitle"
   | "department"
@@ -53,6 +65,12 @@ export type EmployeeListSort =
 
 export type EmployeeListQuery = PaginationInput & {
   search?: string
+  employeeStatus?: EmployeeStatus
+  positionTitle?: PositionTitle
+  department?: Department
+  program?: Program
+  account?: Account
+  divisor?: EmployeeDivisor
   sort?: EmployeeListSort
   direction?: SortDirection
 }
@@ -70,13 +88,38 @@ export async function getPaginatedEmployees(
 ): Promise<PaginatedResult<Employee>> {
   const pagination = normalizePagination(query)
   const search = query.search?.trim()
-  const where = search
-    ? or(
-        ilike(employees.name, `%${search}%`),
-        ilike(employees.employeeId, `%${search}%`),
-        ilike(employees.email, `%${search}%`)
-      )
-    : undefined
+  const conditions: SQL[] = []
+
+  if (search) {
+    const searchCondition = or(
+      ilike(employees.name, `%${search}%`),
+      ilike(employees.employeeId, `%${search}%`),
+      ilike(employees.email, `%${search}%`)
+    )
+    if (searchCondition) {
+      conditions.push(searchCondition)
+    }
+  }
+  if (query.employeeStatus) {
+    conditions.push(eq(employees.employeeStatus, query.employeeStatus))
+  }
+  if (query.positionTitle) {
+    conditions.push(eq(employees.positionTitle, query.positionTitle))
+  }
+  if (query.department) {
+    conditions.push(eq(employees.department, query.department))
+  }
+  if (query.program) {
+    conditions.push(eq(employees.program, query.program))
+  }
+  if (query.account) {
+    conditions.push(eq(employees.account, query.account))
+  }
+  if (query.divisor) {
+    conditions.push(eq(employees.divisor, query.divisor))
+  }
+
+  const where = conditions.length > 0 ? and(...conditions) : undefined
   const sort = query.sort ?? "name"
   const direction = query.direction === "desc" ? "desc" : "asc"
   const orderBy =

@@ -1,11 +1,7 @@
 "use client"
 
-import * as React from "react"
-
-import {
-  SortableTableHead,
-  useTableSort,
-} from "@/components/dashboard/shared/table-sort"
+import { FilterTableHead } from "@/components/dashboard/shared/table-column-filter"
+import { SortableTableHead } from "@/components/dashboard/shared/table-sort"
 import { UserRowActions } from "@/components/dashboard/users/user-row-actions"
 import {
   Table,
@@ -16,18 +12,32 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { ROLE_LABELS } from "@/lib/auth-helpers"
-import { applyDirection, compareDates, compareStrings } from "@/lib/table-sort"
+import type { UserListSort } from "@/lib/users"
 import type { SortDirection } from "@/lib/table-sort"
 import type { Role, UserAccount } from "@/lib/types"
 
-type SortKey = "email" | "employeeId" | "role" | "passwordChangedAt"
-
 type UsersTableProps = {
   users: UserAccount[]
+  role: string
+  passwordStatus: string
+  sortKey: UserListSort
+  sortDir: SortDirection
+  onSort: (key: UserListSort) => void
+  onFilterChange: (key: "role" | "passwordStatus", value: string) => void
   currentEmployeeId: string
   currentRole: Role
   emptyMessage?: string
 }
+
+const roles: Role[] = ["admin", "superAdmin", "employee"]
+const roleOptions = roles.map((role) => ({
+  value: role,
+  label: ROLE_LABELS[role],
+}))
+const passwordStatusOptions = [
+  { value: "initial", label: "Initial password" },
+  { value: "changed", label: "Changed password" },
+]
 
 function formatDate(date: Date | null) {
   if (!date) {
@@ -41,41 +51,18 @@ function formatDate(date: Date | null) {
   }).format(date)
 }
 
-function compareUsers(
-  a: UserAccount,
-  b: UserAccount,
-  key: SortKey,
-  dir: SortDirection
-) {
-  let result = 0
-
-  if (key === "passwordChangedAt") {
-    result = compareDates(a.passwordChangedAt, b.passwordChangedAt)
-  } else if (key === "role") {
-    result = compareStrings(ROLE_LABELS[a.role], ROLE_LABELS[b.role])
-  } else {
-    result = compareStrings(a[key], b[key])
-  }
-
-  return applyDirection(result, dir)
-}
-
 export function UsersTable({
   users,
+  role,
+  passwordStatus,
+  sortKey,
+  sortDir,
+  onSort,
+  onFilterChange,
   currentEmployeeId,
   currentRole,
   emptyMessage = "No users found.",
 }: UsersTableProps) {
-  const { sortKey, sortDir, handleSort, sortedItems } = useTableSort<
-    UserAccount,
-    SortKey
-  >({
-    items: users,
-    defaultKey: "email",
-    defaultDir: "asc",
-    compare: compareUsers,
-  })
-
   if (users.length === 0) {
     return <p className="text-sm text-muted-foreground">{emptyMessage}</p>
   }
@@ -88,31 +75,35 @@ export function UsersTable({
             label="Email"
             active={sortKey === "email"}
             direction={sortDir}
-            onSort={() => handleSort("email")}
+            onSort={() => onSort("email")}
           />
           <SortableTableHead
             label="Employee"
             active={sortKey === "employeeId"}
             direction={sortDir}
-            onSort={() => handleSort("employeeId")}
+            onSort={() => onSort("employeeId")}
           />
-          <SortableTableHead
+          <FilterTableHead
             label="Role"
-            active={sortKey === "role"}
-            direction={sortDir}
-            onSort={() => handleSort("role")}
+            value={role}
+            onChange={(value) => onFilterChange("role", value)}
+            options={roleOptions}
+            searchPlaceholder="Search roles…"
+            emptyMessage="No role found."
           />
-          <SortableTableHead
+          <FilterTableHead
             label="Password Status"
-            active={sortKey === "passwordChangedAt"}
-            direction={sortDir}
-            onSort={() => handleSort("passwordChangedAt")}
+            value={passwordStatus}
+            onChange={(value) => onFilterChange("passwordStatus", value)}
+            options={passwordStatusOptions}
+            searchPlaceholder="Search password statuses…"
+            emptyMessage="No password status found."
           />
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {sortedItems.map((user) => (
+        {users.map((user) => (
           <TableRow key={user.employeeId}>
             <TableCell className="font-medium">{user.email}</TableCell>
             <TableCell>

@@ -6,7 +6,18 @@ import {
 } from "node:crypto"
 
 import bcrypt from "bcryptjs"
-import { asc, count, desc, eq, ilike, or } from "drizzle-orm"
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  ilike,
+  isNotNull,
+  isNull,
+  or,
+  type SQL,
+} from "drizzle-orm"
 
 import { db, type DatabaseClient } from "@/db"
 import { employees, users } from "@/db/schema"
@@ -120,9 +131,12 @@ export async function getUserAccounts(
 }
 
 export type UserListSort = "email" | "employeeId" | "role" | "passwordChangedAt"
+export type UserPasswordStatus = "initial" | "changed"
 
 export type UserListQuery = PaginationInput & {
   search?: string
+  role?: Role
+  passwordStatus?: UserPasswordStatus
   sort?: UserListSort
   direction?: SortDirection
 }
@@ -140,13 +154,29 @@ export async function getPaginatedUserAccounts(
 ): Promise<PaginatedResult<UserAccount>> {
   const pagination = normalizePagination(query)
   const search = query.search?.trim()
-  const where = search
-    ? or(
-        ilike(users.employeeId, `%${search}%`),
-        ilike(users.email, `%${search}%`),
-        ilike(employees.name, `%${search}%`)
-      )
-    : undefined
+  const conditions: SQL[] = []
+
+  if (search) {
+    const searchCondition = or(
+      ilike(users.employeeId, `%${search}%`),
+      ilike(users.email, `%${search}%`),
+      ilike(employees.name, `%${search}%`)
+    )
+    if (searchCondition) {
+      conditions.push(searchCondition)
+    }
+  }
+  if (query.role) {
+    conditions.push(eq(users.role, query.role))
+  }
+  if (query.passwordStatus === "initial") {
+    conditions.push(isNull(users.passwordChangedAt))
+  }
+  if (query.passwordStatus === "changed") {
+    conditions.push(isNotNull(users.passwordChangedAt))
+  }
+
+  const where = conditions.length > 0 ? and(...conditions) : undefined
   const sort = query.sort ?? "email"
   const direction = query.direction === "desc" ? "desc" : "asc"
   const orderBy =

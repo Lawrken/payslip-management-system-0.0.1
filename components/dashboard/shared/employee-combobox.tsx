@@ -31,6 +31,8 @@ type EmployeeComboboxProps = {
   variant?: "form" | "filter"
   label?: string
   placeholder?: string
+  searchPlaceholder?: string
+  emptyMessage?: string
   className?: string
 }
 
@@ -42,6 +44,8 @@ export function EmployeeCombobox({
   variant = "form",
   label = "Employee ID",
   placeholder,
+  searchPlaceholder = "Search by ID or name…",
+  emptyMessage = "No employee found.",
   className,
 }: EmployeeComboboxProps) {
   const [open, setOpen] = React.useState(false)
@@ -91,9 +95,9 @@ export function EmployeeCombobox({
           align="start"
         >
           <Command>
-            <CommandInput placeholder="Search by ID or name…" />
+            <CommandInput placeholder={searchPlaceholder} />
             <CommandList className="max-h-60">
-              <CommandEmpty>No employee found.</CommandEmpty>
+              <CommandEmpty>{emptyMessage}</CommandEmpty>
               <CommandGroup>
                 {employees.map((employee) => (
                   <CommandItem

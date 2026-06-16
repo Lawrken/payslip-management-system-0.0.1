@@ -5,7 +5,11 @@ import { ReviewPageContent } from "@/components/dashboard/review/review-page-con
 import { requireDashboardSession } from "@/lib/authorization"
 import { getEmployees } from "@/lib/employees"
 import { getLatestPayroll, getPayrolls } from "@/lib/payrolls"
-import { getPaginatedPayslips } from "@/lib/payslips"
+import {
+  getPaginatedPayslips,
+  type PayslipListSort,
+} from "@/lib/payslips"
+import type { SortDirection } from "@/lib/table-sort"
 import type { PayslipStatus } from "@/lib/types"
 
 export const dynamic = "force-dynamic"
@@ -13,7 +17,12 @@ export const dynamic = "force-dynamic"
 type ReviewPageProps = {
   searchParams: Promise<{
     payrollId?: string
+    employeeId?: string
+    status?: string
     page?: string
+    pageSize?: string
+    sort?: string
+    direction?: string
   }>
 }
 
@@ -27,6 +36,22 @@ function getReviewStatuses(role: string): PayslipStatus[] {
   return []
 }
 
+const reviewSorts: PayslipListSort[] = [
+  "employeeName",
+  "employeeId",
+  "status",
+]
+
+function normalizeSort(value: string | undefined): PayslipListSort {
+  return reviewSorts.includes(value as PayslipListSort)
+    ? (value as PayslipListSort)
+    : "employeeName"
+}
+
+function normalizeDirection(value: string | undefined): SortDirection {
+  return value === "desc" ? "desc" : "asc"
+}
+
 async function ReviewPageInner({ searchParams }: ReviewPageProps) {
   const session = await requireDashboardSession()
   if ("error" in session) {
@@ -34,6 +59,12 @@ async function ReviewPageInner({ searchParams }: ReviewPageProps) {
   }
 
   const params = await searchParams
+  const allowedStatuses = getReviewStatuses(session.role)
+  const status = allowedStatuses.includes(params.status as PayslipStatus)
+    ? (params.status as PayslipStatus)
+    : undefined
+  const sort = normalizeSort(params.sort)
+  const direction = normalizeDirection(params.direction)
   const [employees, payrolls, latestPayroll] = await Promise.all([
     getEmployees(),
     getPayrolls(),
@@ -47,8 +78,12 @@ async function ReviewPageInner({ searchParams }: ReviewPageProps) {
   const payslips = selectedPayroll
     ? await getPaginatedPayslips({
         payrollId: selectedPayroll.id,
-        statuses: getReviewStatuses(session.role),
+        employeeId: params.employeeId,
+        statuses: status ? [status] : allowedStatuses,
         page: params.page,
+        pageSize: params.pageSize,
+        sort,
+        direction,
       })
     : {
         items: [],
@@ -65,6 +100,11 @@ async function ReviewPageInner({ searchParams }: ReviewPageProps) {
       payrolls={payrolls}
       defaultPayrollId={latestPayroll?.id ?? null}
       role={session.role}
+      employeeId={params.employeeId ?? ""}
+      status={status ?? ""}
+      allowedStatuses={allowedStatuses}
+      sortKey={sort}
+      sortDir={direction}
     />
   )
 }
