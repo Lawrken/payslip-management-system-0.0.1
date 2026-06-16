@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils"
 type PayslipBreakdownProps = {
   inputs: PayslipPayrollInputs
   divisor?: EmployeeDivisor | number
+  variant?: "default" | "dashboard"
 }
 
 type BreakdownSectionKind = "pay" | "deduction" | "nonTaxable"
@@ -120,23 +121,30 @@ function BreakdownSection({
   inputs,
   lineAmounts,
   sectionKind,
+  variant,
 }: {
   title: string
   fields: PayslipFieldDefinition[]
   inputs: PayslipPayrollInputs
   lineAmounts?: Record<string, number>
   sectionKind: BreakdownSectionKind
+  variant: "default" | "dashboard"
 }) {
   return (
     <section className="flex flex-col gap-2">
-      <h3 className="text-sm font-medium">{title}</h3>
-      <dl className="grid gap-1.5 sm:grid-cols-2">
+      <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
+      <dl className="grid gap-2 sm:grid-cols-2">
         {fields.map((field) => {
           const value = inputs[field.key as keyof PayslipPayrollInputs]
           return (
             <div
               key={field.key}
-              className="flex items-baseline justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2 text-sm"
+              className={cn(
+                "flex items-baseline justify-between gap-3 rounded-xl px-3 py-2.5 text-sm",
+                variant === "dashboard"
+                  ? "dashboard-chart-card"
+                  : "border bg-muted/30"
+              )}
             >
               <dt className="text-muted-foreground">{field.label}</dt>
               <dd className="shrink-0 font-medium tabular-nums">
@@ -155,29 +163,36 @@ function BreakdownSection({
   )
 }
 
-export function PayslipBreakdown({ inputs, divisor }: PayslipBreakdownProps) {
+export function PayslipBreakdown({
+  inputs,
+  divisor,
+  variant = "default",
+}: PayslipBreakdownProps) {
   const calculation = calculatePayslipTotals(inputs, divisor)
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <BreakdownSection
         title="Pay Details"
         fields={PAY_DETAILS_FIELDS}
         inputs={inputs}
         lineAmounts={calculation.lineAmounts}
         sectionKind="pay"
+        variant={variant}
       />
       <BreakdownSection
         title="Deductions"
         fields={DEDUCTION_FIELDS}
         inputs={inputs}
         sectionKind="deduction"
+        variant={variant}
       />
       <BreakdownSection
         title="Non-Taxable Earnings"
         fields={NON_TAXABLE_FIELDS}
         inputs={inputs}
         sectionKind="nonTaxable"
+        variant={variant}
       />
     </div>
   )

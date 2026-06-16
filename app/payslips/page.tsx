@@ -3,10 +3,8 @@ import { redirect } from "next/navigation"
 import { logoutAction } from "@/app/account/actions"
 import { ThemeSelector } from "@/components/theme-selector"
 import { ChangePasswordDialog } from "@/components/payslips/change-password-dialog"
-import {
-  EmployeePayslipViewer,
-  type EmployeePayslipPreviewItem,
-} from "@/components/payslips/employee-payslip-viewer"
+import { EmployeePayslipsWorkspace } from "@/components/payslips/employee-payslips-workspace"
+import type { EmployeePayslipPreviewItem } from "@/components/payslips/employee-payslip-viewer"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { getVisibleEmployeePayslipDetailsByEmployeeId } from "@/lib/payslips"
@@ -47,27 +45,7 @@ export default async function EmployeePayslipsPage() {
   const shouldChangePassword = account?.passwordChangedAt === null
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 p-4 sm:p-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Your Payslips
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Signed in as {account?.email ?? session.employeeId}.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <ThemeSelector />
-          <ChangePasswordDialog employeeId={session.employeeId} />
-          <form action={logoutAction}>
-            <Button type="submit" variant="outline">
-              Logout
-            </Button>
-          </form>
-        </div>
-      </div>
-
+    <main className="flex min-h-screen w-full flex-col gap-6 p-4 sm:p-6">
       {shouldChangePassword ? (
         <Alert>
           <AlertTitle>Change your password</AlertTitle>
@@ -78,7 +56,21 @@ export default async function EmployeePayslipsPage() {
         </Alert>
       ) : null}
 
-      <EmployeePayslipViewer payslips={previewPayslips} />
+      <EmployeePayslipsWorkspace
+        payslips={previewPayslips}
+        signedInLabel={account?.email ?? session.employeeId}
+        headerActions={
+          <>
+            <ThemeSelector />
+            <ChangePasswordDialog employeeId={session.employeeId} />
+            <form action={logoutAction}>
+              <Button type="submit" variant="outline">
+                Logout
+              </Button>
+            </form>
+          </>
+        }
+      />
     </main>
   )
 }

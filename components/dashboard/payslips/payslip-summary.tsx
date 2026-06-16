@@ -1,10 +1,17 @@
+import type { CSSProperties } from "react"
+
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  PAYROLL_TOTALS_BACKGROUNDS,
+  PAYROLL_TOTALS_COLORS,
+} from "@/lib/dashboard-chart-colors"
 import type { PayslipTotals } from "@/lib/types"
+import { cn } from "@/lib/utils"
 
 type PayslipSummaryProps = {
   totals: PayslipTotals
@@ -52,26 +59,75 @@ export function PayslipSummary({
   }
 
   if (variant === "compact") {
+    const metricStyles: Partial<
+      Record<(typeof rows)[number]["label"], { bg: string; chart: string }>
+    > = {
+      "Gross Pay": {
+        bg: PAYROLL_TOTALS_BACKGROUNDS.gross,
+        chart: PAYROLL_TOTALS_COLORS.gross,
+      },
+      "Total Deductions": {
+        bg: PAYROLL_TOTALS_BACKGROUNDS.deductions,
+        chart: PAYROLL_TOTALS_COLORS.deductions,
+      },
+      "Net Pay": {
+        bg: PAYROLL_TOTALS_BACKGROUNDS.net,
+        chart: PAYROLL_TOTALS_COLORS.net,
+      },
+    }
+
     return (
-      <div className="rounded-lg border bg-muted/40 p-3">
-        <p className="mb-2 text-xs font-medium text-muted-foreground">
-          Summary
-        </p>
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-3 lg:grid-cols-5">
-          {rows.map((row) => (
-            <div key={row.label} className="flex flex-col gap-0.5">
-              <dt className="text-xs text-muted-foreground">{row.label}</dt>
-              <dd
-                className={
-                  row.label === "Net Pay"
-                    ? "font-semibold tabular-nums"
-                    : "font-medium tabular-nums"
+      <div className="space-y-2">
+        <p className="text-sm font-medium text-muted-foreground">Summary</p>
+        <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+          {rows.map((row) => {
+            const metric = metricStyles[row.label]
+            const isZero = row.value === 0
+
+            if (!metric) {
+              return (
+                <div
+                  key={row.label}
+                  data-zero={isZero ? "true" : "false"}
+                  className="dashboard-metric-card dashboard-chart-card rounded-xl p-3.5"
+                >
+                  <dt className="text-xs text-muted-foreground">{row.label}</dt>
+                  <dd
+                    className={cn(
+                      "metric-value mt-1 text-lg font-semibold tabular-nums",
+                      isZero && "font-medium"
+                    )}
+                  >
+                    {formatMoney(row.value)}
+                  </dd>
+                </div>
+              )
+            }
+
+            return (
+              <div
+                key={row.label}
+                data-zero={isZero ? "true" : "false"}
+                className="dashboard-metric-card rounded-xl p-3.5"
+                style={
+                  {
+                    "--metric-bg": metric.bg,
+                    "--metric-chart": metric.chart,
+                  } as CSSProperties
                 }
               >
-                {formatMoney(row.value)}
-              </dd>
-            </div>
-          ))}
+                <dt className="text-xs text-muted-foreground">{row.label}</dt>
+                <dd
+                  className={cn(
+                    "metric-value mt-1 text-lg font-semibold tabular-nums",
+                    isZero && "font-medium"
+                  )}
+                >
+                  {formatMoney(row.value)}
+                </dd>
+              </div>
+            )
+          })}
         </dl>
       </div>
     )
