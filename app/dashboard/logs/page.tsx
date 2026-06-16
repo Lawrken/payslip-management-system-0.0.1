@@ -2,8 +2,9 @@ import { redirect } from "next/navigation"
 
 import { LogsFilters } from "@/components/dashboard/logs/logs-filters"
 import { LogsTable } from "@/components/dashboard/logs/logs-table"
+import { PaginationControls } from "@/components/dashboard/shared/pagination-controls"
 import { AUDIT_ACTIONS, AUDIT_ACTOR_ROLES } from "@/lib/audit-log-options"
-import { getAuditLogs } from "@/lib/audit-logs"
+import { getPaginatedAuditLogs } from "@/lib/audit-logs"
 import { requireDashboardSession } from "@/lib/authorization"
 import type { AuditAction, AuditLogQuery, Role } from "@/lib/types"
 
@@ -15,6 +16,7 @@ type LogsPageProps = {
     dateTo?: string
     actorRole?: string
     action?: string
+    page?: string
   }>
 }
 
@@ -47,10 +49,13 @@ export default async function LogsPage({ searchParams }: LogsPageProps) {
     actorRole: normalizeActorRole(params.actorRole),
     action: normalizeAction(params.action),
   }
-  const logs = await getAuditLogs(query)
+  const logs = await getPaginatedAuditLogs({
+    ...query,
+    page: params.page,
+  })
 
   return (
-    <div className="flex min-w-0 max-w-full flex-col gap-6">
+    <div className="flex max-w-full min-w-0 flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Logs</h1>
         <p className="text-sm text-muted-foreground">
@@ -60,7 +65,14 @@ export default async function LogsPage({ searchParams }: LogsPageProps) {
 
       <LogsFilters query={query} />
 
-      <LogsTable logs={logs} />
+      <LogsTable logs={logs.items} />
+      <PaginationControls
+        page={logs.page}
+        pageCount={logs.pageCount}
+        total={logs.total}
+        pageSize={logs.pageSize}
+        itemLabel="logs"
+      />
     </div>
   )
 }

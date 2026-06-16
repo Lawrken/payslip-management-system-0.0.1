@@ -20,10 +20,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
-import type { Employee } from "@/lib/types"
+import type { EmployeeOption } from "@/lib/employees"
 
 type EmployeeComboboxProps = {
-  employees: Employee[]
+  employees: EmployeeOption[]
   value: string
   onChange: (employeeId: string) => void
   disabled?: boolean

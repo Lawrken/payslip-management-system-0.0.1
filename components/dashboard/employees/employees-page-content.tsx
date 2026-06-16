@@ -1,28 +1,45 @@
 "use client"
 
-import * as React from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 
 import { AddEmployeeDialog } from "@/components/dashboard/employees/add-employee-dialog"
-import { EmployeeCombobox } from "@/components/dashboard/shared/employee-combobox"
 import { EmployeesTable } from "@/components/dashboard/employees/employees-table"
+import { EmployeeCombobox } from "@/components/dashboard/shared/employee-combobox"
+import { PaginationControls } from "@/components/dashboard/shared/pagination-controls"
 import { Button } from "@/components/ui/button"
+import type { EmployeeOption } from "@/lib/employees"
+import type { PaginatedResult } from "@/lib/pagination"
 import type { Employee } from "@/lib/types"
 
 type EmployeesPageContentProps = {
-  employees: Employee[]
+  employees: PaginatedResult<Employee>
+  employeeOptions: EmployeeOption[]
+  search: string
 }
 
-export function EmployeesPageContent({ employees }: EmployeesPageContentProps) {
-  const [selectedEmployeeId, setSelectedEmployeeId] = React.useState("")
+export function EmployeesPageContent({
+  employees,
+  employeeOptions,
+  search,
+}: EmployeesPageContentProps) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const selectedEmployee = employeeOptions.find(
+    (employee) => employee.employeeId === search
+  )
 
-  const filteredEmployees = React.useMemo(() => {
-    if (!selectedEmployeeId) {
-      return employees
+  function handleEmployeeFilterChange(employeeId: string) {
+    const params = new URLSearchParams(searchParams.toString())
+    if (employeeId) {
+      params.set("search", employeeId)
+    } else {
+      params.delete("search")
     }
-    return employees.filter(
-      (employee) => employee.employeeId === selectedEmployeeId
-    )
-  }, [employees, selectedEmployeeId])
+    params.delete("page")
+    router.replace(`/dashboard/employees?${params.toString()}`, {
+      scroll: false,
+    })
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -30,9 +47,9 @@ export function EmployeesPageContent({ employees }: EmployeesPageContentProps) {
         <h1 className="text-2xl font-semibold tracking-tight">Employees</h1>
         <div className="flex items-center gap-2">
           <EmployeeCombobox
-            employees={employees}
-            value={selectedEmployeeId}
-            onChange={setSelectedEmployeeId}
+            employees={employeeOptions}
+            value={selectedEmployee?.employeeId ?? ""}
+            onChange={handleEmployeeFilterChange}
             variant="filter"
           />
           <AddEmployeeDialog>
@@ -41,12 +58,17 @@ export function EmployeesPageContent({ employees }: EmployeesPageContentProps) {
         </div>
       </div>
       <EmployeesTable
-        employees={filteredEmployees}
+        employees={employees.items}
         emptyMessage={
-          selectedEmployeeId
-            ? "No employee matches that selection."
-            : "No employees yet."
+          search ? "No employees match that search." : "No employees yet."
         }
+      />
+      <PaginationControls
+        page={employees.page}
+        pageCount={employees.pageCount}
+        total={employees.total}
+        pageSize={employees.pageSize}
+        itemLabel="employees"
       />
     </div>
   )
