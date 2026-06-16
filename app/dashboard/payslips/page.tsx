@@ -5,22 +5,48 @@ import { PayslipsPageContent } from "@/components/dashboard/payslips/payslips-pa
 import { requireDashboardSession } from "@/lib/authorization"
 import { getEmployees } from "@/lib/employees"
 import { getLatestPayroll, getPayrolls } from "@/lib/payrolls"
-import { getPayslips } from "@/lib/payslips"
+import { getPaginatedPayslips } from "@/lib/payslips"
 
 export const dynamic = "force-dynamic"
 
-async function PayslipsPageInner() {
+type PayslipsPageProps = {
+  searchParams: Promise<{
+    payrollId?: string
+    employeeId?: string
+    page?: string
+  }>
+}
+
+async function PayslipsPageInner({ searchParams }: PayslipsPageProps) {
   const session = await requireDashboardSession()
   if ("error" in session) {
     redirect("/login")
   }
 
-  const [payslips, employees, payrolls, latestPayroll] = await Promise.all([
-    getPayslips(),
+  const params = await searchParams
+  const [employees, payrolls, latestPayroll] = await Promise.all([
     getEmployees(),
     getPayrolls(),
     getLatestPayroll(),
   ])
+  const selectedPayroll =
+    payrolls.find((payroll) => payroll.id === params.payrollId) ??
+    latestPayroll ??
+    payrolls[0] ??
+    null
+  const payslips = selectedPayroll
+    ? await getPaginatedPayslips({
+        payrollId: selectedPayroll.id,
+        employeeId: params.employeeId,
+        page: params.page,
+      })
+    : {
+        items: [],
+        total: 0,
+        page: 1,
+        pageSize: 50,
+        pageCount: 1,
+      }
 
   return (
     <PayslipsPageContent
@@ -32,10 +58,10 @@ async function PayslipsPageInner() {
   )
 }
 
-export default function PayslipsPage() {
+export default function PayslipsPage({ searchParams }: PayslipsPageProps) {
   return (
     <Suspense>
-      <PayslipsPageInner />
+      <PayslipsPageInner searchParams={searchParams} />
     </Suspense>
   )
 }

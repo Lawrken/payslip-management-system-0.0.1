@@ -1,16 +1,28 @@
 "use client"
 
+import dynamic from "next/dynamic"
 import { useRouter, useSearchParams } from "next/navigation"
 import * as React from "react"
 
-import { ReviewPayslipDialog } from "@/components/dashboard/review/review-payslip-dialog"
+import { PaginationControls } from "@/components/dashboard/shared/pagination-controls"
 import { ReviewTable } from "@/components/dashboard/review/review-table"
 import { PayrollPeriodCombobox } from "@/components/dashboard/shared/payroll-period-combobox"
 import { PayrollPeriodStrip } from "@/components/dashboard/shared/payroll-period-strip"
+import type { PaginatedResult } from "@/lib/pagination"
 import type { Employee, Payroll, Payslip, Role } from "@/lib/types"
 
+const ReviewPayslipDialog = dynamic(
+  () =>
+    import("@/components/dashboard/review/review-payslip-dialog").then(
+      (mod) => mod.ReviewPayslipDialog
+    ),
+  {
+    loading: () => null,
+  }
+)
+
 type ReviewPageContentProps = {
-  payslips: Payslip[]
+  payslips: PaginatedResult<Payslip>
   employees: Employee[]
   payrolls: Payroll[]
   defaultPayrollId: string | null
@@ -65,42 +77,19 @@ export function ReviewPageContent({
     } else {
       params.delete("payrollId")
     }
+    params.delete("page")
     router.replace(`/dashboard/review?${params.toString()}`, {
       scroll: false,
     })
     setActivePayslipId(null)
   }
 
-  const allPayrollPayslips = React.useMemo(() => {
-    if (!selectedPayrollId) {
-      return []
-    }
-    return payslips.filter((payslip) => payslip.payrollId === selectedPayrollId)
-  }, [payslips, selectedPayrollId])
-
-  const reviewQueuePayslips = React.useMemo(() => {
-    if (role === "admin") {
-      return allPayrollPayslips.filter(
-        (payslip) => payslip.status === "pending"
-      )
-    }
-    if (role === "superAdmin") {
-      return allPayrollPayslips.filter(
-        (payslip) =>
-          payslip.status === "adminApproved" || payslip.status === "approved"
-      )
-    }
-    return []
-  }, [allPayrollPayslips, role])
-
   const activeIndex = React.useMemo(() => {
     if (!activePayslipId) {
       return -1
     }
-    return reviewQueuePayslips.findIndex(
-      (payslip) => payslip.id === activePayslipId
-    )
-  }, [reviewQueuePayslips, activePayslipId])
+    return payslips.items.findIndex((payslip) => payslip.id === activePayslipId)
+  }, [payslips.items, activePayslipId])
 
   function handleReview(payslip: Payslip) {
     setActivePayslipId(payslip.id)
@@ -144,22 +133,29 @@ export function ReviewPageContent({
       </div>
 
       <ReviewTable
-        payslips={reviewQueuePayslips}
+        payslips={payslips.items}
         onReview={handleReview}
         emptyMessage={reviewEmptyMessage}
       />
 
       <ReviewPayslipDialog
         employees={employees}
-        payslips={reviewQueuePayslips}
+        payslips={payslips.items}
         activeIndex={activeIndex}
         onActiveIndexChange={(index) => {
-          const payslip = reviewQueuePayslips[index]
+          const payslip = payslips.items[index]
           setActivePayslipId(payslip?.id ?? null)
         }}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         role={role}
+      />
+      <PaginationControls
+        page={payslips.page}
+        pageCount={payslips.pageCount}
+        total={payslips.total}
+        pageSize={payslips.pageSize}
+        itemLabel="review items"
       />
     </div>
   )

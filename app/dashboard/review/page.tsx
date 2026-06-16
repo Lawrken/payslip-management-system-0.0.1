@@ -5,22 +5,58 @@ import { ReviewPageContent } from "@/components/dashboard/review/review-page-con
 import { requireDashboardSession } from "@/lib/authorization"
 import { getEmployees } from "@/lib/employees"
 import { getLatestPayroll, getPayrolls } from "@/lib/payrolls"
-import { getPayslips } from "@/lib/payslips"
+import { getPaginatedPayslips } from "@/lib/payslips"
+import type { PayslipStatus } from "@/lib/types"
 
 export const dynamic = "force-dynamic"
 
-async function ReviewPageInner() {
+type ReviewPageProps = {
+  searchParams: Promise<{
+    payrollId?: string
+    page?: string
+  }>
+}
+
+function getReviewStatuses(role: string): PayslipStatus[] {
+  if (role === "admin") {
+    return ["pending"]
+  }
+  if (role === "superAdmin") {
+    return ["adminApproved", "approved"]
+  }
+  return []
+}
+
+async function ReviewPageInner({ searchParams }: ReviewPageProps) {
   const session = await requireDashboardSession()
   if ("error" in session) {
     redirect("/login")
   }
 
-  const [payslips, employees, payrolls, latestPayroll] = await Promise.all([
-    getPayslips(),
+  const params = await searchParams
+  const [employees, payrolls, latestPayroll] = await Promise.all([
     getEmployees(),
     getPayrolls(),
     getLatestPayroll(),
   ])
+  const selectedPayroll =
+    payrolls.find((payroll) => payroll.id === params.payrollId) ??
+    latestPayroll ??
+    payrolls[0] ??
+    null
+  const payslips = selectedPayroll
+    ? await getPaginatedPayslips({
+        payrollId: selectedPayroll.id,
+        statuses: getReviewStatuses(session.role),
+        page: params.page,
+      })
+    : {
+        items: [],
+        total: 0,
+        page: 1,
+        pageSize: 50,
+        pageCount: 1,
+      }
 
   return (
     <ReviewPageContent
@@ -33,10 +69,10 @@ async function ReviewPageInner() {
   )
 }
 
-export default function ReviewPage() {
+export default function ReviewPage({ searchParams }: ReviewPageProps) {
   return (
     <Suspense>
-      <ReviewPageInner />
+      <ReviewPageInner searchParams={searchParams} />
     </Suspense>
   )
 }

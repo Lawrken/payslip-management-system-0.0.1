@@ -1,10 +1,10 @@
 "use client"
 
+import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import * as React from "react"
 
-import { DashboardCharts } from "@/components/dashboard/dashboard-charts"
 import { DashboardReminder } from "@/components/dashboard/dashboard-reminder"
 import { DashboardStatusStrip } from "@/components/dashboard/dashboard-status-strip"
 import { DashboardTotalsStrip } from "@/components/dashboard/dashboard-totals-strip"
@@ -18,26 +18,39 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { ROLE_LABELS } from "@/lib/auth-helpers"
-import {
-  buildDashboardSummary,
-  buildPayrollTotalsChartData,
-  buildStatusChartData,
-  filterPayslipsForPayroll,
+import type {
+  DashboardSummary,
+  PayrollTotalsChartRow,
+  StatusChartDatum,
 } from "@/lib/dashboard-summary"
-import type { Payroll, Payslip, Session } from "@/lib/types"
+import type { Payroll, Session } from "@/lib/types"
+
+const DashboardCharts = dynamic(
+  () =>
+    import("@/components/dashboard/dashboard-charts").then(
+      (mod) => mod.DashboardCharts
+    ),
+  {
+    loading: () => null,
+  }
+)
 
 type DashboardPageContentProps = {
   session: Session
   payrolls: Payroll[]
-  payslips: Payslip[]
   defaultPayrollId: string | null
+  summary: DashboardSummary
+  totalsChartData: PayrollTotalsChartRow[]
+  statusChartData: StatusChartDatum[]
 }
 
 export function DashboardPageContent({
   session,
   payrolls,
-  payslips,
   defaultPayrollId,
+  summary,
+  totalsChartData,
+  statusChartData,
 }: DashboardPageContentProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -80,33 +93,6 @@ export function DashboardPageContent({
     })
   }
 
-  const payrollPayslips = React.useMemo(() => {
-    if (!selectedPayrollId) {
-      return []
-    }
-    return filterPayslipsForPayroll(payslips, selectedPayrollId)
-  }, [payslips, selectedPayrollId])
-
-  const summary = React.useMemo(
-    () =>
-      buildDashboardSummary({
-        selectedPayroll: selectedPayroll ?? null,
-        payslips,
-        role: session.role,
-      }),
-    [selectedPayroll, payslips, session.role]
-  )
-
-  const totalsChartData = React.useMemo(
-    () => buildPayrollTotalsChartData(payrollPayslips),
-    [payrollPayslips]
-  )
-
-  const statusChartData = React.useMemo(
-    () => buildStatusChartData(summary.statusCounts),
-    [summary.statusCounts]
-  )
-
   const reviewHref = selectedPayroll
     ? `/dashboard/review?payrollId=${encodeURIComponent(selectedPayroll.id)}`
     : "/dashboard/review"
@@ -115,7 +101,7 @@ export function DashboardPageContent({
     : "/dashboard/payslips"
 
   return (
-    <div className="flex min-w-0 max-w-full flex-col gap-6">
+    <div className="flex max-w-full min-w-0 flex-col gap-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>

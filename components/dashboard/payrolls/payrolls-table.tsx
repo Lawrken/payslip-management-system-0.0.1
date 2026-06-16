@@ -18,18 +18,19 @@ import {
 import { formatDisplayDate, formatDtrCutOffRange } from "@/lib/payroll-dates"
 import {
   comparePayrollPeriodStatus,
-  getPayrollPeriodStatus,
+  getPayrollPeriodStatusFromCounts,
 } from "@/lib/payroll-period-status"
+import type { PayrollPayslipMetrics } from "@/lib/payslips"
 import { applyDirection, compareStrings } from "@/lib/table-sort"
 import type { SortDirection } from "@/lib/table-sort"
 import { cn } from "@/lib/utils"
-import type { Payroll, Payslip } from "@/lib/types"
+import type { Payroll } from "@/lib/types"
 
 type SortKey = "payrollPeriodLabel" | "dtrCutOffStart" | "payoutDate" | "status"
 
 type PayrollsTableProps = {
   payrolls: Payroll[]
-  payslipsByPayrollId: Record<string, Payslip[]>
+  metricsByPayrollId: Record<string, PayrollPayslipMetrics>
   emptyMessage?: string
 }
 
@@ -38,11 +39,15 @@ function comparePayrolls(
   b: Payroll,
   key: SortKey,
   dir: SortDirection,
-  payslipsByPayrollId: Record<string, Payslip[]>
+  metricsByPayrollId: Record<string, PayrollPayslipMetrics>
 ) {
   if (key === "status") {
-    const statusA = getPayrollPeriodStatus(payslipsByPayrollId[a.id] ?? [])
-    const statusB = getPayrollPeriodStatus(payslipsByPayrollId[b.id] ?? [])
+    const statusA = getPayrollPeriodStatusFromCounts(
+      metricsByPayrollId[a.id]?.statusCounts ?? {}
+    )
+    const statusB = getPayrollPeriodStatusFromCounts(
+      metricsByPayrollId[b.id]?.statusCounts ?? {}
+    )
     return comparePayrollPeriodStatus(statusA, statusB, dir)
   }
 
@@ -55,13 +60,13 @@ function comparePayrolls(
 
 export function PayrollsTable({
   payrolls,
-  payslipsByPayrollId,
+  metricsByPayrollId,
   emptyMessage = "No payroll periods yet.",
 }: PayrollsTableProps) {
   const compare = React.useCallback(
     (a: Payroll, b: Payroll, key: SortKey, dir: SortDirection) =>
-      comparePayrolls(a, b, key, dir, payslipsByPayrollId),
-    [payslipsByPayrollId]
+      comparePayrolls(a, b, key, dir, metricsByPayrollId),
+    [metricsByPayrollId]
   )
 
   const { sortKey, sortDir, handleSort, sortedItems } = useTableSort<
@@ -75,9 +80,7 @@ export function PayrollsTable({
   })
 
   if (payrolls.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground">{emptyMessage}</p>
-    )
+    return <p className="text-sm text-muted-foreground">{emptyMessage}</p>
   }
 
   return (
@@ -113,8 +116,8 @@ export function PayrollsTable({
       </TableHeader>
       <TableBody>
         {sortedItems.map((payroll) => {
-          const periodStatus = getPayrollPeriodStatus(
-            payslipsByPayrollId[payroll.id] ?? []
+          const periodStatus = getPayrollPeriodStatusFromCounts(
+            metricsByPayrollId[payroll.id]?.statusCounts ?? {}
           )
 
           return (

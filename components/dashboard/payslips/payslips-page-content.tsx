@@ -1,19 +1,31 @@
 "use client"
 
+import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import * as React from "react"
 
-import { EditPayslipDialog } from "@/components/dashboard/payslips/edit-payslip-dialog"
 import { EmployeeCombobox } from "@/components/dashboard/shared/employee-combobox"
+import { PaginationControls } from "@/components/dashboard/shared/pagination-controls"
 import { PayrollPeriodCombobox } from "@/components/dashboard/shared/payroll-period-combobox"
 import { PayrollPeriodStrip } from "@/components/dashboard/shared/payroll-period-strip"
 import { PayslipsTable } from "@/components/dashboard/payslips/payslips-table"
 import { Button } from "@/components/ui/button"
+import type { PaginatedResult } from "@/lib/pagination"
 import type { Employee, Payroll, Payslip } from "@/lib/types"
 
+const EditPayslipDialog = dynamic(
+  () =>
+    import("@/components/dashboard/payslips/edit-payslip-dialog").then(
+      (mod) => mod.EditPayslipDialog
+    ),
+  {
+    loading: () => null,
+  }
+)
+
 type PayslipsPageContentProps = {
-  payslips: Payslip[]
+  payslips: PaginatedResult<Payslip>
   employees: Employee[]
   payrolls: Payroll[]
   defaultPayrollId: string | null
@@ -28,8 +40,8 @@ export function PayslipsPageContent({
   const router = useRouter()
   const searchParams = useSearchParams()
   const payrollIdFromUrl = searchParams.get("payrollId")
+  const selectedEmployeeId = searchParams.get("employeeId") ?? ""
 
-  const [selectedEmployeeId, setSelectedEmployeeId] = React.useState("")
   const [dialogOpen, setDialogOpen] = React.useState(false)
   const [activePayslipId, setActivePayslipId] = React.useState<string | null>(
     null
@@ -67,30 +79,29 @@ export function PayslipsPageContent({
     } else {
       params.delete("payrollId")
     }
+    params.delete("page")
     router.replace(`/dashboard/payslips?${params.toString()}`, {
       scroll: false,
     })
     setActivePayslipId(null)
   }
 
-  const payrollPayslips = React.useMemo(() => {
-    if (!selectedPayrollId) {
-      return []
+  function handleEmployeeFilterChange(employeeId: string) {
+    const params = new URLSearchParams(searchParams.toString())
+    if (employeeId) {
+      params.set("employeeId", employeeId)
+    } else {
+      params.delete("employeeId")
     }
-    return payslips.filter((payslip) => payslip.payrollId === selectedPayrollId)
-  }, [payslips, selectedPayrollId])
-
-  const filteredPayslips = React.useMemo(() => {
-    if (!selectedEmployeeId) {
-      return payrollPayslips
-    }
-    return payrollPayslips.filter(
-      (payslip) => payslip.employeeId === selectedEmployeeId
-    )
-  }, [payrollPayslips, selectedEmployeeId])
+    params.delete("page")
+    router.replace(`/dashboard/payslips?${params.toString()}`, {
+      scroll: false,
+    })
+    setActivePayslipId(null)
+  }
 
   const activeIndex = activePayslipId
-    ? filteredPayslips.findIndex((payslip) => payslip.id === activePayslipId)
+    ? payslips.items.findIndex((payslip) => payslip.id === activePayslipId)
     : -1
 
   function handleActiveIndexChange(index: number) {
@@ -98,7 +109,7 @@ export function PayslipsPageContent({
       setActivePayslipId(null)
       return
     }
-    setActivePayslipId(filteredPayslips[index]?.id ?? null)
+    setActivePayslipId(payslips.items[index]?.id ?? null)
   }
 
   function handleEdit(payslip: Payslip) {
@@ -112,7 +123,10 @@ export function PayslipsPageContent({
         <h1 className="text-2xl font-semibold tracking-tight">Payslips</h1>
         <p className="text-sm text-muted-foreground">
           No payroll periods yet.{" "}
-          <Link href="/dashboard/payrolls" className="text-foreground underline">
+          <Link
+            href="/dashboard/payrolls"
+            className="text-foreground underline"
+          >
             Create a payroll period
           </Link>{" "}
           before editing payslips.
@@ -137,13 +151,13 @@ export function PayslipsPageContent({
             <EmployeeCombobox
               employees={employees}
               value={selectedEmployeeId}
-              onChange={setSelectedEmployeeId}
+              onChange={handleEmployeeFilterChange}
               variant="filter"
             />
             {selectedPayrollId ? (
               <EditPayslipDialog
                 employees={employees}
-                payslips={filteredPayslips}
+                payslips={payslips.items}
                 payrollId={selectedPayrollId}
                 activeIndex={activeIndex}
                 onActiveIndexChange={handleActiveIndexChange}
@@ -162,13 +176,20 @@ export function PayslipsPageContent({
       </div>
 
       <PayslipsTable
-        payslips={filteredPayslips}
+        payslips={payslips.items}
         onEdit={handleEdit}
         emptyMessage={
           selectedEmployeeId
             ? "No payslips match that employee for this payroll period."
             : "No payslips for this payroll period yet."
         }
+      />
+      <PaginationControls
+        page={payslips.page}
+        pageCount={payslips.pageCount}
+        total={payslips.total}
+        pageSize={payslips.pageSize}
+        itemLabel="payslips"
       />
     </div>
   )

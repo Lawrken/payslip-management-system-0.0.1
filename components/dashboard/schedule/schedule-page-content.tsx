@@ -1,17 +1,16 @@
 "use client"
 
+import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import * as React from "react"
 
-import { EditEmployeeScheduleDialog } from "@/components/dashboard/schedule/edit-employee-schedule-dialog"
 import { EmployeeScheduleTable } from "@/components/dashboard/schedule/employee-schedule-table"
+import { PaginationControls } from "@/components/dashboard/shared/pagination-controls"
 import { PayrollPeriodCombobox } from "@/components/dashboard/shared/payroll-period-combobox"
 import { PayrollPeriodStrip } from "@/components/dashboard/shared/payroll-period-strip"
-import {
-  isScheduleComplete,
-  mergeScheduleDays,
-} from "@/lib/schedule-days"
+import { isScheduleComplete, mergeScheduleDays } from "@/lib/schedule-days"
+import type { PaginatedResult } from "@/lib/pagination"
 import type {
   EmployeeSchedule,
   EmployeeScheduleRow,
@@ -19,8 +18,18 @@ import type {
   Payslip,
 } from "@/lib/types"
 
+const EditEmployeeScheduleDialog = dynamic(
+  () =>
+    import("@/components/dashboard/schedule/edit-employee-schedule-dialog").then(
+      (mod) => mod.EditEmployeeScheduleDialog
+    ),
+  {
+    loading: () => null,
+  }
+)
+
 type SchedulePageContentProps = {
-  payslips: Payslip[]
+  payslips: PaginatedResult<Payslip>
   payrolls: Payroll[]
   schedules: EmployeeSchedule[]
   defaultPayrollId: string | null
@@ -73,6 +82,7 @@ export function SchedulePageContent({
     } else {
       params.delete("payrollId")
     }
+    params.delete("page")
     router.replace(`/dashboard/schedule?${params.toString()}`, {
       scroll: false,
     })
@@ -84,16 +94,13 @@ export function SchedulePageContent({
       return []
     }
 
-    const payrollPayslips = payslips.filter(
-      (payslip) => payslip.payrollId === selectedPayrollId
-    )
     const scheduleByEmployeeId = new Map(
       schedules
         .filter((schedule) => schedule.payrollId === selectedPayrollId)
         .map((schedule) => [schedule.employeeId, schedule])
     )
 
-    return payrollPayslips.map((payslip) => {
+    return payslips.items.map((payslip) => {
       const schedule = scheduleByEmployeeId.get(payslip.employeeId)
       const days = schedule
         ? mergeScheduleDays(selectedPayroll, schedule.days)
@@ -109,7 +116,7 @@ export function SchedulePageContent({
             : "notModified",
       }
     })
-  }, [payslips, schedules, selectedPayroll, selectedPayrollId])
+  }, [payslips.items, schedules, selectedPayroll, selectedPayrollId])
 
   const activeSchedule = React.useMemo(() => {
     if (!activeEmployeeId || !selectedPayrollId) {
@@ -139,7 +146,10 @@ export function SchedulePageContent({
         <h1 className="text-2xl font-semibold tracking-tight">Schedule</h1>
         <p className="text-sm text-muted-foreground">
           No payroll periods yet.{" "}
-          <Link href="/dashboard/payrolls" className="text-foreground underline">
+          <Link
+            href="/dashboard/payrolls"
+            className="text-foreground underline"
+          >
             Create a payroll period
           </Link>{" "}
           before managing schedules.
@@ -171,6 +181,13 @@ export function SchedulePageContent({
         rows={scheduleRows}
         onEdit={handleEdit}
         emptyMessage="No employees for this payroll period yet."
+      />
+      <PaginationControls
+        page={payslips.page}
+        pageCount={payslips.pageCount}
+        total={payslips.total}
+        pageSize={payslips.pageSize}
+        itemLabel="employees"
       />
 
       {selectedPayroll && activeRow ? (

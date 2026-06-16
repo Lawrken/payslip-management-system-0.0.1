@@ -5,16 +5,17 @@ import * as React from "react"
 import { AddPayrollDialog } from "@/components/dashboard/payrolls/add-payroll-dialog"
 import { PayrollsTable } from "@/components/dashboard/payrolls/payrolls-table"
 import { Button } from "@/components/ui/button"
-import type { Payroll, Payslip } from "@/lib/types"
+import type { PayrollPayslipMetrics } from "@/lib/payslips"
+import type { Payroll } from "@/lib/types"
 
 type PayrollsPageContentProps = {
   payrolls: Payroll[]
-  payslipsByPayrollId: Record<string, Payslip[]>
+  metricsByPayrollId: Record<string, PayrollPayslipMetrics>
 }
 
 export function PayrollsPageContent({
   payrolls,
-  payslipsByPayrollId,
+  metricsByPayrollId,
 }: PayrollsPageContentProps) {
   return (
     <div className="flex flex-col gap-6">
@@ -26,7 +27,7 @@ export function PayrollsPageContent({
       </div>
       <PayrollsTable
         payrolls={payrolls}
-        payslipsByPayrollId={payslipsByPayrollId}
+        metricsByPayrollId={metricsByPayrollId}
         emptyMessage="No payroll periods yet."
       />
     </div>
