@@ -45,11 +45,7 @@ function isDestructiveAction(action: AuditAction) {
 }
 
 function isSuccessAction(action: AuditAction) {
-  return (
-    action === "payslip.email_send" ||
-    action === "payslip.bulk_send" ||
-    action === "payslip.superadmin_approve"
-  )
+  return action === "payslip.superadmin_approve"
 }
 
 function compareLogs(

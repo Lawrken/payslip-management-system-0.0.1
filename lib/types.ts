@@ -222,8 +222,6 @@ export type AuditAction =
   | "payslip.admin_check"
   | "payslip.superadmin_approve"
   | "payslip.return"
-  | "payslip.email_send"
-  | "payslip.bulk_send"
   | "schedule.create"
   | "schedule.update"
 

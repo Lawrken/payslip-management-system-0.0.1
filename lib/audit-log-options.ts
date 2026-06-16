@@ -16,8 +16,6 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "payslip.admin_check": "Payslip checked",
   "payslip.superadmin_approve": "Payslip ready for email",
   "payslip.return": "Payslip returned",
-  "payslip.email_send": "Payslip email sent",
-  "payslip.bulk_send": "Payslips sent",
   "schedule.create": "Schedule created",
   "schedule.update": "Schedule updated",
 }

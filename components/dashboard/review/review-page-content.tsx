@@ -3,12 +3,10 @@
 import { useRouter, useSearchParams } from "next/navigation"
 import * as React from "react"
 
-import { BulkEmailDialog } from "@/components/dashboard/review/bulk-email-dialog"
 import { ReviewPayslipDialog } from "@/components/dashboard/review/review-payslip-dialog"
 import { ReviewTable } from "@/components/dashboard/review/review-table"
 import { PayrollPeriodCombobox } from "@/components/dashboard/shared/payroll-period-combobox"
 import { PayrollPeriodStrip } from "@/components/dashboard/shared/payroll-period-strip"
-import { Button } from "@/components/ui/button"
 import type { Employee, Payroll, Payslip, Role } from "@/lib/types"
 
 type ReviewPageContentProps = {
@@ -109,15 +107,6 @@ export function ReviewPageContent({
     setDialogOpen(true)
   }
 
-  const approvedCount = allPayrollPayslips.filter(
-    (payslip) => payslip.status === "approved"
-  ).length
-  const totalCount = allPayrollPayslips.length
-  const allApproved =
-    totalCount > 0 &&
-    allPayrollPayslips.every((payslip) => payslip.status === "approved")
-  const isSuperAdmin = role === "superAdmin"
-
   const reviewEmptyMessage =
     role === "admin"
       ? "No payslips ready for review for this payroll period."
@@ -147,25 +136,6 @@ export function ReviewPageContent({
             onChange={handlePayrollChange}
             className="w-full lg:w-80"
           />
-          {isSuperAdmin ? (
-            <div className="flex flex-col items-start gap-1 lg:ml-auto lg:items-end">
-              <BulkEmailDialog
-                payrollId={selectedPayrollId}
-                disabled={!allApproved}
-                approvedCount={approvedCount}
-                totalCount={totalCount}
-              >
-                <Button type="button" disabled={!allApproved}>
-                  Bulk Email
-                </Button>
-              </BulkEmailDialog>
-              {!allApproved && totalCount > 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  {approvedCount} of {totalCount} ready for email
-                </p>
-              ) : null}
-            </div>
-          ) : null}
         </div>
 
         {selectedPayroll ? (
