@@ -11,7 +11,7 @@ import {
 } from "@/lib/employee-schedules"
 import { getPayrollById } from "@/lib/payrolls"
 import {
-  getPayslipsByPayrollId,
+  getPayslipByPayrollAndEmployee,
   refreshPayslipFromSchedule,
 } from "@/lib/payslips"
 import { parseScheduleDaysFromFormData } from "@/lib/schedule-days"
@@ -47,8 +47,7 @@ export async function saveEmployeeScheduleAction(
     return { error: "Payroll not found." }
   }
 
-  const payslips = await getPayslipsByPayrollId(payrollId)
-  const payslip = payslips.find((row) => row.employeeId === employeeId)
+  const payslip = await getPayslipByPayrollAndEmployee(payrollId, employeeId)
   if (!payslip) {
     return { error: "Employee payslip not found for this payroll period." }
   }

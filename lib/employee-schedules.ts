@@ -3,14 +3,8 @@ import { and, eq } from "drizzle-orm"
 import { db, type DatabaseClient } from "@/db"
 import { employeeSchedules } from "@/db/schema"
 import { getPayrollById } from "@/lib/payrolls"
-import {
-  mergeScheduleDays,
-  validateScheduleDays,
-} from "@/lib/schedule-days"
-import type {
-  EmployeeSchedule,
-  EmployeeScheduleDay,
-} from "@/lib/types"
+import { mergeScheduleDays, validateScheduleDays } from "@/lib/schedule-days"
+import type { EmployeeSchedule, EmployeeScheduleDay } from "@/lib/types"
 
 function mapScheduleRow(
   row: typeof employeeSchedules.$inferSelect
@@ -27,6 +21,16 @@ export async function getAllEmployeeSchedules(
   client: DatabaseClient = db
 ): Promise<EmployeeSchedule[]> {
   const rows = await client.query.employeeSchedules.findMany()
+  return rows.map(mapScheduleRow)
+}
+
+export async function getEmployeeSchedulesByPayrollId(
+  payrollId: string,
+  client: DatabaseClient = db
+): Promise<EmployeeSchedule[]> {
+  const rows = await client.query.employeeSchedules.findMany({
+    where: eq(employeeSchedules.payrollId, payrollId),
+  })
   return rows.map(mapScheduleRow)
 }
 

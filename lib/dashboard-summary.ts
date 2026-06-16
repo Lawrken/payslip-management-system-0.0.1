@@ -1,5 +1,6 @@
 import { PAYSLIP_STATUS_COLORS } from "@/lib/dashboard-chart-colors"
 import { formatPayslipStatus } from "@/lib/payslip-status"
+import type { PayrollPayslipMetrics } from "@/lib/payslips"
 import type { Payroll, Payslip, PayslipStatus, Role } from "@/lib/types"
 
 const PAYSLIP_STATUSES: PayslipStatus[] = [
@@ -160,9 +161,7 @@ export function filterPayslipsForPayroll(
   return payslips.filter((payslip) => payslip.payrollId === payrollId)
 }
 
-function countPayslipsByStatus(
-  payslips: Payslip[]
-): PayslipStatusCount[] {
+function countPayslipsByStatus(payslips: Payslip[]): PayslipStatusCount[] {
   const counts = Object.fromEntries(
     PAYSLIP_STATUSES.map((status) => [status, 0])
   ) as Record<PayslipStatus, number>
@@ -178,15 +177,25 @@ function countPayslipsByStatus(
   }))
 }
 
+function mapStatusCounts(
+  counts: Record<PayslipStatus, number>
+): PayslipStatusCount[] {
+  return PAYSLIP_STATUSES.map((status) => ({
+    status,
+    label: formatPayslipStatus(status),
+    count: counts[status] ?? 0,
+  }))
+}
+
 export function buildStatusChartData(
   statusCounts: PayslipStatusCount[]
 ): StatusChartDatum[] {
   return statusCounts.map((item) => ({
-      status: item.status,
-      label: item.label,
-      count: item.count,
-      fill: PAYSLIP_STATUS_COLORS[item.status],
-    }))
+    status: item.status,
+    label: item.label,
+    count: item.count,
+    fill: PAYSLIP_STATUS_COLORS[item.status],
+  }))
 }
 
 function roundMoney(value: number): number {
@@ -224,6 +233,28 @@ export function buildPayrollTotalsChartData(
   ]
 }
 
+export function buildPayrollTotalsChartDataFromMetrics(
+  metrics: PayrollPayslipMetrics | null
+): PayrollTotalsChartRow[] {
+  return [
+    {
+      key: "gross",
+      label: "Gross",
+      value: roundMoney(metrics?.totals.grossPay ?? 0),
+    },
+    {
+      key: "deductions",
+      label: "Deductions",
+      value: roundMoney(metrics?.totals.totalDeductions ?? 0),
+    },
+    {
+      key: "net",
+      label: "Net",
+      value: roundMoney(metrics?.totals.netPay ?? 0),
+    },
+  ]
+}
+
 function getReviewQueueStatus(role: Role): PayslipStatus | null {
   if (role === "admin") {
     return "pending"
@@ -234,10 +265,7 @@ function getReviewQueueStatus(role: Role): PayslipStatus | null {
   return null
 }
 
-function getReviewQueueCount(
-  payslips: Payslip[],
-  role: Role
-): number {
+function getReviewQueueCount(payslips: Payslip[], role: Role): number {
   const queueStatus = getReviewQueueStatus(role)
   if (!queueStatus) {
     return 0
@@ -280,5 +308,69 @@ export function buildDashboardSummary(input: {
     daysUntilPayout: urgency.daysUntilPayout,
     urgencyLevel: urgency.level,
     completionPercent: urgency.completionPercent,
+  }
+}
+
+export function buildDashboardSummaryFromMetrics(input: {
+  selectedPayroll: Payroll | null
+  metrics: PayrollPayslipMetrics | null
+  role: Role
+}): DashboardSummary {
+  const statusCounts = input.metrics
+    ? mapStatusCounts(input.metrics.statusCounts)
+    : mapStatusCounts(
+        Object.fromEntries(
+          PAYSLIP_STATUSES.map((status) => [status, 0])
+        ) as Record<PayslipStatus, number>
+      )
+  const totalPayslips = statusCounts.reduce((sum, item) => sum + item.count, 0)
+  const approvedCount = input.metrics?.statusCounts.approved ?? 0
+  const returnedCount = input.metrics?.statusCounts.returned ?? 0
+  const reviewQueueStatus = getReviewQueueStatus(input.role)
+  const reviewQueueCount = reviewQueueStatus
+    ? (input.metrics?.statusCounts[reviewQueueStatus] ?? 0)
+    : 0
+  const daysUntilPayout = input.selectedPayroll
+    ? getDaysUntilPayout(input.selectedPayroll.payoutDate)
+    : null
+  const completeCount =
+    (input.metrics?.statusCounts.approved ?? 0) +
+    (input.metrics?.statusCounts.sent ?? 0)
+  const completionPercent =
+    totalPayslips === 0 ? 0 : Math.round((completeCount / totalPayslips) * 100)
+  const pipelineComplete =
+    totalPayslips === 0 || completeCount === totalPayslips
+  let urgencyLevel: DashboardUrgencyLevel = "clear"
+
+  if (returnedCount > 0) {
+    urgencyLevel = "critical"
+  } else if (
+    daysUntilPayout !== null &&
+    daysUntilPayout <= 2 &&
+    !pipelineComplete
+  ) {
+    urgencyLevel = "critical"
+  } else if (reviewQueueCount > 0) {
+    urgencyLevel = "action"
+  } else if (
+    daysUntilPayout !== null &&
+    daysUntilPayout <= 5 &&
+    daysUntilPayout >= 0
+  ) {
+    urgencyLevel = "soon"
+  }
+
+  return {
+    selectedPayroll: input.selectedPayroll,
+    statusCounts,
+    totalPayslips,
+    reviewQueueCount,
+    reviewQueueStatus,
+    approvedCount,
+    attentionStatus: getAttentionStatus(input.role),
+    returnedCount,
+    daysUntilPayout,
+    urgencyLevel,
+    completionPercent,
   }
 }

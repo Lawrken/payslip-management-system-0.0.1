@@ -6,11 +6,18 @@ import {
 } from "node:crypto"
 
 import bcrypt from "bcryptjs"
-import { asc, eq } from "drizzle-orm"
+import { asc, count, desc, eq, ilike, or } from "drizzle-orm"
 
 import { db, type DatabaseClient } from "@/db"
 import { employees, users } from "@/db/schema"
 import { normalizeEmail, normalizeEmployeeId } from "@/lib/auth-helpers"
+import {
+  buildPaginatedResult,
+  normalizePagination,
+  type PaginatedResult,
+  type PaginationInput,
+} from "@/lib/pagination"
+import type { SortDirection } from "@/lib/table-sort"
 import type { Role, UserAccount } from "@/lib/types"
 
 const GENERATED_PASSWORD_LENGTH = 12
@@ -110,6 +117,71 @@ export async function getUserAccounts(
     .orderBy(asc(users.employeeId))
 
   return rows.map(toUserAccount)
+}
+
+export type UserListSort = "email" | "employeeId" | "role" | "passwordChangedAt"
+
+export type UserListQuery = PaginationInput & {
+  search?: string
+  sort?: UserListSort
+  direction?: SortDirection
+}
+
+function getUserSortColumn(sort: UserListSort) {
+  if (sort === "passwordChangedAt") {
+    return users.passwordChangedAt
+  }
+  return users[sort]
+}
+
+export async function getPaginatedUserAccounts(
+  query: UserListQuery = {},
+  client: DatabaseClient = db
+): Promise<PaginatedResult<UserAccount>> {
+  const pagination = normalizePagination(query)
+  const search = query.search?.trim()
+  const where = search
+    ? or(
+        ilike(users.employeeId, `%${search}%`),
+        ilike(users.email, `%${search}%`),
+        ilike(employees.name, `%${search}%`)
+      )
+    : undefined
+  const sort = query.sort ?? "email"
+  const direction = query.direction === "desc" ? "desc" : "asc"
+  const orderBy =
+    direction === "desc"
+      ? desc(getUserSortColumn(sort))
+      : asc(getUserSortColumn(sort))
+
+  const [totalRow] = await client
+    .select({ count: count() })
+    .from(users)
+    .leftJoin(employees, eq(users.employeeId, employees.employeeId))
+    .where(where)
+  const rows = await client
+    .select({
+      employeeId: users.employeeId,
+      email: users.email,
+      role: users.role,
+      employeeName: employees.name,
+      initialPasswordCiphertext: users.initialPasswordCiphertext,
+      passwordChangedAt: users.passwordChangedAt,
+      createdAt: users.createdAt,
+      updatedAt: users.updatedAt,
+    })
+    .from(users)
+    .leftJoin(employees, eq(users.employeeId, employees.employeeId))
+    .where(where)
+    .orderBy(orderBy)
+    .limit(pagination.pageSize)
+    .offset(pagination.offset)
+
+  return buildPaginatedResult(
+    rows.map(toUserAccount),
+    totalRow?.count ?? 0,
+    pagination
+  )
 }
 
 export async function getUserAccount(

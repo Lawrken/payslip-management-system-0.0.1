@@ -1,4 +1,4 @@
-import { and, eq, inArray, ne } from "drizzle-orm"
+import { and, asc, count, desc, eq, inArray, ne, sql } from "drizzle-orm"
 
 import { db, type DatabaseClient } from "@/db"
 import {
@@ -10,6 +10,12 @@ import {
 import { normalizeEmployeeId } from "@/lib/auth-helpers"
 import { getScheduleByPayrollAndEmployee } from "@/lib/employee-schedules"
 import { findEmployeeByEmployeeId, getEmployees } from "@/lib/employees"
+import {
+  buildPaginatedResult,
+  normalizePagination,
+  type PaginatedResult,
+  type PaginationInput,
+} from "@/lib/pagination"
 import {
   calculatePayslipTotals,
   createEmptyPayslipInputs,
@@ -24,9 +30,19 @@ import type {
   PayslipPayrollInputs,
   PayslipPdfData,
   PayslipStatus,
+  PayslipTotals,
 } from "@/lib/types"
+import type { SortDirection } from "@/lib/table-sort"
 
 const VISIBLE_EMPLOYEE_PAYSLIP_STATUSES: PayslipStatus[] = ["approved", "sent"]
+const PAYSLIP_STATUSES: PayslipStatus[] = [
+  "draft",
+  "pending",
+  "adminApproved",
+  "approved",
+  "returned",
+  "sent",
+]
 
 function buildPayslipTotals(
   inputs: PayslipPayrollInputs,
@@ -153,6 +169,200 @@ export async function getPayslips(): Promise<Payslip[]> {
   })
 }
 
+export type PayslipListSort = "employeeName" | "employeeId" | "status"
+
+export type PayslipListQuery = PaginationInput & {
+  payrollId?: string
+  employeeId?: string
+  statuses?: PayslipStatus[]
+  sort?: PayslipListSort
+  direction?: SortDirection
+}
+
+export type PayrollPayslipMetrics = {
+  statusCounts: Record<PayslipStatus, number>
+  totals: PayslipTotals
+}
+
+function getPayslipSortColumn(sort: PayslipListSort) {
+  if (sort === "employeeName") {
+    return employeesTable.name
+  }
+  if (sort === "employeeId") {
+    return payslips.employeeId
+  }
+  return payslips.status
+}
+
+function buildPayslipWhere(query: PayslipListQuery) {
+  const conditions = []
+
+  if (query.payrollId) {
+    conditions.push(eq(payslips.payrollId, query.payrollId))
+  }
+  if (query.employeeId) {
+    conditions.push(
+      eq(payslips.employeeId, normalizeEmployeeId(query.employeeId))
+    )
+  }
+  if (query.statuses && query.statuses.length > 0) {
+    conditions.push(inArray(payslips.status, query.statuses))
+  }
+
+  return conditions.length > 0 ? and(...conditions) : undefined
+}
+
+export async function getPaginatedPayslips(
+  query: PayslipListQuery = {},
+  client: DatabaseClient = db
+): Promise<PaginatedResult<Payslip>> {
+  const pagination = normalizePagination(query)
+  const where = buildPayslipWhere(query)
+  const sort = query.sort ?? "employeeName"
+  const direction = query.direction === "desc" ? "desc" : "asc"
+  const orderBy =
+    direction === "desc"
+      ? desc(getPayslipSortColumn(sort))
+      : asc(getPayslipSortColumn(sort))
+
+  const [totalRow] = await client
+    .select({ count: count() })
+    .from(payslips)
+    .where(where)
+  const rows = await client
+    .select({
+      payslip: payslips,
+      payslipInput: payslipInputs,
+      employee: employeesTable,
+    })
+    .from(payslips)
+    .leftJoin(payslipInputs, eq(payslipInputs.payslipId, payslips.id))
+    .leftJoin(
+      employeesTable,
+      eq(employeesTable.employeeId, payslips.employeeId)
+    )
+    .where(where)
+    .orderBy(orderBy, asc(payslips.employeeId))
+    .limit(pagination.pageSize)
+    .offset(pagination.offset)
+
+  return buildPaginatedResult(
+    rows.map(mapPayslipRow),
+    totalRow?.count ?? 0,
+    pagination
+  )
+}
+
+export async function getPayslipCountByPayrollId(
+  payrollId: string,
+  client: DatabaseClient = db
+): Promise<number> {
+  const [row] = await client
+    .select({ count: count() })
+    .from(payslips)
+    .where(eq(payslips.payrollId, payrollId))
+  return row?.count ?? 0
+}
+
+export async function getPayrollPayslipMetrics(
+  payrollId: string,
+  client: DatabaseClient = db
+): Promise<PayrollPayslipMetrics> {
+  const statusRows = await client
+    .select({
+      status: payslips.status,
+      count: count(),
+    })
+    .from(payslips)
+    .where(eq(payslips.payrollId, payrollId))
+    .groupBy(payslips.status)
+  const [totalsRow] = await client
+    .select({
+      grossPay:
+        sql<number>`coalesce(sum((${payslipInputs.totals}->>'grossPay')::numeric), 0)`.mapWith(
+          Number
+        ),
+      totalDeductions:
+        sql<number>`coalesce(sum((${payslipInputs.totals}->>'totalDeductions')::numeric), 0)`.mapWith(
+          Number
+        ),
+      netPay:
+        sql<number>`coalesce(sum((${payslipInputs.totals}->>'netPay')::numeric), 0)`.mapWith(
+          Number
+        ),
+      taxableEarnings:
+        sql<number>`coalesce(sum((${payslipInputs.totals}->>'taxableEarnings')::numeric), 0)`.mapWith(
+          Number
+        ),
+      nonTaxableEarnings:
+        sql<number>`coalesce(sum((${payslipInputs.totals}->>'nonTaxableEarnings')::numeric), 0)`.mapWith(
+          Number
+        ),
+    })
+    .from(payslips)
+    .leftJoin(payslipInputs, eq(payslipInputs.payslipId, payslips.id))
+    .where(eq(payslips.payrollId, payrollId))
+  const statusCounts = Object.fromEntries(
+    PAYSLIP_STATUSES.map((status) => [status, 0])
+  ) as Record<PayslipStatus, number>
+
+  for (const row of statusRows) {
+    statusCounts[row.status] = row.count
+  }
+
+  return {
+    statusCounts,
+    totals: {
+      grossPay: totalsRow?.grossPay ?? 0,
+      totalDeductions: totalsRow?.totalDeductions ?? 0,
+      netPay: totalsRow?.netPay ?? 0,
+      taxableEarnings: totalsRow?.taxableEarnings ?? 0,
+      nonTaxableEarnings: totalsRow?.nonTaxableEarnings ?? 0,
+    },
+  }
+}
+
+export async function getPayrollPayslipMetricsByPayrollIds(
+  payrollIds: string[],
+  client: DatabaseClient = db
+): Promise<Record<string, PayrollPayslipMetrics>> {
+  if (payrollIds.length === 0) {
+    return {}
+  }
+
+  const statusRows = await client
+    .select({
+      payrollId: payslips.payrollId,
+      status: payslips.status,
+      count: count(),
+    })
+    .from(payslips)
+    .where(inArray(payslips.payrollId, payrollIds))
+    .groupBy(payslips.payrollId, payslips.status)
+
+  const result: Record<string, PayrollPayslipMetrics> = {}
+  for (const payrollId of payrollIds) {
+    result[payrollId] = {
+      statusCounts: Object.fromEntries(
+        PAYSLIP_STATUSES.map((status) => [status, 0])
+      ) as Record<PayslipStatus, number>,
+      totals: {
+        taxableEarnings: 0,
+        totalDeductions: 0,
+        nonTaxableEarnings: 0,
+        grossPay: 0,
+        netPay: 0,
+      },
+    }
+  }
+
+  for (const row of statusRows) {
+    result[row.payrollId].statusCounts[row.status] = row.count
+  }
+
+  return result
+}
+
 export async function getPayslipById(
   id: string,
   client: DatabaseClient = db
@@ -194,6 +404,35 @@ export async function getPayslipsByPayrollId(
     .where(eq(payslips.payrollId, payrollId))
 
   return rows.map(mapPayslipRow)
+}
+
+export async function getPayslipByPayrollAndEmployee(
+  payrollId: string,
+  employeeId: string,
+  client: DatabaseClient = db
+): Promise<Payslip | null> {
+  const normalizedId = normalizeEmployeeId(employeeId)
+  const [row] = await client
+    .select({
+      payslip: payslips,
+      payslipInput: payslipInputs,
+      employee: employeesTable,
+    })
+    .from(payslips)
+    .leftJoin(payslipInputs, eq(payslipInputs.payslipId, payslips.id))
+    .leftJoin(
+      employeesTable,
+      eq(employeesTable.employeeId, payslips.employeeId)
+    )
+    .where(
+      and(
+        eq(payslips.payrollId, payrollId),
+        eq(payslips.employeeId, normalizedId)
+      )
+    )
+    .limit(1)
+
+  return row ? mapPayslipRow(row) : null
 }
 
 export async function getVisibleEmployeePayslipDetailsByEmployeeAndId(

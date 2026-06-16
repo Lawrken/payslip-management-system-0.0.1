@@ -1,9 +1,18 @@
-import { eq, ne } from "drizzle-orm"
+import { asc, count, desc, eq, ilike, ne, or } from "drizzle-orm"
 
 import { db, type DatabaseClient } from "@/db"
 import { employees } from "@/db/schema"
 import { normalizeEmployeeId } from "@/lib/auth-helpers"
+import {
+  buildPaginatedResult,
+  normalizePagination,
+  type PaginatedResult,
+  type PaginationInput,
+} from "@/lib/pagination"
+import type { SortDirection } from "@/lib/table-sort"
 import type { Employee } from "@/lib/types"
+
+export type EmployeeOption = Pick<Employee, "id" | "employeeId" | "name">
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase()
@@ -15,6 +24,78 @@ export async function getEmployees(
   return client.query.employees.findMany({
     orderBy: (table, { asc }) => [asc(table.name)],
   })
+}
+
+export async function getEmployeeOptions(
+  client: DatabaseClient = db
+): Promise<EmployeeOption[]> {
+  return client.query.employees.findMany({
+    columns: {
+      id: true,
+      employeeId: true,
+      name: true,
+    },
+    orderBy: (table, { asc }) => [asc(table.name)],
+  })
+}
+
+export type EmployeeListSort =
+  | "name"
+  | "employeeId"
+  | "email"
+  | "basicPay"
+  | "employeeStatus"
+  | "positionTitle"
+  | "department"
+  | "program"
+  | "account"
+  | "divisor"
+
+export type EmployeeListQuery = PaginationInput & {
+  search?: string
+  sort?: EmployeeListSort
+  direction?: SortDirection
+}
+
+function getEmployeeSortColumn(sort: EmployeeListSort) {
+  if (sort === "employeeId") {
+    return employees.employeeId
+  }
+  return employees[sort]
+}
+
+export async function getPaginatedEmployees(
+  query: EmployeeListQuery = {},
+  client: DatabaseClient = db
+): Promise<PaginatedResult<Employee>> {
+  const pagination = normalizePagination(query)
+  const search = query.search?.trim()
+  const where = search
+    ? or(
+        ilike(employees.name, `%${search}%`),
+        ilike(employees.employeeId, `%${search}%`),
+        ilike(employees.email, `%${search}%`)
+      )
+    : undefined
+  const sort = query.sort ?? "name"
+  const direction = query.direction === "desc" ? "desc" : "asc"
+  const orderBy =
+    direction === "desc"
+      ? desc(getEmployeeSortColumn(sort))
+      : asc(getEmployeeSortColumn(sort))
+
+  const [totalRow] = await client
+    .select({ count: count() })
+    .from(employees)
+    .where(where)
+  const items = await client.query.employees.findMany({
+    where,
+    orderBy: () => [orderBy],
+    limit: pagination.pageSize,
+    offset: pagination.offset,
+  })
+
+  return buildPaginatedResult(items, totalRow?.count ?? 0, pagination)
 }
 
 export async function getEmployeeById(

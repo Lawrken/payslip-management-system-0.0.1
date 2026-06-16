@@ -38,8 +38,10 @@ export async function getPayrollById(
 }
 
 export async function getLatestPayroll(): Promise<Payroll | null> {
-  const [payroll] = await getPayrolls()
-  return payroll ?? null
+  const payroll = await db.query.payrolls.findFirst({
+    orderBy: (table, { desc }) => [desc(table.payrollPeriodEnd)],
+  })
+  return payroll ? normalizePayroll(payroll) : null
 }
 
 export type NewPayrollInput = Omit<
@@ -52,7 +54,9 @@ export type NewPayrollInput = Omit<
 
 export type UpdatePayrollInput = NewPayrollInput & { id: string }
 
-function validatePayrollDates(input: NewPayrollInput): { error: string } | null {
+function validatePayrollDates(
+  input: NewPayrollInput
+): { error: string } | null {
   if (
     !input.payrollPeriodStart ||
     !input.payrollPeriodEnd ||
@@ -107,7 +111,10 @@ function buildPayroll(id: string, input: NewPayrollInput): Payroll {
     id,
     payrollPeriodLabel:
       input.payrollPeriodLabel ??
-      formatPayrollPeriodLabel(input.payrollPeriodStart, input.payrollPeriodEnd),
+      formatPayrollPeriodLabel(
+        input.payrollPeriodStart,
+        input.payrollPeriodEnd
+      ),
     payrollPeriodStart: input.payrollPeriodStart,
     payrollPeriodEnd: input.payrollPeriodEnd,
     dtrCutOffStart: input.dtrCutOffStart,
