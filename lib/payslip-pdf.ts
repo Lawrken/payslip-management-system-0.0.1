@@ -1,4 +1,3 @@
-
 import fs from "fs"
 import path from "path"
 import PDFDocument from "pdfkit/js/pdfkit.standalone.js"
@@ -20,14 +19,13 @@ const CONTENT_WIDTH = PAGE_WIDTH - PAGE_MARGIN * 2
 const BLOCK_GAP = 0
 
 const DARK_GREEN = "#166534"
-const TEXT = "#000000"
 
 const GRID_ROW_COUNT =
   1 + PAY_DETAILS_FIELDS.length + 1.5 + NON_TAXABLE_FIELDS.length + 1.5 + 1
 
 const COLUMN_WIDTHS = {
   payItem: 0.21,
-  days: 0.10,
+  days: 0.1,
   hrs: 0.08,
   amount: 0.15,
   middle: 0.06,
@@ -94,11 +92,12 @@ function getAdjLabel(field: PayslipFieldDefinition) {
     return null
   }
 
-  return NON_TAXABLE_ADJ_LABELS[field.key] ?? `${field.label.replace(/\s/g, "")}adj`
+  return (
+    NON_TAXABLE_ADJ_LABELS[field.key] ?? `${field.label.replace(/\s/g, "")}adj`
+  )
 }
 
 function collectPdf(doc: PDFKit.PDFDocument) {
-
   return new Promise<Buffer>((resolve, reject) => {
     const chunks: Buffer[] = []
     doc.on("data", (chunk) => chunks.push(Buffer.from(chunk)))
@@ -107,7 +106,6 @@ function collectPdf(doc: PDFKit.PDFDocument) {
     doc.end()
   })
 }
-
 
 function columnX(startX: number, ...keys: (keyof typeof COLUMN_WIDTHS)[]) {
   let x = startX
@@ -121,50 +119,98 @@ function rowTextY(y: number, rowHeight: number, fontSize: number) {
   return y + (rowHeight - fontSize) / 2
 }
 
-function drawSampleHeader(doc: PDFKit.PDFDocument, data: PayslipPdfData, y: number) {
+function drawSampleHeader(
+  doc: PDFKit.PDFDocument,
+  data: PayslipPdfData,
+  y: number
+) {
   // Outer Border is drawn separately
-  
-  const logoPath = path.join(process.cwd(), "public", "helport.png");
+
+  const logoPath = path.join(process.cwd(), "public", "helport.png")
   if (fs.existsSync(logoPath)) {
-    const logoBuffer = fs.readFileSync(logoPath);
-    const arrayBuffer = logoBuffer.buffer.slice(logoBuffer.byteOffset, logoBuffer.byteOffset + logoBuffer.byteLength);
-    doc.image(arrayBuffer, PAGE_MARGIN + 10, y + 5, { height: 40 });
+    const logoBuffer = fs.readFileSync(logoPath)
+    const arrayBuffer = logoBuffer.buffer.slice(
+      logoBuffer.byteOffset,
+      logoBuffer.byteOffset + logoBuffer.byteLength
+    )
+    doc.image(arrayBuffer, PAGE_MARGIN + 10, y + 5, { height: 40 })
   } else {
-    doc.font("Helvetica-Bold").fontSize(32).fillColor("#20B2AA").text("HELPORT", PAGE_MARGIN + 10, y + 15, { characterSpacing: 2 });
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(32)
+      .fillColor("#20B2AA")
+      .text("HELPORT", PAGE_MARGIN + 10, y + 15, { characterSpacing: 2 })
   }
-  
-  doc.font("Helvetica-BoldOblique").fontSize(8).fillColor(DARK_GREEN).text("HELPORT PHILIPPINES BRANCH OFFICE PAYROLL", PAGE_MARGIN + 10, y + 55);
-  
-  doc.font("Helvetica-Bold").fontSize(8).fillColor("#000000").text("EMPLOYEE NAME:", PAGE_MARGIN + 10, y + 70);
-  doc.font("Helvetica-Oblique").fontSize(8).fillColor("#000000").text(data.employeeName, PAGE_MARGIN + 100, y + 70);
-  
-  doc.font("Helvetica-Bold").fontSize(8).fillColor("#000000").text("EMPLOYEE ID:", PAGE_MARGIN + 10, y + 85);
-  doc.font("Helvetica-Oblique").fontSize(8).fillColor("#000000").text(data.employeeId, PAGE_MARGIN + 100, y + 85);
 
-  const rightX = PAGE_WIDTH / 2 + 30;
-  const rightValX = rightX + 80;
-  const lineH = 12;
-  let currY = y + 10;
-  
+  doc
+    .font("Helvetica-BoldOblique")
+    .fontSize(8)
+    .fillColor(DARK_GREEN)
+    .text("HELPORT PHILIPPINES BRANCH OFFICE PAYROLL", PAGE_MARGIN + 10, y + 55)
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(8)
+    .fillColor("#000000")
+    .text("EMPLOYEE NAME:", PAGE_MARGIN + 10, y + 70)
+  doc
+    .font("Helvetica-Oblique")
+    .fontSize(8)
+    .fillColor("#000000")
+    .text(data.employeeName, PAGE_MARGIN + 100, y + 70)
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(8)
+    .fillColor("#000000")
+    .text("EMPLOYEE ID:", PAGE_MARGIN + 10, y + 85)
+  doc
+    .font("Helvetica-Oblique")
+    .fontSize(8)
+    .fillColor("#000000")
+    .text(data.employeeId, PAGE_MARGIN + 100, y + 85)
+
+  const rightX = PAGE_WIDTH / 2 + 30
+  const rightValX = rightX + 80
+  const lineH = 12
+  let currY = y + 10
+
   const drawRightItem = (label: string, value: string) => {
-    doc.font("Helvetica-Bold").fontSize(8).fillColor("#000000").text(label, rightX, currY);
-    doc.font("Helvetica-Oblique").fontSize(8).fillColor("#000000").text(value, rightValX, currY);
-    currY += lineH;
-  };
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(8)
+      .fillColor("#000000")
+      .text(label, rightX, currY)
+    doc
+      .font("Helvetica-Oblique")
+      .fontSize(8)
+      .fillColor("#000000")
+      .text(value, rightValX, currY)
+    currY += lineH
+  }
 
-  drawRightItem("PAYROLL PERIOD:", data.payrollPeriodLabel);
-  drawRightItem("DTR CUT-OFF:", formatSampleDtr(data.dtrCutOffStart, data.dtrCutOffEnd));
-  drawRightItem("TIN:", data.tin || "-");
-  drawRightItem("SSS NO.:", data.sssNo || "-");
-  drawRightItem("PHIC NO.:", data.phicNo || "-");
-  drawRightItem("HDMF NO.:", data.hdmfNo || "-");
+  drawRightItem("PAYROLL PERIOD:", data.payrollPeriodLabel)
+  drawRightItem(
+    "DTR CUT-OFF:",
+    formatSampleDtr(data.dtrCutOffStart, data.dtrCutOffEnd)
+  )
+  drawRightItem("TIN:", data.tin || "-")
+  drawRightItem("SSS NO.:", data.sssNo || "-")
+  drawRightItem("PHIC NO.:", data.phicNo || "-")
+  drawRightItem("HDMF NO.:", data.hdmfNo || "-")
 
-  const headerBottomY = Math.max(y + 105, currY + 5);
-  
+  const headerBottomY = Math.max(y + 105, currY + 5)
+
   // Separator line between header and table
-  doc.moveTo(PAGE_MARGIN, headerBottomY).lineTo(PAGE_WIDTH - PAGE_MARGIN, headerBottomY).lineWidth(1).strokeColor(DARK_GREEN).undash().stroke();
+  doc
+    .moveTo(PAGE_MARGIN, headerBottomY)
+    .lineTo(PAGE_WIDTH - PAGE_MARGIN, headerBottomY)
+    .lineWidth(1)
+    .strokeColor(DARK_GREEN)
+    .undash()
+    .stroke()
 
-  return headerBottomY;
+  return headerBottomY
 }
 
 function getColumnBounds(x: number) {
@@ -174,10 +220,24 @@ function getColumnBounds(x: number) {
   const amount = columnX(x, "payItem", "days", "hrs")
   const middle = columnX(x, "payItem", "days", "hrs", "amount")
   const dedItem = columnX(x, "payItem", "days", "hrs", "amount", "middle")
-  const dedAmount = columnX(x, "payItem", "days", "hrs", "amount", "middle", "dedItem")
+  const dedAmount = columnX(
+    x,
+    "payItem",
+    "days",
+    "hrs",
+    "amount",
+    "middle",
+    "dedItem"
+  )
 
   return {
-    payItem, days, hrs, amount, middle, dedItem, dedAmount,
+    payItem,
+    days,
+    hrs,
+    amount,
+    middle,
+    dedItem,
+    dedAmount,
     payItemW: CONTENT_WIDTH * COLUMN_WIDTHS.payItem,
     daysW: CONTENT_WIDTH * COLUMN_WIDTHS.days,
     hrsW: CONTENT_WIDTH * COLUMN_WIDTHS.hrs,
@@ -189,153 +249,276 @@ function getColumnBounds(x: number) {
 }
 
 function drawMainGrid({
-  doc, data, inputs, lineAmounts, x, y, height,
+  doc,
+  data,
+  inputs,
+  lineAmounts,
+  x,
+  y,
+  height,
 }: {
-  doc: PDFKit.PDFDocument, data: PayslipPdfData, inputs: PayslipPayrollInputs, lineAmounts: Record<string, number>, x: number, y: number, height: number
+  doc: PDFKit.PDFDocument
+  data: PayslipPdfData
+  inputs: PayslipPayrollInputs
+  lineAmounts: Record<string, number>
+  x: number
+  y: number
+  height: number
 }) {
-  const rowHeight = height / GRID_ROW_COUNT;
-  const cols = getColumnBounds(x);
-  let rowY = y;
+  const rowHeight = height / GRID_ROW_COUNT
+  const cols = getColumnBounds(x)
+  let rowY = y
 
   const drawGridLines = (currentY: number) => {
-    doc.moveTo(x, currentY).lineTo(x + CONTENT_WIDTH, currentY).lineWidth(0.5).strokeColor(DARK_GREEN).dash(2, { space: 2 }).stroke();
-  };
+    doc
+      .moveTo(x, currentY)
+      .lineTo(x + CONTENT_WIDTH, currentY)
+      .lineWidth(0.5)
+      .strokeColor(DARK_GREEN)
+      .dash(2, { space: 2 })
+      .stroke()
+  }
 
-  const headerY = rowTextY(rowY, rowHeight, 8);
-  doc.font("Helvetica-Bold").fontSize(8).fillColor("#000000");
-  doc.text("Pay Details", cols.payItem + 2, headerY, { width: cols.payItemW - 4 });
-  doc.text("Days", cols.days + 2, headerY, { width: cols.daysW - 4, align: "center" });
-  doc.text("Hrs", cols.hrs + 2, headerY, { width: cols.hrsW - 4, align: "center" });
-  doc.text("Amount", cols.amount + 2, headerY, { width: cols.amountW - 4, align: "center" });
-  doc.text("Deductions", cols.dedItem + 2, headerY, { width: cols.dedItemW - 4 });
-  doc.text("Amount", cols.dedAmount + 2, headerY, { width: cols.dedAmountW - 4, align: "center" });
-  
-  rowY += rowHeight;
-  drawGridLines(rowY);
+  const headerY = rowTextY(rowY, rowHeight, 8)
+  doc.font("Helvetica-Bold").fontSize(8).fillColor("#000000")
+  doc.text("Pay Details", cols.payItem + 2, headerY, {
+    width: cols.payItemW - 4,
+  })
+  doc.text("Days", cols.days + 2, headerY, {
+    width: cols.daysW - 4,
+    align: "center",
+  })
+  doc.text("Hrs", cols.hrs + 2, headerY, {
+    width: cols.hrsW - 4,
+    align: "center",
+  })
+  doc.text("Amount", cols.amount + 2, headerY, {
+    width: cols.amountW - 4,
+    align: "center",
+  })
+  doc.text("Deductions", cols.dedItem + 2, headerY, {
+    width: cols.dedItemW - 4,
+  })
+  doc.text("Amount", cols.dedAmount + 2, headerY, {
+    width: cols.dedAmountW - 4,
+    align: "center",
+  })
+
+  rowY += rowHeight
+  drawGridLines(rowY)
 
   for (const [index, field] of PAY_DETAILS_FIELDS.entries()) {
-    const textY = rowTextY(rowY, rowHeight, 8);
-    const val = rawFieldValue(inputs, field);
-    const amount = typeof val === "number" ? getPayAmount(field, val, lineAmounts) : 0;
-    const dedField = DEDUCTION_FIELDS[index];
-    const dedVal = dedField ? rawFieldValue(inputs, dedField) : undefined;
-    
-    doc.font("Helvetica-Oblique").fontSize(8).fillColor("#000000");
-    doc.text(field.label, cols.payItem + 2, textY, { width: cols.payItemW - 4, lineBreak: false, ellipsis: true });
-    
-    doc.font("Helvetica").fontSize(8).fillColor("#000000");
+    const textY = rowTextY(rowY, rowHeight, 8)
+    const val = rawFieldValue(inputs, field)
+    const amount =
+      typeof val === "number" ? getPayAmount(field, val, lineAmounts) : 0
+    const dedField = DEDUCTION_FIELDS[index]
+    const dedVal = dedField ? rawFieldValue(inputs, dedField) : undefined
+
+    doc.font("Helvetica-Oblique").fontSize(8).fillColor("#000000")
+    doc.text(field.label, cols.payItem + 2, textY, {
+      width: cols.payItemW - 4,
+      lineBreak: false,
+      ellipsis: true,
+    })
+
+    doc.font("Helvetica").fontSize(8).fillColor("#000000")
     if (typeof val !== "number") {
-      doc.text("-", cols.days, textY, { width: cols.daysW - 4, align: "right" });
-      doc.text("-", cols.hrs, textY, { width: cols.hrsW - 4, align: "right" });
-      doc.text("-", cols.amount, textY, { width: cols.amountW - 4, align: "right" });
+      doc.text("-", cols.days, textY, { width: cols.daysW - 4, align: "right" })
+      doc.text("-", cols.hrs, textY, { width: cols.hrsW - 4, align: "right" })
+      doc.text("-", cols.amount, textY, {
+        width: cols.amountW - 4,
+        align: "right",
+      })
     } else {
       if (field.inputKind === "days") {
-        doc.text(formatSampleQty(val), cols.days, textY, { width: cols.daysW - 4, align: "right" });
-        doc.text("-", cols.hrs, textY, { width: cols.hrsW - 4, align: "right" });
+        doc.text(formatSampleQty(val), cols.days, textY, {
+          width: cols.daysW - 4,
+          align: "right",
+        })
+        doc.text("-", cols.hrs, textY, { width: cols.hrsW - 4, align: "right" })
       } else if (field.inputKind === "hours") {
-        doc.text("-", cols.days, textY, { width: cols.daysW - 4, align: "right" });
-        doc.text(formatSampleQty(val), cols.hrs, textY, { width: cols.hrsW - 4, align: "right" });
+        doc.text("-", cols.days, textY, {
+          width: cols.daysW - 4,
+          align: "right",
+        })
+        doc.text(formatSampleQty(val), cols.hrs, textY, {
+          width: cols.hrsW - 4,
+          align: "right",
+        })
       } else {
-        doc.text("-", cols.days, textY, { width: cols.daysW - 4, align: "right" });
-        doc.text("-", cols.hrs, textY, { width: cols.hrsW - 4, align: "right" });
+        doc.text("-", cols.days, textY, {
+          width: cols.daysW - 4,
+          align: "right",
+        })
+        doc.text("-", cols.hrs, textY, { width: cols.hrsW - 4, align: "right" })
       }
-      doc.fillColor(amount < 0 ? "#FF0000" : "#000000");
-      doc.text(formatSampleAmount(amount), cols.amount, textY, { width: cols.amountW - 4, align: "right" });
+      doc.fillColor(amount < 0 ? "#FF0000" : "#000000")
+      doc.text(formatSampleAmount(amount), cols.amount, textY, {
+        width: cols.amountW - 4,
+        align: "right",
+      })
     }
-    
+
     if (dedField) {
-      doc.font("Helvetica-Oblique").fontSize(8).fillColor("#000000");
-      doc.text(dedField.label, cols.dedItem + 2, textY, { width: cols.dedItemW - 4, lineBreak: false, ellipsis: true });
-      doc.font("Helvetica").fontSize(8).fillColor("#000000");
-      doc.text(typeof dedVal === "number" && dedVal !== 0 ? formatSampleAmount(dedVal) : "-", cols.dedAmount, textY, { width: cols.dedAmountW - 4, align: "right" });
+      doc.font("Helvetica-Oblique").fontSize(8).fillColor("#000000")
+      doc.text(dedField.label, cols.dedItem + 2, textY, {
+        width: cols.dedItemW - 4,
+        lineBreak: false,
+        ellipsis: true,
+      })
+      doc.font("Helvetica").fontSize(8).fillColor("#000000")
+      doc.text(
+        typeof dedVal === "number" && dedVal !== 0
+          ? formatSampleAmount(dedVal)
+          : "-",
+        cols.dedAmount,
+        textY,
+        { width: cols.dedAmountW - 4, align: "right" }
+      )
     }
-    
-    rowY += rowHeight;
-    drawGridLines(rowY);
+
+    rowY += rowHeight
+    drawGridLines(rowY)
   }
 
-  const taxableRowHeight = rowHeight * 1.5;
-  const subY = rowTextY(rowY, taxableRowHeight, 8);
-  doc.font("Helvetica-Bold").fontSize(8).fillColor("#000000");
-  doc.text("TAXABLE", cols.payItem + 2, subY - 4, { width: cols.payItemW - 4 });
-  doc.text("EARNINGS", cols.payItem + 2, subY + 4, { width: cols.payItemW - 4 });
-  doc.text(formatSampleAmount(data.totals.taxableEarnings), cols.amount, subY, { width: cols.amountW - 4, align: "right" });
-  
-  doc.font("Helvetica-Bold").fontSize(8).fillColor("#000000");
-  doc.text("TOTAL", cols.dedItem + 2, subY - 4, { width: cols.dedItemW - 4 });
-  doc.text("DEDUCTIONS", cols.dedItem + 2, subY + 4, { width: cols.dedItemW - 4 });
-  doc.text(formatSampleAmount(data.totals.totalDeductions), cols.dedAmount, subY, { width: cols.dedAmountW - 4, align: "right" });
-  
-  rowY += taxableRowHeight;
-  drawGridLines(rowY);
+  const taxableRowHeight = rowHeight * 1.5
+  const subY = rowTextY(rowY, taxableRowHeight, 8)
+  doc.font("Helvetica-Bold").fontSize(8).fillColor("#000000")
+  doc.text("TAXABLE", cols.payItem + 2, subY - 4, { width: cols.payItemW - 4 })
+  doc.text("EARNINGS", cols.payItem + 2, subY + 4, { width: cols.payItemW - 4 })
+  doc.text(formatSampleAmount(data.totals.taxableEarnings), cols.amount, subY, {
+    width: cols.amountW - 4,
+    align: "right",
+  })
+
+  doc.font("Helvetica-Bold").fontSize(8).fillColor("#000000")
+  doc.text("TOTAL", cols.dedItem + 2, subY - 4, { width: cols.dedItemW - 4 })
+  doc.text("DEDUCTIONS", cols.dedItem + 2, subY + 4, {
+    width: cols.dedItemW - 4,
+  })
+  doc.text(
+    formatSampleAmount(data.totals.totalDeductions),
+    cols.dedAmount,
+    subY,
+    { width: cols.dedAmountW - 4, align: "right" }
+  )
+
+  rowY += taxableRowHeight
+  drawGridLines(rowY)
 
   for (const field of NON_TAXABLE_FIELDS) {
-    const textY = rowTextY(rowY, rowHeight, 8);
-    const val = rawFieldValue(inputs, field);
-    const adjLabel = getAdjLabel(field);
-    
-    doc.font("Helvetica-Oblique").fontSize(8).fillColor("#000000");
-    doc.text(field.label, cols.payItem + 2, textY, { width: cols.payItemW - 4, lineBreak: false, ellipsis: true });
-    doc.font("Helvetica").fontSize(8).fillColor("#000000");
-    doc.text("-", cols.days, textY, { width: cols.daysW - 4, align: "right" });
-    doc.text("-", cols.hrs, textY, { width: cols.hrsW - 4, align: "right" });
-    doc.text(typeof val === "number" && val !== 0 ? formatSampleAmount(val) : "-", cols.amount, textY, { width: cols.amountW - 4, align: "right" });
-    
+    const textY = rowTextY(rowY, rowHeight, 8)
+    const val = rawFieldValue(inputs, field)
+    const adjLabel = getAdjLabel(field)
+
+    doc.font("Helvetica-Oblique").fontSize(8).fillColor("#000000")
+    doc.text(field.label, cols.payItem + 2, textY, {
+      width: cols.payItemW - 4,
+      lineBreak: false,
+      ellipsis: true,
+    })
+    doc.font("Helvetica").fontSize(8).fillColor("#000000")
+    doc.text("-", cols.days, textY, { width: cols.daysW - 4, align: "right" })
+    doc.text("-", cols.hrs, textY, { width: cols.hrsW - 4, align: "right" })
+    doc.text(
+      typeof val === "number" && val !== 0 ? formatSampleAmount(val) : "-",
+      cols.amount,
+      textY,
+      { width: cols.amountW - 4, align: "right" }
+    )
+
     if (adjLabel) {
-      doc.font("Helvetica-Oblique").fontSize(8).fillColor("#000000");
-      doc.text(adjLabel, cols.dedItem + 2, textY, { width: cols.dedItemW - 4, lineBreak: false, ellipsis: true });
-      doc.font("Helvetica").fontSize(8).fillColor("#000000");
-      doc.text("-", cols.dedAmount, textY, { width: cols.dedAmountW - 4, align: "right" });
+      doc.font("Helvetica-Oblique").fontSize(8).fillColor("#000000")
+      doc.text(adjLabel, cols.dedItem + 2, textY, {
+        width: cols.dedItemW - 4,
+        lineBreak: false,
+        ellipsis: true,
+      })
+      doc.font("Helvetica").fontSize(8).fillColor("#000000")
+      doc.text("-", cols.dedAmount, textY, {
+        width: cols.dedAmountW - 4,
+        align: "right",
+      })
     }
-    rowY += rowHeight;
-    drawGridLines(rowY);
+    rowY += rowHeight
+    drawGridLines(rowY)
   }
 
-  const ntRowHeight = rowHeight * 1.5;
-  const ntY = rowTextY(rowY, ntRowHeight, 8);
-  doc.font("Helvetica-Bold").fontSize(8).fillColor("#000000");
-  doc.text("NON-TAXABLE", cols.payItem + 2, ntY - 4, { width: cols.payItemW - 4 });
-  doc.text("EARNINGS", cols.payItem + 2, ntY + 4, { width: cols.payItemW - 4 });
-  doc.text(formatSampleAmount(data.totals.nonTaxableEarnings), cols.amount, ntY, { width: cols.amountW - 4, align: "right" });
-  
-  rowY += ntRowHeight;
-  
-  doc.moveTo(x, rowY).lineTo(x + CONTENT_WIDTH, rowY).lineWidth(1).strokeColor(DARK_GREEN).undash().stroke();
+  const ntRowHeight = rowHeight * 1.5
+  const ntY = rowTextY(rowY, ntRowHeight, 8)
+  doc.font("Helvetica-Bold").fontSize(8).fillColor("#000000")
+  doc.text("NON-TAXABLE", cols.payItem + 2, ntY - 4, {
+    width: cols.payItemW - 4,
+  })
+  doc.text("EARNINGS", cols.payItem + 2, ntY + 4, { width: cols.payItemW - 4 })
+  doc.text(
+    formatSampleAmount(data.totals.nonTaxableEarnings),
+    cols.amount,
+    ntY,
+    { width: cols.amountW - 4, align: "right" }
+  )
 
-  const gY = rowTextY(rowY, rowHeight, 8);
-  doc.font("Helvetica-Bold").fontSize(8).fillColor("#000000");
-  doc.text("GROSS PAY", cols.payItem + 2, gY, { width: cols.payItemW - 4 });
-  doc.text(formatSampleAmount(data.totals.grossPay), cols.amount, gY, { width: cols.amountW - 4, align: "right" });
+  rowY += ntRowHeight
 
-  doc.font("Helvetica-Bold").fontSize(8).fillColor("#000000");
-  doc.text("NET PAY", cols.dedItem + 2, gY, { width: cols.dedItemW - 4 });
-  doc.text(formatSampleAmount(data.totals.netPay), cols.dedAmount, gY, { width: cols.dedAmountW - 4, align: "right" });
+  doc
+    .moveTo(x, rowY)
+    .lineTo(x + CONTENT_WIDTH, rowY)
+    .lineWidth(1)
+    .strokeColor(DARK_GREEN)
+    .undash()
+    .stroke()
 
-  rowY += rowHeight;
+  const gY = rowTextY(rowY, rowHeight, 8)
+  doc.font("Helvetica-Bold").fontSize(8).fillColor("#000000")
+  doc.text("GROSS PAY", cols.payItem + 2, gY, { width: cols.payItemW - 4 })
+  doc.text(formatSampleAmount(data.totals.grossPay), cols.amount, gY, {
+    width: cols.amountW - 4,
+    align: "right",
+  })
+
+  doc.font("Helvetica-Bold").fontSize(8).fillColor("#000000")
+  doc.text("NET PAY", cols.dedItem + 2, gY, { width: cols.dedItemW - 4 })
+  doc.text(formatSampleAmount(data.totals.netPay), cols.dedAmount, gY, {
+    width: cols.dedAmountW - 4,
+    align: "right",
+  })
+
+  rowY += rowHeight
 
   // Draw Vertical lines for the grid
   const drawVerticalLine = (lineX: number) => {
-    doc.moveTo(lineX, y).lineTo(lineX, rowY).lineWidth(0.5).strokeColor(DARK_GREEN).dash(2, { space: 2 }).stroke();
-  };
-  
-  drawVerticalLine(cols.days);
-  drawVerticalLine(cols.hrs);
-  drawVerticalLine(cols.amount);
-  drawVerticalLine(cols.middle);
-  drawVerticalLine(cols.dedItem);
-  drawVerticalLine(cols.dedAmount);
-  
-  doc.undash();
+    doc
+      .moveTo(lineX, y)
+      .lineTo(lineX, rowY)
+      .lineWidth(0.5)
+      .strokeColor(DARK_GREEN)
+      .dash(2, { space: 2 })
+      .stroke()
+  }
+
+  drawVerticalLine(cols.days)
+  drawVerticalLine(cols.hrs)
+  drawVerticalLine(cols.amount)
+  drawVerticalLine(cols.middle)
+  drawVerticalLine(cols.dedItem)
+  drawVerticalLine(cols.dedAmount)
+
+  doc.undash()
 }
 
-function drawSampleFooter(doc: PDFKit.PDFDocument, data: PayslipPdfData, y: number) {
-  doc.font("Helvetica-Bold").fontSize(8).fillColor("#000000");
-  doc.text(" Payout Date:", PAGE_MARGIN, y + 15, { width: 70 });
-  doc.font("Helvetica-Oblique").fontSize(8).fillColor("#000000");
-  doc.text(formatDisplayDate(data.payoutDate), PAGE_MARGIN + 65, y + 15);
+function drawSampleFooter(
+  doc: PDFKit.PDFDocument,
+  data: PayslipPdfData,
+  y: number
+) {
+  doc.font("Helvetica-Bold").fontSize(8).fillColor("#000000")
+  doc.text(" Payout Date:", PAGE_MARGIN, y + 15, { width: 70 })
+  doc.font("Helvetica-Oblique").fontSize(8).fillColor("#000000")
+  doc.text(formatDisplayDate(data.payoutDate), PAGE_MARGIN + 65, y + 15)
 
-  doc.font("Helvetica-Bold").fontSize(7).fillColor(DARK_GREEN);
-  doc.text("HELPORT PHILIPPINES BRANCH OFFICE", PAGE_WIDTH / 2 + 30, y + 25);
+  doc.font("Helvetica-Bold").fontSize(7).fillColor(DARK_GREEN)
+  doc.text("HELPORT PHILIPPINES BRANCH OFFICE", PAGE_WIDTH / 2 + 30, y + 25)
 }
 
 export async function buildPasswordLockedPayslipPdf(
@@ -366,14 +549,30 @@ export async function buildPasswordLockedPayslipPdf(
   })
 
   // Outer border
-  doc.rect(PAGE_MARGIN, PAGE_MARGIN, CONTENT_WIDTH, PAGE_HEIGHT - 2 * PAGE_MARGIN).lineWidth(1).strokeColor(DARK_GREEN).undash().stroke();
+  doc
+    .rect(
+      PAGE_MARGIN,
+      PAGE_MARGIN,
+      CONTENT_WIDTH,
+      PAGE_HEIGHT - 2 * PAGE_MARGIN
+    )
+    .lineWidth(1)
+    .strokeColor(DARK_GREEN)
+    .undash()
+    .stroke()
 
-  let cursorY = drawSampleHeader(doc, data, PAGE_MARGIN) + BLOCK_GAP
+  const cursorY = drawSampleHeader(doc, data, PAGE_MARGIN) + BLOCK_GAP
 
-  const footerY = PAGE_HEIGHT - PAGE_MARGIN - 40;
-  
+  const footerY = PAGE_HEIGHT - PAGE_MARGIN - 40
+
   // Footer border line
-  doc.moveTo(PAGE_MARGIN, footerY).lineTo(PAGE_WIDTH - PAGE_MARGIN, footerY).lineWidth(1).strokeColor(DARK_GREEN).undash().stroke();
+  doc
+    .moveTo(PAGE_MARGIN, footerY)
+    .lineTo(PAGE_WIDTH - PAGE_MARGIN, footerY)
+    .lineWidth(1)
+    .strokeColor(DARK_GREEN)
+    .undash()
+    .stroke()
 
   const gridHeight = footerY - BLOCK_GAP - cursorY
 
