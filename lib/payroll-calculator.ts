@@ -78,14 +78,14 @@ function getHourlyRate(
   basicPay: number,
   divisor: EmployeeDivisor | number = CUTOFF_PERIOD_DAYS * 24
 ): number {
-  return roundMoney(getDailyRate(basicPay, divisor) / HOURS_PER_DAY)
+  return getDailyRate(basicPay, divisor) / HOURS_PER_DAY
 }
 
 function getPerMinuteRate(
   basicPay: number,
   divisor: EmployeeDivisor | number
 ): number {
-  return roundMoney(getHourlyRate(basicPay, divisor) / 60)
+  return getHourlyRate(basicPay, divisor) / 60
 }
 
 function computeHourLineAmount(
