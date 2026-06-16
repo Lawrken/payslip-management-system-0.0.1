@@ -1,4 +1,6 @@
 import { redirect } from "next/navigation"
+import Image from "next/image"
+
 
 import { LoginForm } from "@/components/login/login-form"
 import { ThemeSelector } from "@/components/theme-selector"
@@ -7,7 +9,6 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card"
 import { getHomePath } from "@/lib/auth-helpers"
 import { getSession } from "@/lib/session"
@@ -31,8 +32,17 @@ export default async function LoginPage() {
 
       <div className="relative z-10 w-full max-w-sm">
         <Card className="border border-border bg-card shadow-sm ring-0">
-          <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-xl text-balance">Helport AI</CardTitle>
+          <CardHeader className="space-y-3 text-center">
+            <div className="flex justify-center">
+              <Image
+                src="/helport.png"
+                alt="Helport"
+                width={220}
+                height={64}
+                className="h-16 w-auto"
+                priority
+              />
+            </div>
             <CardDescription className="text-pretty">
               Sign in to view and manage payslips.
             </CardDescription>

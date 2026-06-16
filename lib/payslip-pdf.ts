@@ -17,6 +17,7 @@ const PAGE_WIDTH = 612
 const PAGE_HEIGHT = 792
 const CONTENT_WIDTH = PAGE_WIDTH - PAGE_MARGIN * 2
 const BLOCK_GAP = 0
+const LOGO_HEIGHT = 52
 
 const DARK_GREEN = "#166534"
 
@@ -127,48 +128,50 @@ function drawSampleHeader(
   // Outer Border is drawn separately
 
   const logoPath = path.join(process.cwd(), "public", "helport.png")
+  const logoTop = y + 5
+
   if (fs.existsSync(logoPath)) {
     const logoBuffer = fs.readFileSync(logoPath)
     const arrayBuffer = logoBuffer.buffer.slice(
       logoBuffer.byteOffset,
       logoBuffer.byteOffset + logoBuffer.byteLength
     )
-    doc.image(arrayBuffer, PAGE_MARGIN + 10, y + 5, { height: 40 })
-  } else {
-    doc
-      .font("Helvetica-Bold")
-      .fontSize(32)
-      .fillColor("#20B2AA")
-      .text("HELPORT", PAGE_MARGIN + 10, y + 15, { characterSpacing: 2 })
+    doc.image(arrayBuffer, PAGE_MARGIN + 10, logoTop, { height: LOGO_HEIGHT })
   }
+
+  const payrollTitleY = logoTop + LOGO_HEIGHT + 6
 
   doc
     .font("Helvetica-BoldOblique")
     .fontSize(8)
     .fillColor(DARK_GREEN)
-    .text("HELPORT PHILIPPINES BRANCH OFFICE PAYROLL", PAGE_MARGIN + 10, y + 55)
+    .text(
+      "HELPORT PHILIPPINES BRANCH OFFICE PAYROLL",
+      PAGE_MARGIN + 10,
+      payrollTitleY
+    )
 
   doc
     .font("Helvetica-Bold")
     .fontSize(8)
     .fillColor("#000000")
-    .text("EMPLOYEE NAME:", PAGE_MARGIN + 10, y + 70)
+    .text("EMPLOYEE NAME:", PAGE_MARGIN + 10, payrollTitleY + 15)
   doc
     .font("Helvetica-Oblique")
     .fontSize(8)
     .fillColor("#000000")
-    .text(data.employeeName, PAGE_MARGIN + 100, y + 70)
+    .text(data.employeeName, PAGE_MARGIN + 100, payrollTitleY + 15)
 
   doc
     .font("Helvetica-Bold")
     .fontSize(8)
     .fillColor("#000000")
-    .text("EMPLOYEE ID:", PAGE_MARGIN + 10, y + 85)
+    .text("EMPLOYEE ID:", PAGE_MARGIN + 10, payrollTitleY + 30)
   doc
     .font("Helvetica-Oblique")
     .fontSize(8)
     .fillColor("#000000")
-    .text(data.employeeId, PAGE_MARGIN + 100, y + 85)
+    .text(data.employeeId, PAGE_MARGIN + 100, payrollTitleY + 30)
 
   const rightX = PAGE_WIDTH / 2 + 30
   const rightValX = rightX + 80
@@ -199,7 +202,7 @@ function drawSampleHeader(
   drawRightItem("PHIC NO.:", data.phicNo || "-")
   drawRightItem("HDMF NO.:", data.hdmfNo || "-")
 
-  const headerBottomY = Math.max(y + 105, currY + 5)
+  const headerBottomY = Math.max(payrollTitleY + 40, currY + 5)
 
   // Separator line between header and table
   doc

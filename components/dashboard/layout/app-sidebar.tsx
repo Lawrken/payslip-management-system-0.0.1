@@ -61,8 +61,10 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="none">
-      <SidebarHeader>
-        <span className="px-2 text-sm font-medium">Payslip Admin</span>
+      <SidebarHeader className="px-4 pt-4 pb-2">
+        <h2 className="text-2xl font-semibold tracking-tight text-balance">
+          Helport Payslip
+        </h2>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
