@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
+
 const Module = require("node:module")
 
 const originalLoad = Module._load
@@ -10,7 +12,7 @@ function isServerOnlyModule(request) {
   )
 }
 
-Module._load = function (request, parent, isMain) {
+Module._load = function (request) {
   if (isServerOnlyModule(request)) {
     return {}
   }

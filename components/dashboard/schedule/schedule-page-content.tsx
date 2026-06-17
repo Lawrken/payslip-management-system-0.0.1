@@ -76,7 +76,11 @@ export function SchedulePageContent({
     }
 
     let cancelled = false
-    setIsLoadingSchedule(true)
+    queueMicrotask(() => {
+      if (!cancelled) {
+        setIsLoadingSchedule(true)
+      }
+    })
     void getEmployeeScheduleAction(
       selectedPayroll.id,
       activeEmployeeId

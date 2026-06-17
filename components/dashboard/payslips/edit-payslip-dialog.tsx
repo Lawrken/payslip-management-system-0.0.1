@@ -142,14 +142,23 @@ export function EditPayslipDialog({
     }
 
     let cancelled = false
-    setState(initialState)
+    queueMicrotask(() => {
+      if (!cancelled) {
+        setState(initialState)
+      }
+    })
 
     if (isCreateMode) {
-      setLoadedPayslip(null)
-      setSelectedEmployee(null)
-      setEmployeeId("")
-      setInputs(createEmptyPayslipInputs())
-      setFieldDrafts({})
+      queueMicrotask(() => {
+        if (cancelled) {
+          return
+        }
+        setLoadedPayslip(null)
+        setSelectedEmployee(null)
+        setEmployeeId("")
+        setInputs(createEmptyPayslipInputs())
+        setFieldDrafts({})
+      })
       return
     }
 
@@ -157,7 +166,11 @@ export function EditPayslipDialog({
       return
     }
 
-    setIsLoadingPayslip(true)
+    queueMicrotask(() => {
+      if (!cancelled) {
+        setIsLoadingPayslip(true)
+      }
+    })
     void getPayslipByIdAction(activePayslipId).then((result) => {
       if (cancelled) {
         return

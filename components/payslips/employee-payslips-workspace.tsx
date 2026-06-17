@@ -25,13 +25,22 @@ export function EmployeePayslipsWorkspace({
   const [isLoading, setIsLoading] = React.useState(false)
 
   React.useEffect(() => {
+    let cancelled = false
+
     if (!selectedId) {
-      setSelectedPayslip(null)
+      queueMicrotask(() => {
+        if (!cancelled) {
+          setSelectedPayslip(null)
+        }
+      })
       return
     }
 
-    let cancelled = false
-    setIsLoading(true)
+    queueMicrotask(() => {
+      if (!cancelled) {
+        setIsLoading(true)
+      }
+    })
     void getEmployeePayslipDetailAction(selectedId).then((result) => {
       if (cancelled) {
         return

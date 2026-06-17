@@ -99,7 +99,11 @@ export function ReviewPayslipDialog({
     }
 
     let cancelled = false
-    setIsLoadingPayslip(true)
+    queueMicrotask(() => {
+      if (!cancelled) {
+        setIsLoadingPayslip(true)
+      }
+    })
     void getPayslipByIdAction(activePayslipId).then((result) => {
       if (cancelled) {
         return

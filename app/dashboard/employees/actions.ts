@@ -7,7 +7,6 @@ import {
   addEmployee,
   deleteEmployee,
   getEmployeeById,
-  type NewEmployeeInput,
   updateEmployee,
 } from "@/lib/employees"
 import { createAuditLog } from "@/lib/audit-logs"
