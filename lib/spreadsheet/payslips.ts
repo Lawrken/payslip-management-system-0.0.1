@@ -1,6 +1,7 @@
 import {
   ALL_PAYSLIP_FIELD_KEYS,
   DEDUCTION_FIELDS,
+  NON_TAXABLE_ADJUSTMENT_PAIRS,
   NON_TAXABLE_FIELDS,
   PAY_DETAILS_FIELDS,
 } from "@/lib/payslip-fields"
@@ -34,6 +35,9 @@ export type PayslipSpreadsheetRow = SpreadsheetRow & {
 } & PayslipPayrollInputs
 
 const PAYSLIP_INPUT_KEYS = ALL_PAYSLIP_FIELD_KEYS as (keyof PayslipPayrollInputs)[]
+const NON_TAXABLE_ADJUSTMENT_FIELD_KEYS = new Set<string>(
+  NON_TAXABLE_ADJUSTMENT_PAIRS.map(({ adjKey }) => adjKey)
+)
 
 const DEFAULT_DIVISOR = 261
 
@@ -123,6 +127,11 @@ export function spreadsheetRowToPayslipInputs(
   const inputs = {} as PayslipPayrollInputs
 
   for (const key of PAYSLIP_INPUT_KEYS) {
+    if (NON_TAXABLE_ADJUSTMENT_FIELD_KEYS.has(key)) {
+      inputs[key] = 0
+      continue
+    }
+
     const parsed = parseDecimalInput(String(row[key] ?? ""))
     if (Number.isNaN(parsed)) {
       return { error: `Invalid number for ${key}.` }

@@ -1,10 +1,6 @@
 import { formatLongDisplayDate } from "@/lib/payroll-dates"
 import { mergeScheduleDays } from "@/lib/schedule-days"
-import {
-  isValidTimeValue,
-  normalizeTimeValue,
-  parseDisplayTime,
-} from "@/lib/schedule-time"
+import { parseScheduleTimeValue } from "@/lib/schedule-time"
 import type { SpreadsheetRow } from "@/lib/spreadsheet/types"
 import type {
   EmployeeSchedule,
@@ -37,22 +33,7 @@ const SCHEDULE_TIME_FIELDS = [
 >)[]
 
 export function parseScheduleSpreadsheetTime(value: string): string | null {
-  const trimmed = value.trim()
-  if (!trimmed) {
-    return ""
-  }
-
-  const fromDisplay = parseDisplayTime(trimmed)
-  if (fromDisplay) {
-    return fromDisplay
-  }
-
-  const normalized = normalizeTimeValue(trimmed)
-  if (isValidTimeValue(normalized)) {
-    return normalized
-  }
-
-  return null
+  return parseScheduleTimeValue(value)
 }
 
 export function resolveScheduleErrorRowId(
