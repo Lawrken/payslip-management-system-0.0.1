@@ -33,6 +33,7 @@ import {
   PAY_DETAILS_FIELDS,
 } from "@/lib/payslip-fields"
 import {
+  applyNonTaxableAttendanceAdjustments,
   calculatePayslipTotals,
   createEmptyPayslipInputs,
   createPayslipInputsWithBasicPay,
@@ -114,6 +115,12 @@ export function EditPayslipDialog({
   const canGoPrev = activeIndex > 0
   const canGoNext =
     activeIndex >= 0 && activeIndex < payslipListItems.length - 1
+
+  function applyPreviewAdjustments(nextInputs: PayslipPayrollInputs) {
+    return selectedEmployee
+      ? applyNonTaxableAttendanceAdjustments(nextInputs, selectedEmployee.divisor)
+      : nextInputs
+  }
 
   function resetForm() {
     setState(initialState)
@@ -262,7 +269,7 @@ export function EditPayslipDialog({
         delete next[key]
         return next
       })
-      setInputs((prev) => ({ ...prev, [key]: 0 }))
+      setInputs((prev) => applyPreviewAdjustments({ ...prev, [key]: 0 }))
       return
     }
 
@@ -273,7 +280,7 @@ export function EditPayslipDialog({
     }
 
     setFieldDrafts((prev) => ({ ...prev, [key]: value }))
-    setInputs((prev) => ({ ...prev, [key]: parsed }))
+    setInputs((prev) => applyPreviewAdjustments({ ...prev, [key]: parsed }))
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {

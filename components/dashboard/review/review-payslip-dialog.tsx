@@ -345,6 +345,7 @@ export function ReviewPayslipDialog({
             <PayslipBreakdown
               inputs={activePayslip.inputs}
               divisor={employeeDivisor}
+              attendance={activePayslip.attendance}
             />
           )}
         </div>

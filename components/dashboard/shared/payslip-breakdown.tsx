@@ -5,13 +5,17 @@ import {
   PAY_DETAILS_FIELDS,
 } from "@/lib/payslip-fields"
 import type { EmployeeDivisor } from "@/lib/employee-options"
-import { calculatePayslipTotals } from "@/lib/payroll-calculator"
-import type { PayslipPayrollInputs } from "@/lib/types"
+import { calculatePayslipTotals, formatAttendanceDuration } from "@/lib/payroll-calculator"
+import type {
+  PayslipAttendanceDisplay,
+  PayslipPayrollInputs,
+} from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 type PayslipBreakdownProps = {
   inputs: PayslipPayrollInputs
   divisor?: EmployeeDivisor | number
+  attendance?: PayslipAttendanceDisplay
   variant?: "default" | "dashboard"
 }
 
@@ -80,11 +84,13 @@ function BreakdownValue({
   sectionKind,
   value,
   lineAmount,
+  displayMinutes,
 }: {
   field: PayslipFieldDefinition
   sectionKind: BreakdownSectionKind
   value: unknown
   lineAmount?: number
+  displayMinutes?: number | null
 }) {
   if (typeof value !== "number") {
     return "—"
@@ -96,10 +102,18 @@ function BreakdownValue({
     lineAmount,
   })
 
-  if (field.inputKind === "hours" || field.inputKind === "days") {
+  if (
+    displayMinutes !== undefined ||
+    field.inputKind === "hours" ||
+    field.inputKind === "days"
+  ) {
     return (
       <span className="flex flex-wrap items-baseline justify-end gap-x-1.5 gap-y-0.5 text-right">
-        <span>{formatQuantity(field, value)}</span>
+        <span>
+          {displayMinutes !== undefined
+            ? formatAttendanceDuration(displayMinutes ?? 0)
+            : formatQuantity(field, value)}
+        </span>
         <span className="text-muted-foreground">/</span>
         <span className={cn("font-semibold", getAmountClassName(amount))}>
           {formatMoney(amount, { signed: true })}
@@ -120,6 +134,7 @@ function BreakdownSection({
   fields,
   inputs,
   lineAmounts,
+  attendance,
   sectionKind,
   variant,
 }: {
@@ -127,6 +142,7 @@ function BreakdownSection({
   fields: PayslipFieldDefinition[]
   inputs: PayslipPayrollInputs
   lineAmounts?: Record<string, number>
+  attendance?: PayslipAttendanceDisplay
   sectionKind: BreakdownSectionKind
   variant: "default" | "dashboard"
 }) {
@@ -136,6 +152,12 @@ function BreakdownSection({
       <dl className="grid gap-2 sm:grid-cols-2">
         {fields.map((field) => {
           const value = inputs[field.key as keyof PayslipPayrollInputs]
+          const displayMinutes =
+            field.key === "tardiness"
+              ? (attendance?.tardinessMinutes ?? 0)
+              : field.key === "undertime"
+                ? (attendance?.undertimeMinutes ?? 0)
+                : undefined
           return (
             <div
               key={field.key}
@@ -153,6 +175,7 @@ function BreakdownSection({
                   sectionKind={sectionKind}
                   value={value}
                   lineAmount={lineAmounts?.[field.key]}
+                  displayMinutes={displayMinutes}
                 />
               </dd>
             </div>
@@ -166,6 +189,7 @@ function BreakdownSection({
 export function PayslipBreakdown({
   inputs,
   divisor,
+  attendance,
   variant = "default",
 }: PayslipBreakdownProps) {
   const calculation = calculatePayslipTotals(inputs, divisor)
@@ -177,6 +201,7 @@ export function PayslipBreakdown({
         fields={PAY_DETAILS_FIELDS}
         inputs={inputs}
         lineAmounts={calculation.lineAmounts}
+        attendance={attendance}
         sectionKind="pay"
         variant={variant}
       />

@@ -24,6 +24,7 @@ import {
   formatDtrCutOffRange,
 } from "@/lib/payroll-dates"
 import type {
+  PayslipAttendanceDisplay,
   PayslipPayrollInputs,
   PayslipStatus,
   PayslipTotals,
@@ -46,6 +47,7 @@ export type EmployeePayslipPreviewItem = {
   status: PayslipStatus
   inputs: PayslipPayrollInputs
   totals: PayslipTotals
+  attendance: PayslipAttendanceDisplay
 }
 
 type EmployeePayslipViewerProps = {
@@ -257,6 +259,7 @@ export function EmployeePayslipViewer({
         <PayslipBreakdown
           inputs={payslip.inputs}
           divisor={payslip.employeeDivisor}
+          attendance={payslip.attendance}
         />
       </div>
     </section>

@@ -68,6 +68,7 @@ export function EmployeePayslipsWorkspace({
         status: payslip.status,
         inputs: payslip.inputs,
         totals: payslip.totals,
+        attendance: payslip.attendance,
       })
     })
 
