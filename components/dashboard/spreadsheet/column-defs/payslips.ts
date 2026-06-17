@@ -1,0 +1,59 @@
+import type { SpreadsheetColumnDef } from "@/components/dashboard/spreadsheet/column-defs/types"
+import { PAYSLIP_FIELD_SECTIONS } from "@/lib/spreadsheet/payslips"
+import { DERIVED_PAYSLIP_FIELD_KEYS } from "@/lib/payroll-calculator"
+
+const derivedFields = new Set<string>(DERIVED_PAYSLIP_FIELD_KEYS)
+
+function formatAmount(value: unknown) {
+  const amount = Number(value ?? 0)
+  return Number.isFinite(amount) ? amount.toFixed(2) : "0.00"
+}
+
+const numericColumn = (field: string, headerName: string): SpreadsheetColumnDef => ({
+  field,
+  headerName,
+  type: derivedFields.has(field) ? "readonly" : "number",
+  minWidth: 110,
+  format: formatAmount,
+})
+
+const totalColumn = (field: string, headerName: string): SpreadsheetColumnDef => ({
+  field,
+  headerName,
+  type: "readonly",
+  minWidth: 130,
+  pinned: "right",
+  format: formatAmount,
+})
+
+export const payslipColumns: SpreadsheetColumnDef[] = [
+  {
+    field: "employeeName",
+    headerName: "Employee",
+    type: "readonly",
+    pinned: "left",
+    minWidth: 240,
+  },
+  {
+    field: "employeeId",
+    headerName: "Employee ID",
+    type: "readonly",
+    pinned: "left",
+    minWidth: 120,
+  },
+  {
+    field: "status",
+    headerName: "Status",
+    type: "readonly",
+    pinned: "left",
+    minWidth: 120,
+  },
+  ...PAYSLIP_FIELD_SECTIONS.flatMap((section) =>
+    section.fields.map((field) => numericColumn(field.key, field.label))
+  ),
+  totalColumn("taxableEarnings", "Taxable Earnings"),
+  totalColumn("totalDeductions", "Total Deductions"),
+  totalColumn("nonTaxableEarnings", "Non-Taxable"),
+  totalColumn("grossPay", "Gross Pay"),
+  totalColumn("netPay", "Net Pay"),
+]

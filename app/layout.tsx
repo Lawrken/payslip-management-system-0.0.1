@@ -1,5 +1,7 @@
 import { Geist_Mono, Inter } from "next/font/google"
 
+import "handsontable/styles/handsontable.min.css"
+import "handsontable/styles/ht-theme-main.min.css"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"

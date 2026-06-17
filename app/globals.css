@@ -220,6 +220,28 @@
   --reminder-accent: var(--dashboard-urgency-critical-accent);
 }
 
+.dark .spreadsheet-hot-container {
+  color-scheme: dark;
+}
+
+.spreadsheet-hot-container .handsontable td.spreadsheet-readonly-cell {
+  color: var(--muted-foreground);
+}
+
+.spreadsheet-hot-container .handsontable td.spreadsheet-dirty-cell {
+  background: color-mix(in oklch, var(--dashboard-status-pending-bg) 75%, transparent);
+}
+
+.spreadsheet-hot-container .handsontable td.spreadsheet-error-cell {
+  background: color-mix(in oklch, var(--destructive) 18%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--destructive) 45%, transparent);
+}
+
+.spreadsheet-hot-container .handsontable td.spreadsheet-total-cell {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
 .dashboard-reminder[data-urgency="action"] {
   background-color: var(--dashboard-urgency-action-bg);
   --reminder-fg: var(--dashboard-urgency-action-fg);

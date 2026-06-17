@@ -8,6 +8,7 @@ import {
   DashboardSquare01Icon,
   Invoice01Icon,
   SquareLock01Icon,
+  Table01Icon,
   UserGroupIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -39,6 +40,7 @@ const navItems = [
   { label: "Review", href: "/dashboard/review", icon: CheckListIcon },
   { label: "Users", href: "/dashboard/users", icon: UserGroupIcon },
   { label: "Logs", href: "/dashboard/logs", icon: Activity01Icon },
+  { label: "Spreadsheet", href: "/dashboard/spreadsheet", icon: Table01Icon },
 ] as const
 
 const accountItems = [
