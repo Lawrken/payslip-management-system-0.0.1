@@ -12,7 +12,14 @@ type PayslipFormSectionProps = {
   values: PayslipPayrollInputs
   fieldDrafts?: Partial<Record<keyof PayslipPayrollInputs, string>>
   readOnlyFields?: ReadonlySet<keyof PayslipPayrollInputs>
+  columns?: 2 | 3 | 4
   onChange: (key: keyof PayslipPayrollInputs, value: string) => void
+}
+
+const COLUMNS_CLASS: Record<2 | 3 | 4, string> = {
+  2: "grid gap-4 sm:grid-cols-2",
+  3: "grid gap-4 sm:grid-cols-2 lg:grid-cols-3",
+  4: "grid gap-4 sm:grid-cols-2 lg:grid-cols-4",
 }
 
 export function PayslipFormSection({
@@ -21,12 +28,13 @@ export function PayslipFormSection({
   values,
   fieldDrafts,
   readOnlyFields,
+  columns = 3,
   onChange,
 }: PayslipFormSectionProps) {
   return (
     <FieldSet>
       <FieldLegend>{title}</FieldLegend>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className={COLUMNS_CLASS[columns]}>
         {fields.map((field) => {
           const key = field.key as keyof PayslipPayrollInputs
           const value = values[key]

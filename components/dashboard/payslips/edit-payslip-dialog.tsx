@@ -433,6 +433,8 @@ export function EditPayslipDialog({
                       fields={NON_TAXABLE_FIELDS}
                       values={inputs}
                       fieldDrafts={fieldDrafts}
+                      readOnlyFields={READ_ONLY_PAYSLIP_FIELDS}
+                      columns={4}
                       onChange={handleFieldChange}
                     />
                   </div>
