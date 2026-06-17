@@ -180,8 +180,7 @@ export function EmployeeFormFields({
             <NumericInput
               id={`${prefix}tin`}
               name="tin"
-              defaultValue={employee?.tin.replace(/\D/g, "")}
-              required
+              defaultValue={employee?.tin?.replace(/\D/g, "")}
             />
           </Field>
           <Field>
@@ -189,8 +188,7 @@ export function EmployeeFormFields({
             <NumericInput
               id={`${prefix}sssNo`}
               name="sssNo"
-              defaultValue={employee?.sssNo.replace(/\D/g, "")}
-              required
+              defaultValue={employee?.sssNo?.replace(/\D/g, "")}
             />
           </Field>
           <Field>
@@ -198,8 +196,7 @@ export function EmployeeFormFields({
             <NumericInput
               id={`${prefix}phicNo`}
               name="phicNo"
-              defaultValue={employee?.phicNo.replace(/\D/g, "")}
-              required
+              defaultValue={employee?.phicNo?.replace(/\D/g, "")}
             />
           </Field>
           <Field>
@@ -207,8 +204,7 @@ export function EmployeeFormFields({
             <NumericInput
               id={`${prefix}hdmfNo`}
               name="hdmfNo"
-              defaultValue={employee?.hdmfNo.replace(/\D/g, "")}
-              required
+              defaultValue={employee?.hdmfNo?.replace(/\D/g, "")}
             />
           </Field>
         </div>

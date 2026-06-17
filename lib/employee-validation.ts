@@ -94,11 +94,7 @@ export function validateEmployeeFields(
     !fields.positionTitle ||
     !fields.department ||
     !fields.program ||
-    !fields.account ||
-    !fields.tin ||
-    !fields.sssNo ||
-    !fields.phicNo ||
-    !fields.hdmfNo
+    !fields.account
   ) {
     return { error: "All fields are required." }
   }
@@ -126,7 +122,8 @@ export function validateEmployeeFields(
   }
 
   for (const field of numericIdFields) {
-    if (!isDigitsOnly(fields[field])) {
+    const value = fields[field]
+    if (value && !isDigitsOnly(value)) {
       return {
         error:
           "TIN, SSS NO., PHIC NO., and HDMF NO. must contain numbers only.",
