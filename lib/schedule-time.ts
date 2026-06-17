@@ -78,6 +78,25 @@ export function formatTimeDisplay(value: string): string {
   return `${hour}:${minute} ${period}`
 }
 
+export function parseScheduleTimeValue(value: string): string | null {
+  const trimmed = value.trim()
+  if (!trimmed) {
+    return ""
+  }
+
+  const fromDisplay = parseDisplayTime(trimmed)
+  if (fromDisplay) {
+    return fromDisplay
+  }
+
+  const normalized = normalizeTimeValue(trimmed)
+  if (isValidTimeValue(normalized)) {
+    return normalized
+  }
+
+  return null
+}
+
 export function parseDisplayTime(value: string): string | null {
   const trimmed = value.trim()
   if (!trimmed) {

@@ -175,13 +175,21 @@ export type PayslipPayrollInputs = {
   cashAdvance: number
   taxPayable: number
   cloth: number
+  clothAdj: number
   emplach: number
+  emplachAdj: number
   holrep: number
+  holrepAdj: number
   laundry: number
+  laundryAdj: number
   medasst: number
+  medasstAdj: number
   medcash: number
+  medcashAdj: number
   otmeal: number
+  otmealAdj: number
   riceSubsidy: number
+  riceSubsidyAdj: number
   dmbAdj: number
   taxRefund: number
 }
@@ -194,6 +202,11 @@ export type PayslipTotals = {
   netPay: number
 }
 
+export type PayslipAttendanceDisplay = {
+  tardinessMinutes: number
+  undertimeMinutes: number
+}
+
 export type Payslip = {
   id: string
   payrollId: string
@@ -202,6 +215,7 @@ export type Payslip = {
   status: PayslipStatus
   inputs: PayslipPayrollInputs
   totals: PayslipTotals
+  attendance: PayslipAttendanceDisplay
 }
 
 export type PayslipPdfData = Payslip & {

@@ -1,6 +1,7 @@
 import {
   ALL_PAYSLIP_FIELD_KEYS,
   DEDUCTION_FIELDS,
+  NON_TAXABLE_ADJUSTMENT_PAIRS,
   NON_TAXABLE_FIELDS,
   PAY_DETAILS_FIELDS,
 } from "@/lib/payslip-fields"
@@ -11,10 +12,12 @@ import {
   PAYROLL_RATE_MULTIPLIERS,
   type PayrollRateKey,
 } from "@/lib/payroll-rates"
+import { parseScheduleTimeValue } from "@/lib/schedule-time"
 import type {
   Employee,
   EmployeeScheduleDay,
   Payroll,
+  PayslipAttendanceDisplay,
   PayslipPayrollInputs,
   PayslipTotals,
 } from "@/lib/types"
@@ -38,6 +41,14 @@ export const DERIVED_PAYSLIP_FIELD_KEYS = [
   "spclNd",
   "spclRd",
   "spclRdOver8",
+  "clothAdj",
+  "emplachAdj",
+  "holrepAdj",
+  "laundryAdj",
+  "medasstAdj",
+  "medcashAdj",
+  "otmealAdj",
+  "riceSubsidyAdj",
 ] as const satisfies readonly (keyof PayslipPayrollInputs)[]
 
 const NIGHT_DIFFERENTIAL_START_MINUTE = 22 * 60
@@ -46,6 +57,15 @@ const NIGHT_DIFFERENTIAL_END_MINUTE = 6 * 60
 const DERIVED_PAYSLIP_FIELDS = new Set<keyof PayslipPayrollInputs>(
   DERIVED_PAYSLIP_FIELD_KEYS
 )
+const NON_TAXABLE_ADJUSTMENT_FIELD_KEYS = new Set<string>(
+  NON_TAXABLE_ADJUSTMENT_PAIRS.map(({ adjKey }) => adjKey)
+)
+
+type AttendanceAdjustmentBasis = {
+  absencesDays: number
+  tardyMinutes: number
+  undertimeMinutes: number
+}
 
 export function createEmptyPayslipInputs(): PayslipPayrollInputs {
   return ALL_PAYSLIP_FIELD_KEYS.reduce((acc, key) => {
@@ -86,6 +106,74 @@ function getPerMinuteRate(
   divisor: EmployeeDivisor | number
 ): number {
   return getHourlyRate(basicPay, divisor) / 60
+}
+
+function reverseMinutesFromPesoDeduction(
+  amount: number,
+  basicPay: number,
+  divisor: EmployeeDivisor | number
+): number {
+  const perMinuteRate = getPerMinuteRate(basicPay, divisor)
+  if (amount <= 0 || perMinuteRate <= 0) {
+    return 0
+  }
+
+  return amount / perMinuteRate
+}
+
+function computeNonTaxableAdjustment(
+  allowanceBase: number,
+  divisor: EmployeeDivisor | number,
+  basis: AttendanceAdjustmentBasis
+): number {
+  if (allowanceBase <= 0) {
+    return 0
+  }
+
+  const dailyRate = getDailyRate(allowanceBase, divisor)
+  const minuteRate = dailyRate / HOURS_PER_DAY / 60
+  const rawAdjustment = -(
+    basis.absencesDays * dailyRate +
+    (basis.tardyMinutes + basis.undertimeMinutes) * minuteRate
+  )
+  if (rawAdjustment === 0) {
+    return 0
+  }
+
+  return roundMoney(Math.max(rawAdjustment, -allowanceBase))
+}
+
+export function applyNonTaxableAttendanceAdjustments(
+  inputs: PayslipPayrollInputs,
+  divisor: EmployeeDivisor | number,
+  basis?: AttendanceAdjustmentBasis
+): PayslipPayrollInputs {
+  const next = { ...inputs }
+  const adjustmentBasis =
+    basis ??
+    {
+      absencesDays: inputs.absencesDays ?? 0,
+      tardyMinutes: reverseMinutesFromPesoDeduction(
+        inputs.tardiness ?? 0,
+        inputs.basicPay ?? 0,
+        divisor
+      ),
+      undertimeMinutes: reverseMinutesFromPesoDeduction(
+        inputs.undertime ?? 0,
+        inputs.basicPay ?? 0,
+        divisor
+      ),
+    }
+
+  for (const { baseKey, adjKey } of NON_TAXABLE_ADJUSTMENT_PAIRS) {
+    next[adjKey] = computeNonTaxableAdjustment(
+      next[baseKey] ?? 0,
+      divisor,
+      adjustmentBasis
+    )
+  }
+
+  return next
 }
 
 function computeHourLineAmount(
@@ -176,7 +264,11 @@ export function calculatePayslipTotals(
 }
 
 function parseMinutes(value: string): number | null {
-  const match = value.trim().match(/^([01]\d|2[0-3]):([0-5]\d)$/)
+  const normalized = parseScheduleTimeValue(value)
+  if (!normalized) {
+    return null
+  }
+  const match = normalized.match(/^([01]\d|2[0-3]):([0-5]\d)$/)
   if (!match) {
     return null
   }
@@ -339,6 +431,56 @@ function isWorkRequired(day: EmployeeScheduleDay): boolean {
   return day.shiftType === "scheduledShift" || day.shiftType === "legalHoliday"
 }
 
+export function calculatePayslipAttendanceDisplay(
+  scheduleDays: EmployeeScheduleDay[]
+): PayslipAttendanceDisplay {
+  let tardyMinutes = 0
+  let undertimeMinutes = 0
+
+  for (const day of scheduleDays) {
+    if (!isWorkRequired(day) || !hasShiftPair(day) || !hasLogPair(day)) {
+      continue
+    }
+
+    const timeline = getShiftLogTimeline(day)
+    if (!timeline) {
+      continue
+    }
+
+    if (timeline.logIn > timeline.shiftIn) {
+      tardyMinutes += timeline.logIn - timeline.shiftIn
+    }
+
+    if (timeline.logOut < timeline.shiftOut) {
+      undertimeMinutes += timeline.shiftOut - timeline.logOut
+    }
+  }
+
+  return {
+    tardinessMinutes: tardyMinutes,
+    undertimeMinutes,
+  }
+}
+
+export function formatAttendanceDuration(totalMinutes: number): string {
+  if (totalMinutes <= 0) {
+    return "0 hrs"
+  }
+
+  const hours = Math.floor(totalMinutes / 60)
+  const mins = totalMinutes % 60
+
+  if (hours === 0) {
+    return `0 hrs and ${mins} ${mins === 1 ? "min" : "mins"}`
+  }
+
+  if (mins === 0) {
+    return `${hours} ${hours === 1 ? "hr" : "hrs"}`
+  }
+
+  return `${hours} ${hours === 1 ? "hr" : "hrs"} and ${mins} ${mins === 1 ? "min" : "mins"}`
+}
+
 export function derivePayslipInputsFromSchedule({
   employee,
   scheduleDays,
@@ -354,6 +496,25 @@ export function derivePayslipInputsFromSchedule({
     ...(existingInputs ?? {}),
   }
   const perMinuteRate = getPerMinuteRate(employee.basicPay, employee.divisor)
+  const fallbackAttendanceBasis: AttendanceAdjustmentBasis = {
+    absencesDays: inputs.absencesDays ?? 0,
+    tardyMinutes: reverseMinutesFromPesoDeduction(
+      inputs.tardiness ?? 0,
+      employee.basicPay,
+      employee.divisor
+    ),
+    undertimeMinutes: reverseMinutesFromPesoDeduction(
+      inputs.undertime ?? 0,
+      employee.basicPay,
+      employee.divisor
+    ),
+  }
+  const scheduleAttendanceBasis: AttendanceAdjustmentBasis = {
+    absencesDays: 0,
+    tardyMinutes: 0,
+    undertimeMinutes: 0,
+  }
+  const hasScheduleAttendanceSource = scheduleDays.some(isWorkRequired)
 
   for (const key of DERIVED_PAYSLIP_FIELDS) {
     inputs[key] = 0
@@ -366,6 +527,7 @@ export function derivePayslipInputsFromSchedule({
 
     if (isWorkRequired(day) && !hasLogs) {
       inputs.absencesDays += 1
+      scheduleAttendanceBasis.absencesDays += 1
       continue
     }
 
@@ -377,15 +539,13 @@ export function derivePayslipInputsFromSchedule({
       const timeline = getShiftLogTimeline(day)
 
       if (timeline && timeline.logIn > timeline.shiftIn) {
-        inputs.tardiness += roundMoney(
-          (timeline.logIn - timeline.shiftIn) * perMinuteRate
-        )
+        scheduleAttendanceBasis.tardyMinutes +=
+          timeline.logIn - timeline.shiftIn
       }
 
       if (timeline && timeline.logOut < timeline.shiftOut) {
-        inputs.undertime += roundMoney(
-          (timeline.shiftOut - timeline.logOut) * perMinuteRate
-        )
+        scheduleAttendanceBasis.undertimeMinutes +=
+          timeline.shiftOut - timeline.logOut
       }
     }
 
@@ -403,6 +563,21 @@ export function derivePayslipInputsFromSchedule({
     }
   }
 
+  if (!hasScheduleAttendanceSource) {
+    inputs.absencesDays = fallbackAttendanceBasis.absencesDays
+    inputs.tardiness = roundMoney(fallbackAttendanceBasis.tardyMinutes * perMinuteRate)
+    inputs.undertime = roundMoney(
+      fallbackAttendanceBasis.undertimeMinutes * perMinuteRate
+    )
+  } else {
+    inputs.tardiness = roundMoney(
+      scheduleAttendanceBasis.tardyMinutes * perMinuteRate
+    )
+    inputs.undertime = roundMoney(
+      scheduleAttendanceBasis.undertimeMinutes * perMinuteRate
+    )
+  }
+
   inputs.absencesDays = roundHours(inputs.absencesDays)
   inputs.tardiness = roundMoney(inputs.tardiness)
   inputs.undertime = roundMoney(inputs.undertime)
@@ -416,7 +591,13 @@ export function derivePayslipInputsFromSchedule({
   inputs.spclOver8 = roundHours(inputs.spclOver8)
   inputs.spclNd = roundHours(inputs.spclNd)
 
-  return inputs
+  return applyNonTaxableAttendanceAdjustments(
+    inputs,
+    employee.divisor,
+    hasScheduleAttendanceSource
+      ? scheduleAttendanceBasis
+      : fallbackAttendanceBasis
+  )
 }
 
 export function parseDecimalInput(value: string | null | undefined): number {
@@ -440,6 +621,10 @@ export function parsePayslipInputsFromFormData(
   const inputs = createEmptyPayslipInputs()
 
   for (const key of ALL_PAYSLIP_FIELD_KEYS) {
+    if (NON_TAXABLE_ADJUSTMENT_FIELD_KEYS.has(key)) {
+      continue
+    }
+
     const parsed = parseDecimalInput(String(formData.get(key) ?? ""))
     if (Number.isNaN(parsed)) {
       return { error: `Invalid number for ${key}.` }

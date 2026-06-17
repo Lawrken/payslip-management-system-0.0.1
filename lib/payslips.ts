@@ -4,6 +4,7 @@ import { and, asc, count, desc, eq, inArray, ne, sql } from "drizzle-orm"
 
 import { db, type DatabaseClient } from "@/db"
 import {
+  employeeSchedules,
   employees as employeesTable,
   payrolls as payrollsTable,
   payslipInputs,
@@ -19,15 +20,18 @@ import {
   type PaginationInput,
 } from "@/lib/pagination"
 import {
+  calculatePayslipAttendanceDisplay,
   calculatePayslipTotals,
   createEmptyPayslipInputs,
   createPayslipInputsWithBasicPay,
   derivePayslipInputsFromSchedule,
 } from "@/lib/payroll-calculator"
+import { mergeScheduleDays } from "@/lib/schedule-days"
 import type {
   Employee,
   EmployeePayslip,
   EmployeePayslipListItem,
+  EmployeeScheduleDay,
   Payroll,
   Payslip,
   PayslipListItem,
@@ -39,6 +43,14 @@ import type {
 import type { SortDirection } from "@/lib/table-sort"
 
 const VISIBLE_EMPLOYEE_PAYSLIP_STATUSES: PayslipStatus[] = ["approved", "sent"]
+
+function employeeScheduleJoinCondition() {
+  return and(
+    eq(employeeSchedules.payrollId, payslips.payrollId),
+    eq(employeeSchedules.employeeId, payslips.employeeId)
+  )
+}
+
 const PAYSLIP_STATUSES: PayslipStatus[] = [
   "draft",
   "pending",
@@ -62,15 +74,34 @@ function buildPayslipTotals(
   }
 }
 
+type PayslipPayrollRow = typeof payrollsTable.$inferSelect
+
+function resolveAttendanceScheduleDays(
+  payroll: PayslipPayrollRow | null | undefined,
+  scheduleDays?: EmployeeScheduleDay[]
+): EmployeeScheduleDay[] {
+  const days = scheduleDays ?? []
+  return payroll ? mergeScheduleDays(payroll, days) : days
+}
+
 function mapPayslipRow(row: {
   payslip: typeof payslips.$inferSelect
   payslipInput: typeof payslipInputs.$inferSelect | null
   employee: typeof employeesTable.$inferSelect | null
+  schedule?: typeof employeeSchedules.$inferSelect | null
+  payroll?: PayslipPayrollRow | null
 }): Payslip {
-  const inputs = row.payslipInput?.inputs ?? createEmptyPayslipInputs()
+  const inputs = {
+    ...createEmptyPayslipInputs(),
+    ...(row.payslipInput?.inputs ?? {}),
+  }
   const totals =
     row.payslipInput?.totals ??
     buildPayslipTotals(inputs, row.employee?.divisor)
+  const scheduleDays = resolveAttendanceScheduleDays(
+    row.payroll,
+    row.schedule?.days
+  )
 
   return {
     id: row.payslip.id,
@@ -80,6 +111,7 @@ function mapPayslipRow(row: {
     status: row.payslip.status,
     inputs,
     totals,
+    attendance: calculatePayslipAttendanceDisplay(scheduleDays),
   }
 }
 
@@ -125,7 +157,8 @@ function mapPayslipPdfRow(row: {
   payslip: typeof payslips.$inferSelect
   payslipInput: typeof payslipInputs.$inferSelect | null
   employee: typeof employeesTable.$inferSelect
-  payroll: typeof payrollsTable.$inferSelect
+  schedule?: typeof employeeSchedules.$inferSelect | null
+  payroll: PayslipPayrollRow
 }): PayslipPdfData {
   return {
     ...mapPayslipRow(row),
@@ -147,7 +180,8 @@ function mapEmployeePayslipRow(row: {
   payslip: typeof payslips.$inferSelect
   payslipInput: typeof payslipInputs.$inferSelect | null
   employee: typeof employeesTable.$inferSelect | null
-  payroll: typeof payrollsTable.$inferSelect
+  schedule?: typeof employeeSchedules.$inferSelect | null
+  payroll: PayslipPayrollRow
 }): EmployeePayslip {
   return {
     ...mapPayslipRow(row),
@@ -264,6 +298,8 @@ export async function getPaginatedPayslips(
       payslip: payslips,
       payslipInput: payslipInputs,
       employee: employeesTable,
+      schedule: employeeSchedules,
+      payroll: payrollsTable,
     })
     .from(payslips)
     .leftJoin(payslipInputs, eq(payslipInputs.payslipId, payslips.id))
@@ -271,6 +307,8 @@ export async function getPaginatedPayslips(
       employeesTable,
       eq(employeesTable.employeeId, payslips.employeeId)
     )
+    .leftJoin(employeeSchedules, employeeScheduleJoinCondition())
+    .leftJoin(payrollsTable, eq(payrollsTable.id, payslips.payrollId))
     .where(where)
     .orderBy(orderBy, asc(payslips.employeeId))
     .limit(pagination.pageSize)
@@ -402,6 +440,8 @@ export async function getPayslipById(
       payslip: payslips,
       payslipInput: payslipInputs,
       employee: employeesTable,
+      schedule: employeeSchedules,
+      payroll: payrollsTable,
     })
     .from(payslips)
     .leftJoin(payslipInputs, eq(payslipInputs.payslipId, payslips.id))
@@ -409,6 +449,8 @@ export async function getPayslipById(
       employeesTable,
       eq(employeesTable.employeeId, payslips.employeeId)
     )
+    .leftJoin(employeeSchedules, employeeScheduleJoinCondition())
+    .leftJoin(payrollsTable, eq(payrollsTable.id, payslips.payrollId))
     .where(eq(payslips.id, id))
     .limit(1)
 
@@ -419,11 +461,15 @@ export async function getPayslipsByPayrollId(
   payrollId: string,
   client: DatabaseClient = db
 ): Promise<Payslip[]> {
+  const payroll = await client.query.payrolls.findFirst({
+    where: eq(payrollsTable.id, payrollId),
+  })
   const rows = await client
     .select({
       payslip: payslips,
       payslipInput: payslipInputs,
       employee: employeesTable,
+      schedule: employeeSchedules,
     })
     .from(payslips)
     .leftJoin(payslipInputs, eq(payslipInputs.payslipId, payslips.id))
@@ -431,9 +477,10 @@ export async function getPayslipsByPayrollId(
       employeesTable,
       eq(employeesTable.employeeId, payslips.employeeId)
     )
+    .leftJoin(employeeSchedules, employeeScheduleJoinCondition())
     .where(eq(payslips.payrollId, payrollId))
 
-  return rows.map(mapPayslipRow)
+  return rows.map((row) => mapPayslipRow({ ...row, payroll }))
 }
 
 export async function getPayslipByPayrollAndEmployee(
@@ -447,6 +494,8 @@ export async function getPayslipByPayrollAndEmployee(
       payslip: payslips,
       payslipInput: payslipInputs,
       employee: employeesTable,
+      schedule: employeeSchedules,
+      payroll: payrollsTable,
     })
     .from(payslips)
     .leftJoin(payslipInputs, eq(payslipInputs.payslipId, payslips.id))
@@ -454,6 +503,8 @@ export async function getPayslipByPayrollAndEmployee(
       employeesTable,
       eq(employeesTable.employeeId, payslips.employeeId)
     )
+    .leftJoin(employeeSchedules, employeeScheduleJoinCondition())
+    .leftJoin(payrollsTable, eq(payrollsTable.id, payslips.payrollId))
     .where(
       and(
         eq(payslips.payrollId, payrollId),
@@ -476,6 +527,7 @@ export async function getVisibleEmployeePayslipDetailsByEmployeeAndId(
       payslip: payslips,
       payslipInput: payslipInputs,
       employee: employeesTable,
+      schedule: employeeSchedules,
       payroll: payrollsTable,
     })
     .from(payslips)
@@ -485,6 +537,7 @@ export async function getVisibleEmployeePayslipDetailsByEmployeeAndId(
       eq(employeesTable.employeeId, payslips.employeeId)
     )
     .leftJoin(payslipInputs, eq(payslipInputs.payslipId, payslips.id))
+    .leftJoin(employeeSchedules, employeeScheduleJoinCondition())
     .where(
       and(
         eq(payslips.id, id),
@@ -506,6 +559,7 @@ export async function getVisiblePayslipsByEmployeeId(
       payslip: payslips,
       payslipInput: payslipInputs,
       employee: employeesTable,
+      schedule: employeeSchedules,
       payroll: payrollsTable,
     })
     .from(payslips)
@@ -515,6 +569,7 @@ export async function getVisiblePayslipsByEmployeeId(
       employeesTable,
       eq(employeesTable.employeeId, payslips.employeeId)
     )
+    .leftJoin(employeeSchedules, employeeScheduleJoinCondition())
     .where(
       and(
         eq(payslips.employeeId, normalizedId),
@@ -713,15 +768,12 @@ export async function addPayslip(
     updatedAt: new Date(),
   })
 
-  return {
-    id,
-    payrollId,
-    employeeId,
-    employeeName: employee.name,
-    status,
-    inputs,
-    totals,
+  const payslip = await getPayslipById(id, client)
+  if (!payslip) {
+    return { error: "Payslip not found." }
   }
+
+  return payslip
 }
 
 export type UpdatePayslipInput = {
@@ -795,15 +847,12 @@ export async function updatePayslip(
     })
     .where(eq(payslipInputs.payslipId, input.id))
 
-  return {
-    id: input.id,
-    payrollId,
-    employeeId,
-    employeeName: employee.name,
-    status,
-    inputs,
-    totals,
+  const payslip = await getPayslipById(input.id, client)
+  if (!payslip) {
+    return { error: "Payslip not found." }
   }
+
+  return payslip
 }
 
 export async function refreshPayslipFromSchedule(

@@ -4,11 +4,13 @@ import PDFDocument from "pdfkit/js/pdfkit.standalone.js"
 
 import {
   DEDUCTION_FIELDS,
-  NON_TAXABLE_FIELDS,
+  NON_TAXABLE_ADJUSTMENT_FIELDS,
+  NON_TAXABLE_ADJUSTMENT_PAIRS,
+  NON_TAXABLE_PDF_FIELDS,
   PAY_DETAILS_FIELDS,
   type PayslipFieldDefinition,
 } from "@/lib/payslip-fields"
-import { calculatePayslipTotals } from "@/lib/payroll-calculator"
+import { calculatePayslipTotals, formatAttendanceDuration } from "@/lib/payroll-calculator"
 import { formatDisplayDate } from "@/lib/payroll-dates"
 import type { PayslipPayrollInputs, PayslipPdfData } from "@/lib/types"
 
@@ -22,7 +24,7 @@ const LOGO_HEIGHT = 52
 const DARK_GREEN = "#166534"
 
 const GRID_ROW_COUNT =
-  1 + PAY_DETAILS_FIELDS.length + 1.5 + NON_TAXABLE_FIELDS.length + 1.5 + 1
+  1 + PAY_DETAILS_FIELDS.length + 1.5 + NON_TAXABLE_PDF_FIELDS.length + 1.5 + 1
 
 const COLUMN_WIDTHS = {
   payItem: 0.21,
@@ -33,17 +35,6 @@ const COLUMN_WIDTHS = {
   dedItem: 0.24,
   dedAmount: 0.16,
 } as const
-
-const NON_TAXABLE_ADJ_LABELS: Partial<Record<string, string>> = {
-  cloth: "Clothadj",
-  emplach: "Emplachadj",
-  holrep: "Holrepadj",
-  laundry: "Laundryadj",
-  medasst: "Medasstadj",
-  medcash: "Medcashadj",
-  otmeal: "OTMealadj",
-  riceSubsidy: "Rice Subsidyadj",
-}
 
 function formatSampleAmount(value: number | undefined) {
   if (value === undefined || value === 0) {
@@ -89,13 +80,35 @@ function getPayAmount(
 }
 
 function getAdjLabel(field: PayslipFieldDefinition) {
-  if (field.key === "dmbAdj" || field.key === "taxRefund") {
-    return null
-  }
-
-  return (
-    NON_TAXABLE_ADJ_LABELS[field.key] ?? `${field.label.replace(/\s/g, "")}adj`
+  const pair = NON_TAXABLE_ADJUSTMENT_PAIRS.find(
+    ({ baseKey }) => baseKey === field.key
   )
+  const adjField = NON_TAXABLE_ADJUSTMENT_FIELDS.find(
+    (candidate) => candidate.key === pair?.adjKey
+  )
+
+  return adjField?.label ?? null
+}
+
+function getAdjValue(
+  inputs: PayslipPayrollInputs,
+  field: PayslipFieldDefinition
+) {
+  const pair = NON_TAXABLE_ADJUSTMENT_PAIRS.find(
+    ({ baseKey }) => baseKey === field.key
+  )
+
+  return pair ? inputs[pair.adjKey] : undefined
+}
+
+function getAttendanceMinutes(data: PayslipPdfData, fieldKey: string) {
+  if (fieldKey === "tardiness") {
+    return data.attendance.tardinessMinutes
+  }
+  if (fieldKey === "undertime") {
+    return data.attendance.undertimeMinutes
+  }
+  return undefined
 }
 
 function collectPdf(doc: PDFKit.PDFDocument) {
@@ -327,6 +340,7 @@ function drawMainGrid({
     const val = rawFieldValue(inputs, field)
     const amount =
       typeof val === "number" ? getPayAmount(field, val, lineAmounts) : 0
+    const attendanceMinutes = getAttendanceMinutes(data, field.key)
     const dedField = DEDUCTION_FIELDS[index]
     const dedVal = dedField ? rawFieldValue(inputs, dedField) : undefined
 
@@ -352,15 +366,20 @@ function drawMainGrid({
           align: "right",
         })
         doc.text("-", cols.hrs, textY, { width: cols.hrsW - 4, align: "right" })
-      } else if (field.inputKind === "hours") {
+      } else if (field.inputKind === "hours" || attendanceMinutes !== undefined) {
         doc.text("-", cols.days, textY, {
           width: cols.daysW - 4,
           align: "right",
         })
-        doc.text(formatSampleQty(val), cols.hrs, textY, {
-          width: cols.hrsW - 4,
-          align: "right",
-        })
+        doc.text(
+          formatAttendanceDuration(attendanceMinutes ?? 0),
+          cols.hrs,
+          textY,
+          {
+            width: cols.hrsW - 4,
+            align: "right",
+          }
+        )
       } else {
         doc.text("-", cols.days, textY, {
           width: cols.daysW - 4,
@@ -422,10 +441,11 @@ function drawMainGrid({
   rowY += taxableRowHeight
   drawGridLines(rowY)
 
-  for (const field of NON_TAXABLE_FIELDS) {
+  for (const field of NON_TAXABLE_PDF_FIELDS) {
     const textY = rowTextY(rowY, rowHeight, 8)
     const val = rawFieldValue(inputs, field)
     const adjLabel = getAdjLabel(field)
+    const adjVal = getAdjValue(inputs, field)
 
     doc.font("Helvetica-Oblique").fontSize(8).fillColor("#000000")
     doc.text(field.label, cols.payItem + 2, textY, {
@@ -451,10 +471,18 @@ function drawMainGrid({
         ellipsis: true,
       })
       doc.font("Helvetica").fontSize(8).fillColor("#000000")
-      doc.text("-", cols.dedAmount, textY, {
-        width: cols.dedAmountW - 4,
-        align: "right",
-      })
+      doc.fillColor(typeof adjVal === "number" && adjVal < 0 ? "#FF0000" : "#000000")
+      doc.text(
+        typeof adjVal === "number" && adjVal !== 0
+          ? formatSampleAmount(adjVal)
+          : "-",
+        cols.dedAmount,
+        textY,
+        {
+          width: cols.dedAmountW - 4,
+          align: "right",
+        }
+      )
     }
     rowY += rowHeight
     drawGridLines(rowY)

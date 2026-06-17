@@ -80,7 +80,7 @@ export const DEDUCTION_FIELDS: PayslipFieldDefinition[] = [
   { key: "taxPayable", label: "Tax Payable", inputKind: "peso" },
 ]
 
-export const NON_TAXABLE_FIELDS: PayslipFieldDefinition[] = [
+export const NON_TAXABLE_ADJUSTABLE_FIELDS: PayslipFieldDefinition[] = [
   { key: "cloth", label: "Cloth", inputKind: "peso" },
   { key: "emplach", label: "Emplach", inputKind: "peso" },
   { key: "holrep", label: "Holrep", inputKind: "peso" },
@@ -89,8 +89,46 @@ export const NON_TAXABLE_FIELDS: PayslipFieldDefinition[] = [
   { key: "medcash", label: "Medcash", inputKind: "peso" },
   { key: "otmeal", label: "Otmeal", inputKind: "peso" },
   { key: "riceSubsidy", label: "Rice Subsidy", inputKind: "peso" },
+]
+
+export const NON_TAXABLE_ADJUSTMENT_FIELDS: PayslipFieldDefinition[] = [
+  { key: "clothAdj", label: "Clothadj", inputKind: "peso" },
+  { key: "emplachAdj", label: "Emplachadj", inputKind: "peso" },
+  { key: "holrepAdj", label: "Holrepadj", inputKind: "peso" },
+  { key: "laundryAdj", label: "Laundryadj", inputKind: "peso" },
+  { key: "medasstAdj", label: "Medasstadj", inputKind: "peso" },
+  { key: "medcashAdj", label: "Medcashadj", inputKind: "peso" },
+  { key: "otmealAdj", label: "OTMealadj", inputKind: "peso" },
+  { key: "riceSubsidyAdj", label: "Rice Subsidyadj", inputKind: "peso" },
+]
+
+export const NON_TAXABLE_ADJUSTMENT_PAIRS = [
+  { baseKey: "cloth", adjKey: "clothAdj" },
+  { baseKey: "emplach", adjKey: "emplachAdj" },
+  { baseKey: "holrep", adjKey: "holrepAdj" },
+  { baseKey: "laundry", adjKey: "laundryAdj" },
+  { baseKey: "medasst", adjKey: "medasstAdj" },
+  { baseKey: "medcash", adjKey: "medcashAdj" },
+  { baseKey: "otmeal", adjKey: "otmealAdj" },
+  { baseKey: "riceSubsidy", adjKey: "riceSubsidyAdj" },
+] as const
+
+export const NON_TAXABLE_MANUAL_FIELDS: PayslipFieldDefinition[] = [
   { key: "dmbAdj", label: "DMB Adj.", inputKind: "peso" },
   { key: "taxRefund", label: "Tax Refund", inputKind: "peso" },
+]
+
+export const NON_TAXABLE_PDF_FIELDS: PayslipFieldDefinition[] = [
+  ...NON_TAXABLE_ADJUSTABLE_FIELDS,
+  ...NON_TAXABLE_MANUAL_FIELDS,
+]
+
+export const NON_TAXABLE_FIELDS: PayslipFieldDefinition[] = [
+  ...NON_TAXABLE_ADJUSTABLE_FIELDS.flatMap((field, index) => [
+    field,
+    NON_TAXABLE_ADJUSTMENT_FIELDS[index],
+  ]),
+  ...NON_TAXABLE_MANUAL_FIELDS,
 ]
 
 export const ALL_PAYSLIP_FIELD_KEYS = [
