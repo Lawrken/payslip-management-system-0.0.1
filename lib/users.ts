@@ -363,6 +363,40 @@ export async function syncEmployeeUserIdentity(input: {
   return { success: true }
 }
 
+export async function updateUserRole(
+  employeeId: string,
+  role: Role,
+  client: DatabaseClient = db
+): Promise<UserAccount | { error: string }> {
+  const normalizedId = normalizeEmployeeId(employeeId)
+  const existing = await client.query.users.findFirst({
+    where: eq(users.employeeId, normalizedId),
+  })
+
+  if (!existing) {
+    return { error: "User not found." }
+  }
+
+  if (!["admin", "superAdmin", "employee"].includes(role)) {
+    return { error: "Invalid role." }
+  }
+
+  await client
+    .update(users)
+    .set({
+      role,
+      updatedAt: new Date(),
+    })
+    .where(eq(users.employeeId, normalizedId))
+
+  const user = await getUserAccount(normalizedId, client)
+  if (!user) {
+    return { error: "User not found." }
+  }
+
+  return user
+}
+
 export async function resetUserPassword(
   employeeId: string,
   client: DatabaseClient = db

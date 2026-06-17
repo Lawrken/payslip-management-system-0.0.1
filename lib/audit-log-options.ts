@@ -5,6 +5,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "employee.update": "Employee edited",
   "employee.delete": "Employee deleted",
   "user.create": "User created",
+  "user.update": "User edited",
   "user.delete": "User deleted",
   "user.password_reset": "Password reset",
   "payroll.create": "Payroll created",
