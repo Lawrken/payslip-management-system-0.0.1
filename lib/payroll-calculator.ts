@@ -49,6 +49,7 @@ export const DERIVED_PAYSLIP_FIELD_KEYS = [
   "medcashAdj",
   "otmealAdj",
   "riceSubsidyAdj",
+  "dmbAdj",
 ] as const satisfies readonly (keyof PayslipPayrollInputs)[]
 
 const NIGHT_DIFFERENTIAL_START_MINUTE = 22 * 60
@@ -172,6 +173,13 @@ export function applyNonTaxableAttendanceAdjustments(
       adjustmentBasis
     )
   }
+
+  next.dmbAdj = roundMoney(
+    NON_TAXABLE_ADJUSTMENT_PAIRS.reduce(
+      (sum, { adjKey }) => sum + (next[adjKey] ?? 0),
+      0
+    )
+  )
 
   return next
 }
@@ -621,7 +629,7 @@ export function parsePayslipInputsFromFormData(
   const inputs = createEmptyPayslipInputs()
 
   for (const key of ALL_PAYSLIP_FIELD_KEYS) {
-    if (NON_TAXABLE_ADJUSTMENT_FIELD_KEYS.has(key)) {
+    if (NON_TAXABLE_ADJUSTMENT_FIELD_KEYS.has(key) || key === "dmbAdj") {
       continue
     }
 

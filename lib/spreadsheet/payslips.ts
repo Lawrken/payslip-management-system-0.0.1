@@ -127,7 +127,7 @@ export function spreadsheetRowToPayslipInputs(
   const inputs = {} as PayslipPayrollInputs
 
   for (const key of PAYSLIP_INPUT_KEYS) {
-    if (NON_TAXABLE_ADJUSTMENT_FIELD_KEYS.has(key)) {
+    if (NON_TAXABLE_ADJUSTMENT_FIELD_KEYS.has(key) || key === "dmbAdj") {
       inputs[key] = 0
       continue
     }

@@ -182,7 +182,6 @@ function buildPayslipInputs(row: unknown[]): PayslipPayrollInputs {
     otmealAdj: numberCell(row, 88),
     riceSubsidy: numberCell(row, 89),
     riceSubsidyAdj: numberCell(row, 90),
-    dmbAdj: numberCell(row, 91),
     tax: numberCell(row, 95),
     sss: numberCell(row, 96),
     sssMpf: numberCell(row, 99),
