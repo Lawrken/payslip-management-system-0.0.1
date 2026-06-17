@@ -13,15 +13,10 @@ import {
 import { createAuditLog } from "@/lib/audit-logs"
 import { requireDashboardSession } from "@/lib/authorization"
 import {
-  ACCOUNTS,
-  DEPARTMENTS,
-  EMPLOYEE_STATUSES,
-  isEmployeeDivisor,
-  isEmployeeOption,
-  POSITION_TITLES,
-  PROGRAMS,
-} from "@/lib/employee-options"
-import { parseDecimalInput } from "@/lib/payroll-calculator"
+  parseEmployeeFormData,
+  toNewEmployeeInput,
+  validateEmployeeFields,
+} from "@/lib/employee-validation"
 import { createUserAccount, syncEmployeeUserIdentity } from "@/lib/users"
 
 type EmployeeFormState = {
@@ -34,89 +29,6 @@ type EmployeeFormState = {
 
 export type AddEmployeeState = EmployeeFormState
 export type UpdateEmployeeState = EmployeeFormState
-
-function parseEmployeeFormData(formData: FormData) {
-  return {
-    name: String(formData.get("name") ?? "").trim(),
-    employeeId: String(formData.get("employeeId") ?? "").trim(),
-    email: String(formData.get("email") ?? "").trim(),
-    employeeStatus: String(formData.get("employeeStatus") ?? "").trim(),
-    positionTitle: String(formData.get("positionTitle") ?? "").trim(),
-    department: String(formData.get("department") ?? "").trim(),
-    program: String(formData.get("program") ?? "").trim(),
-    account: String(formData.get("account") ?? "").trim(),
-    divisor: Number(String(formData.get("divisor") ?? "").trim()),
-    basicPay: parseDecimalInput(String(formData.get("basicPay") ?? "")),
-    tin: String(formData.get("tin") ?? "").trim(),
-    sssNo: String(formData.get("sssNo") ?? "").trim(),
-    phicNo: String(formData.get("phicNo") ?? "").trim(),
-    hdmfNo: String(formData.get("hdmfNo") ?? "").trim(),
-  }
-}
-
-const numericIdFields = ["tin", "sssNo", "phicNo", "hdmfNo"] as const
-
-function isDigitsOnly(value: string) {
-  return /^\d+$/.test(value)
-}
-
-function isValidEmail(value: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
-}
-
-function validateEmployeeFields(
-  fields: ReturnType<typeof parseEmployeeFormData>
-) {
-  if (
-    !fields.name ||
-    !fields.employeeId ||
-    !fields.email ||
-    !fields.employeeStatus ||
-    !fields.positionTitle ||
-    !fields.department ||
-    !fields.program ||
-    !fields.account ||
-    !fields.tin ||
-    !fields.sssNo ||
-    !fields.phicNo ||
-    !fields.hdmfNo
-  ) {
-    return { error: "All fields are required." } as const
-  }
-
-  if (!isValidEmail(fields.email)) {
-    return { error: "Enter a valid email address." } as const
-  }
-
-  if (
-    !isEmployeeOption(fields.employeeStatus, EMPLOYEE_STATUSES) ||
-    !isEmployeeOption(fields.positionTitle, POSITION_TITLES) ||
-    !isEmployeeOption(fields.department, DEPARTMENTS) ||
-    !isEmployeeOption(fields.program, PROGRAMS) ||
-    !isEmployeeOption(fields.account, ACCOUNTS)
-  ) {
-    return { error: "Choose a valid employee profile option." } as const
-  }
-
-  if (!isEmployeeDivisor(fields.divisor)) {
-    return { error: "Choose a valid divisor." } as const
-  }
-
-  if (Number.isNaN(fields.basicPay)) {
-    return { error: "Basic Pay must be a non-negative number." } as const
-  }
-
-  for (const field of numericIdFields) {
-    if (!isDigitsOnly(fields[field])) {
-      return {
-        error:
-          "TIN, SSS NO., PHIC NO., and HDMF NO. must contain numbers only.",
-      } as const
-    }
-  }
-
-  return null
-}
 
 export async function addEmployeeAction(
   _prevState: AddEmployeeState,
@@ -132,7 +44,7 @@ export async function addEmployeeAction(
   if (validationError) {
     return validationError
   }
-  const employeeInput = fields as NewEmployeeInput
+  const employeeInput = toNewEmployeeInput(fields)
 
   const result = await db.transaction(async (tx) => {
     const employee = await addEmployee(employeeInput, tx)
@@ -212,7 +124,7 @@ export async function updateEmployeeAction(
   if (validationError) {
     return validationError
   }
-  const employeeInput = fields as NewEmployeeInput
+  const employeeInput = toNewEmployeeInput(fields)
 
   const result = await db.transaction(async (tx) => {
     const previousEmployee = await getEmployeeById(id, tx)
