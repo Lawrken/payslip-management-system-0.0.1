@@ -170,6 +170,7 @@ type HandsontableSpreadsheetProps = {
     dirtyRows: SpreadsheetRow[]
     allRows: SpreadsheetRow[]
     dirtyRowIds: string[]
+    changedFieldsByRowId: Record<string, string[]>
   }) => Promise<void>
   onSaveError?: (message: string) => void
   isSaving?: boolean
@@ -557,11 +558,20 @@ export function HandsontableSpreadsheet({
       dirtyRows,
       initialSnapshotRef.current
     )
+    const changedFieldsByRowId = Object.fromEntries(
+      dirtyIds.map((rowId) => [
+        rowId,
+        [...dirtyCells]
+          .filter((dirtyCell) => dirtyCell.startsWith(`${rowId}:`))
+          .map((dirtyCell) => dirtyCell.slice(rowId.length + 1)),
+      ])
+    )
 
     await onSave({
       dirtyRows: enrichedDirtyRows,
       allRows: rowDataRef.current,
       dirtyRowIds: dirtyIds,
+      changedFieldsByRowId,
     })
   }
 

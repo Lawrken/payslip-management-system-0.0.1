@@ -121,6 +121,7 @@ export function SpreadsheetPageContent({
     dirtyRows: SpreadsheetRow[]
     allRows: SpreadsheetRow[]
     dirtyRowIds: string[]
+    changedFieldsByRowId: Record<string, string[]>
   }) {
     setIsSaving(true)
     setSaveErrors([])
@@ -130,7 +131,12 @@ export function SpreadsheetPageContent({
 
       switch (activeTab) {
         case "employees":
-          result = await bulkUpdateEmployeesAction(context.dirtyRows)
+          result = await bulkUpdateEmployeesAction(
+            context.dirtyRows.map((row) => ({
+              ...row,
+              __changedFields: context.changedFieldsByRowId[row.rowId] ?? [],
+            }))
+          )
           break
         case "payrolls":
           result = await bulkUpdatePayrollsAction(context.dirtyRows)
@@ -146,9 +152,14 @@ export function SpreadsheetPageContent({
               )
             ),
           ]
+          const dirtyEmployeeIdSet = new Set(dirtyEmployeeIds)
+          const rowsForDirtyEmployees = (
+            context.allRows as ScheduleSpreadsheetRow[]
+          ).filter((row) => dirtyEmployeeIdSet.has(row.employeeId))
+
           result = await bulkUpdateSchedulesAction({
             payrollId: selectedPayrollId,
-            allRows: context.allRows,
+            allRows: rowsForDirtyEmployees,
             dirtyEmployeeIds,
           })
           break
@@ -175,7 +186,10 @@ export function SpreadsheetPageContent({
         toast.error("No rows were saved. Fix the highlighted errors and try again.")
       }
     } catch {
-      toast.error("Failed to save changes.")
+      const message =
+        "The spreadsheet save request failed before the server returned row details. Check the server logs and try again."
+      setSaveErrors([{ rowId: "", message }])
+      toast.error(message)
     } finally {
       setIsSaving(false)
     }
