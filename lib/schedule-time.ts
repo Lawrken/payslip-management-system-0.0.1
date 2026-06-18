@@ -242,7 +242,7 @@ function canAppendTimeDigit(digits: string, digit: string): boolean {
     if (hour >= 1 && hour <= 12) {
       return true
     }
-    if (Number(next[0]) >= 1 && Number(next[0]) <= 9 && Number(next[1]) <= 5) {
+    if (Number(next[0]) >= 1 && Number(next[0]) <= 9 && Number(next[1]) <= 9) {
       return true
     }
     return false
@@ -252,7 +252,7 @@ function canAppendTimeDigit(digits: string, digit: string): boolean {
     if (usesTwoDigitHour(next)) {
       return Number(digit) <= 5
     }
-    return Number(digit) <= 5
+    return Number(next.slice(1, 3)) <= 59
   }
 
   const minute = getMinuteValue(next)
