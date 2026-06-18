@@ -153,7 +153,7 @@ export function scheduleRowsToDays(
       if (parsed === null) {
         const label = field.replace(/([A-Z])/g, " $1").trim()
         return {
-          error: `Invalid ${label} on ${row.date}. Use 24-hour format (09:30) or 9:30 AM.`,
+          error: `Invalid ${label} on ${row.date}. Use 9:30 AM format.`,
           rowId: row.rowId,
         }
       }

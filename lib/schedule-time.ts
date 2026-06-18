@@ -78,6 +78,50 @@ export function formatTimeDisplay(value: string): string {
   return `${hour}:${minute} ${period}`
 }
 
+export function formatScheduleTimeForExcel(value: string): string {
+  const trimmed = value.trim()
+  if (!trimmed) {
+    return ""
+  }
+  return formatTimeDisplay(trimmed) || trimmed
+}
+
+export function coerceScheduleTimeCell(value: unknown): string {
+  if (value === null || value === undefined || value === "") {
+    return ""
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const timeFraction = value >= 1 ? value % 1 : value
+    if (timeFraction >= 0 && timeFraction < 1) {
+      const totalSeconds = Math.round(timeFraction * 24 * 60 * 60)
+      const hours = Math.floor(totalSeconds / 3600) % 24
+      const minutes = Math.floor((totalSeconds % 3600) / 60)
+      return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`
+    }
+  }
+
+  return String(value).trim()
+}
+
+export function scheduleTimesEqual(left: unknown, right: unknown): boolean {
+  const leftRaw = coerceScheduleTimeCell(left)
+  const rightRaw = coerceScheduleTimeCell(right)
+
+  if (!leftRaw && !rightRaw) {
+    return true
+  }
+
+  const leftParsed = parseScheduleTimeValue(leftRaw)
+  const rightParsed = parseScheduleTimeValue(rightRaw)
+
+  if (leftParsed === null || rightParsed === null) {
+    return leftRaw === rightRaw
+  }
+
+  return leftParsed === rightParsed
+}
+
 export function parseScheduleTimeValue(value: string): string | null {
   const trimmed = value.trim()
   if (!trimmed) {
