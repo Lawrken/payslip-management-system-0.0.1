@@ -17,19 +17,11 @@ import {
   type UpdateEmployeeInput,
 } from "@/lib/employees"
 import { mergeDtrDays } from "@/lib/dtr-days"
-import { upsertEmployeeSchedule } from "@/lib/employee-schedules"
 import { getPayrollById, updatePayroll } from "@/lib/payrolls"
-import { updatePayslip, refreshPayslipFromSchedule } from "@/lib/payslips"
 import {
-  groupScheduleRowsByEmployee,
-  resolveScheduleErrorRowId,
-  scheduleRowsToDays,
-  type ScheduleSpreadsheetRow,
-} from "@/lib/spreadsheet/schedules"
-import {
-  spreadsheetRowToPayslipInputs,
-  type PayslipSpreadsheetRow,
-} from "@/lib/spreadsheet/payslips"
+  bulkSavePayslipRows,
+  bulkSaveScheduleRows,
+} from "@/lib/excel/apply-payroll-import"
 import type { BulkSaveResult } from "@/lib/spreadsheet/types"
 import { syncEmployeeUserIdentity, updateUserRole } from "@/lib/users"
 import type { Role } from "@/lib/types"
@@ -340,58 +332,10 @@ export async function bulkUpdatePayslipsAction(
       }
     }
 
-    const errors: BulkSaveResult["errors"] = []
-    let updatedCount = 0
-
-    await db.transaction(async (tx) => {
-      for (const row of rows) {
-        const payslipRow = row as PayslipSpreadsheetRow
-        const rowId = String(payslipRow.rowId ?? payslipRow.id ?? "")
-
-        const inputs = spreadsheetRowToPayslipInputs(payslipRow)
-        if ("error" in inputs) {
-          errors.push({ rowId, message: inputs.error })
-          continue
-        }
-
-        const payslip = await updatePayslip(
-          {
-            id: String(payslipRow.id),
-            payrollId: String(payslipRow.payrollId),
-            employeeId: String(payslipRow.employeeId),
-            inputs,
-          },
-          tx
-        )
-
-        if ("error" in payslip) {
-          errors.push({ rowId, message: payslip.error })
-          continue
-        }
-
-        await createAuditLog({
-          actor: session,
-          action: "payslip.update",
-          targetType: "payslip",
-          targetId: payslip.id,
-          targetLabel: `${payslip.employeeName} (${payslip.employeeId})`,
-          details: "Updated payslip from spreadsheet.",
-          client: tx,
-        })
-
-        updatedCount += 1
-      }
-    })
-
-    if (updatedCount > 0) {
-      revalidateSpreadsheetPaths()
-    }
-
-    return {
-      success: errors.length === 0,
-      updatedCount,
-      errors,
-    }
+    return bulkSavePayslipRows(
+      session,
+      rows as import("@/lib/spreadsheet/payslips").PayslipSpreadsheetRow[]
+    )
   })
 }
 
@@ -410,96 +354,12 @@ export async function bulkUpdateSchedulesAction(input: {
       }
     }
 
-    const payrollId = input.payrollId.trim()
-    const payroll = await getPayrollById(payrollId)
-    if (!payroll) {
-      return {
-        success: false,
-        updatedCount: 0,
-        errors: [{ rowId: "", message: "Payroll not found." }],
-      }
-    }
-
-    const scheduleRows = input.allRows as ScheduleSpreadsheetRow[]
-    const grouped = groupScheduleRowsByEmployee(scheduleRows)
-    const errors: BulkSaveResult["errors"] = []
-    let updatedCount = 0
-
-    await db.transaction(async (tx) => {
-      for (const employeeId of input.dirtyEmployeeIds) {
-        const employeeRows = grouped.get(employeeId) ?? []
-        if (employeeRows.length === 0) {
-          errors.push({
-            rowId: employeeId,
-            message: "Schedule rows not found for employee.",
-          })
-          continue
-        }
-
-        const daysResult = scheduleRowsToDays(employeeRows)
-        if ("error" in daysResult) {
-          errors.push({ rowId: daysResult.rowId, message: daysResult.error })
-          continue
-        }
-
-        const schedule = await upsertEmployeeSchedule(
-          { payrollId, employeeId, days: daysResult },
-          tx
-        )
-
-        if ("error" in schedule) {
-          errors.push({
-            rowId: resolveScheduleErrorRowId(
-              employeeId,
-              daysResult,
-              schedule.error
-            ),
-            message: schedule.error,
-          })
-          continue
-        }
-
-        const refreshedPayslip = await refreshPayslipFromSchedule(
-          payrollId,
-          employeeId,
-          tx
-        )
-
-        if ("error" in refreshedPayslip) {
-          errors.push({
-            rowId: resolveScheduleErrorRowId(
-              employeeId,
-              daysResult,
-              refreshedPayslip.error
-            ),
-            message: refreshedPayslip.error,
-          })
-          continue
-        }
-
-        await createAuditLog({
-          actor: session,
-          action: "schedule.update",
-          targetType: "employee_schedule",
-          targetId: schedule.id,
-          targetLabel: `${employeeId} (${payroll.payrollPeriodLabel})`,
-          details: "Updated employee schedule from spreadsheet.",
-          client: tx,
-        })
-
-        updatedCount += 1
-      }
+    return bulkSaveScheduleRows(session, {
+      payrollId: input.payrollId,
+      allRows:
+        input.allRows as import("@/lib/spreadsheet/schedules").ScheduleSpreadsheetRow[],
+      dirtyEmployeeIds: input.dirtyEmployeeIds,
     })
-
-    if (updatedCount > 0) {
-      revalidateSpreadsheetPaths()
-    }
-
-    return {
-      success: errors.length === 0,
-      updatedCount,
-      errors,
-    }
   })
 }
 
