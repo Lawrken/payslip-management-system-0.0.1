@@ -17,11 +17,14 @@ export const IMPORTABLE_SHEET_NAMES = [
   EXCEL_SHEET_NAMES.schedule,
 ] as const satisfies readonly ExcelSheetName[]
 
+export type ExcelListValidationKey = "shiftType" | "dtrStatus"
+
 export type ExcelColumnDef = {
   key: string
   label: string
   editable: boolean
   section?: string
+  listValidation?: ExcelListValidationKey
 }
 
 const derivedFieldKeys = new Set<string>(DERIVED_PAYSLIP_FIELD_KEYS)
@@ -90,7 +93,7 @@ export const SCHEDULE_COLUMNS: ExcelColumnDef[] = [
     editable: false,
     section: "Identity",
   },
-  { key: "shiftType", label: "Shift Type", editable: true },
+  { key: "shiftType", label: "Shift Type", editable: true, listValidation: "shiftType" },
   { key: "shiftIn", label: "Shift In", editable: true },
   { key: "shiftOut", label: "Shift Out", editable: true },
   { key: "logIn", label: "Log In", editable: true },
@@ -108,7 +111,7 @@ export const PAYROLL_COLUMNS: ExcelColumnDef[] = [
 
 export const DTR_COLUMNS: ExcelColumnDef[] = [
   { key: "date", label: "Date", editable: false },
-  { key: "status", label: "Status", editable: false },
+  { key: "status", label: "Status", editable: false, listValidation: "dtrStatus" },
   { key: "holidayName", label: "Holiday Name", editable: false },
 ]
 
