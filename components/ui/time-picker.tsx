@@ -47,7 +47,21 @@ export function TimePicker({
 
   function handleInputChange(raw: string) {
     setInputError(null)
-    setDraft(formatTimeInput(raw))
+
+    // Detect backspace past an auto-inserted colon:
+    // If the user is deleting (raw is shorter than current draft) and the
+    // current draft ends with ":" (auto-colon), strip the last digit so the
+    // colon doesn't get re-appended, trapping the cursor.
+    const prev = draft ?? formatTimeDisplay(value)
+    const isDeleting = raw.length < prev.length
+    const prevEndsWithAutoColon = prev.endsWith(":")
+    let adjusted = raw
+    if (isDeleting && prevEndsWithAutoColon && raw === prev.slice(0, -1)) {
+      // Remove the last digit so we fall back to a single-digit state
+      adjusted = raw.slice(0, -1)
+    }
+
+    setDraft(formatTimeInput(adjusted))
   }
 
   function commitInput() {
