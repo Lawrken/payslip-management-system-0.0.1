@@ -394,6 +394,7 @@ export function EditPayslipDialog({
           className="flex min-h-0 flex-1 flex-col"
         >
           <input type="hidden" name="payrollId" value={payrollId} />
+          <input type="hidden" name="employeeId" value={employeeId} />
           {!isCreateMode && loadedPayslip ? (
             <input type="hidden" name="id" value={loadedPayslip.id} />
           ) : null}
