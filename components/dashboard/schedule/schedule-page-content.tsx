@@ -6,11 +6,14 @@ import { useRouter, useSearchParams } from "next/navigation"
 import * as React from "react"
 
 import { getEmployeeScheduleAction } from "@/app/dashboard/schedule/actions"
+import { PayrollExcelExportButton } from "@/components/dashboard/payrolls/payroll-excel-export-button"
+import { PayrollExcelImportDialog } from "@/components/dashboard/payrolls/payroll-excel-import-dialog"
 import { EmployeeScheduleTable } from "@/components/dashboard/schedule/employee-schedule-table"
 import { EmployeeCombobox } from "@/components/dashboard/shared/employee-combobox"
 import { PaginationControls } from "@/components/dashboard/shared/pagination-controls"
 import { PayrollPeriodCombobox } from "@/components/dashboard/shared/payroll-period-combobox"
 import { PayrollPeriodStrip } from "@/components/dashboard/shared/payroll-period-strip"
+import { Button } from "@/components/ui/button"
 import type { EmployeeOption } from "@/lib/employees"
 import type { ScheduleRowSort } from "@/lib/employee-schedules"
 import type { PaginatedResult } from "@/lib/pagination"
@@ -198,6 +201,19 @@ export function SchedulePageContent({
             onChange={handleEmployeeFilterChange}
             variant="filter"
           />
+          {selectedPayrollId ? (
+            <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
+              <PayrollExcelExportButton
+                payrollId={selectedPayrollId}
+                size="default"
+              />
+              <PayrollExcelImportDialog payrollId={selectedPayrollId}>
+                <Button type="button" variant="outline">
+                  Import Excel
+                </Button>
+              </PayrollExcelImportDialog>
+            </div>
+          ) : null}
         </div>
 
         {selectedPayroll ? (

@@ -5,6 +5,8 @@ import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import * as React from "react"
 
+import { PayrollExcelExportButton } from "@/components/dashboard/payrolls/payroll-excel-export-button"
+import { PayrollExcelImportDialog } from "@/components/dashboard/payrolls/payroll-excel-import-dialog"
 import { EmployeeCombobox } from "@/components/dashboard/shared/employee-combobox"
 import { PaginationControls } from "@/components/dashboard/shared/pagination-controls"
 import { PayrollPeriodCombobox } from "@/components/dashboard/shared/payroll-period-combobox"
@@ -171,7 +173,17 @@ export function PayslipsPageContent({
               variant="filter"
             />
             {selectedPayrollId ? (
-              <EditPayslipDialog
+              <>
+                <PayrollExcelExportButton
+                  payrollId={selectedPayrollId}
+                  size="default"
+                />
+                <PayrollExcelImportDialog payrollId={selectedPayrollId}>
+                  <Button type="button" variant="outline">
+                    Import Excel
+                  </Button>
+                </PayrollExcelImportDialog>
+                <EditPayslipDialog
                 employeeOptions={employeeOptions}
                 payslipListItems={payslips.items}
                 payrollId={selectedPayrollId}
@@ -183,6 +195,7 @@ export function PayslipsPageContent({
               >
                 <Button>Edit Payslip</Button>
               </EditPayslipDialog>
+              </>
             ) : null}
           </div>
         </div>

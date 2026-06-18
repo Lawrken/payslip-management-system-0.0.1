@@ -5,6 +5,7 @@ import * as React from "react"
 import { toast } from "sonner"
 
 import { deletePayrollAction } from "@/app/dashboard/payrolls/actions"
+import { PayrollExcelExportButton } from "@/components/dashboard/payrolls/payroll-excel-export-button"
 import { EditPayrollDialog } from "@/components/dashboard/payrolls/edit-payroll-dialog"
 import {
   AlertDialog,
@@ -49,6 +50,7 @@ export function PayrollRowActions({ payroll }: PayrollRowActionsProps) {
   return (
     <>
       <div className="flex justify-end gap-2">
+        <PayrollExcelExportButton payrollId={payroll.id} />
         <Button
           type="button"
           variant="outline"
