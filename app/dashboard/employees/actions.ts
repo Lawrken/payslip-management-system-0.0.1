@@ -14,7 +14,7 @@ import { requireDashboardSession } from "@/lib/authorization"
 import {
   parseEmployeeFormData,
   toNewEmployeeInput,
-  validateEmployeeFields,
+  validateEmployeeFormData,
 } from "@/lib/employee-validation"
 import { createUserAccount, syncEmployeeUserIdentity } from "@/lib/users"
 
@@ -39,7 +39,7 @@ export async function addEmployeeAction(
   }
 
   const fields = parseEmployeeFormData(formData)
-  const validationError = validateEmployeeFields(fields)
+  const validationError = validateEmployeeFormData(formData)
   if (validationError) {
     return validationError
   }
@@ -116,7 +116,7 @@ export async function updateEmployeeAction(
 
   const id = String(formData.get("id") ?? "").trim()
   const fields = parseEmployeeFormData(formData)
-  const validationError = validateEmployeeFields(fields)
+  const validationError = validateEmployeeFormData(formData)
   if (!id) {
     return { error: "Employee not found." }
   }

@@ -6,6 +6,7 @@ import {
   PAY_DETAILS_FIELDS,
 } from "@/lib/payslip-fields"
 import type { EmployeeDivisor } from "@/lib/employee-options"
+import { getPayslipFieldMaxLengthByKey } from "@/lib/input-limits"
 import {
   CUTOFF_PERIOD_DAYS,
   HOURS_PER_DAY,
@@ -633,7 +634,13 @@ export function parsePayslipInputsFromFormData(
       continue
     }
 
-    const parsed = parseDecimalInput(String(formData.get(key) ?? ""))
+    const rawValue = String(formData.get(key) ?? "").trim()
+    const maxLength = getPayslipFieldMaxLengthByKey(key)
+    if (maxLength !== undefined && rawValue.length > maxLength) {
+      return { error: `${key} must be at most ${maxLength} characters.` }
+    }
+
+    const parsed = parseDecimalInput(rawValue)
     if (Number.isNaN(parsed)) {
       return { error: `Invalid number for ${key}.` }
     }

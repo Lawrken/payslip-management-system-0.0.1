@@ -9,6 +9,7 @@ function stripNonDigits(value: string) {
 }
 
 export function NumericInput({
+  maxLength,
   onChange,
   ...props
 }: React.ComponentProps<typeof Input>) {
@@ -16,8 +17,12 @@ export function NumericInput({
     <Input
       inputMode="numeric"
       pattern="[0-9]+"
+      maxLength={maxLength}
       onChange={(event) => {
-        const digitsOnly = stripNonDigits(event.target.value)
+        let digitsOnly = stripNonDigits(event.target.value)
+        if (maxLength !== undefined) {
+          digitsOnly = digitsOnly.slice(0, maxLength)
+        }
         if (digitsOnly !== event.target.value) {
           event.target.value = digitsOnly
         }

@@ -8,6 +8,11 @@ import {
   PROGRAMS,
 } from "@/lib/employee-options"
 import type { NewEmployeeInput } from "@/lib/employees"
+import {
+  getGovernmentIdFieldLabel,
+  GOVERNMENT_ID_MAX_LENGTH,
+  MONEY_INPUT_MAX_LENGTH,
+} from "@/lib/input-limits"
 import { parseDecimalInput } from "@/lib/payroll-calculator"
 
 export type EmployeeFieldValues = {
@@ -41,6 +46,28 @@ function isDigitsOnly(value: string) {
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+}
+
+function validateEmployeeInputLengths(
+  input: Record<string, unknown>
+): { error: string } | null {
+  const basicPayRaw = String(input.basicPay ?? "").trim()
+  if (basicPayRaw.length > MONEY_INPUT_MAX_LENGTH) {
+    return {
+      error: `Basic Pay must be at most ${MONEY_INPUT_MAX_LENGTH} characters.`,
+    }
+  }
+
+  for (const field of numericIdFields) {
+    const value = String(input[field] ?? "").trim()
+    if (value.length > GOVERNMENT_ID_MAX_LENGTH) {
+      return {
+        error: `${getGovernmentIdFieldLabel(field)} must be at most ${GOVERNMENT_ID_MAX_LENGTH} characters.`,
+      }
+    }
+  }
+
+  return null
 }
 
 export function parseEmployeeFields(
@@ -84,8 +111,16 @@ export function parseEmployeeFormData(formData: FormData): EmployeeFieldValues {
 }
 
 export function validateEmployeeFields(
-  fields: EmployeeFieldValues
+  fields: EmployeeFieldValues,
+  rawInput?: Record<string, unknown>
 ): { error: string } | null {
+  if (rawInput) {
+    const lengthError = validateEmployeeInputLengths(rawInput)
+    if (lengthError) {
+      return lengthError
+    }
+  }
+
   if (
     !fields.name ||
     !fields.employeeId ||
@@ -132,4 +167,27 @@ export function validateEmployeeFields(
   }
 
   return null
+}
+
+export function validateEmployeeFormData(
+  formData: FormData
+): { error: string } | null {
+  const rawInput = {
+    name: formData.get("name"),
+    employeeId: formData.get("employeeId"),
+    email: formData.get("email"),
+    employeeStatus: formData.get("employeeStatus"),
+    positionTitle: formData.get("positionTitle"),
+    department: formData.get("department"),
+    program: formData.get("program"),
+    account: formData.get("account"),
+    divisor: formData.get("divisor"),
+    basicPay: formData.get("basicPay"),
+    tin: formData.get("tin"),
+    sssNo: formData.get("sssNo"),
+    phicNo: formData.get("phicNo"),
+    hdmfNo: formData.get("hdmfNo"),
+  }
+
+  return validateEmployeeFields(parseEmployeeFields(rawInput), rawInput)
 }

@@ -16,6 +16,10 @@ import {
   POSITION_TITLES,
   PROGRAMS,
 } from "@/lib/employee-options"
+import {
+  GOVERNMENT_ID_MAX_LENGTH,
+  MONEY_INPUT_MAX_LENGTH,
+} from "@/lib/input-limits"
 import type { Employee } from "@/lib/types"
 
 type EmployeeFormFieldsProps = {
@@ -160,6 +164,7 @@ export function EmployeeFormFields({
               id={`${prefix}basicPay`}
               name="basicPay"
               className="tabular-nums"
+              maxLength={MONEY_INPUT_MAX_LENGTH}
               defaultValue={
                 employee?.basicPay !== undefined
                   ? String(employee.basicPay)
@@ -180,6 +185,7 @@ export function EmployeeFormFields({
             <NumericInput
               id={`${prefix}tin`}
               name="tin"
+              maxLength={GOVERNMENT_ID_MAX_LENGTH}
               defaultValue={employee?.tin?.replace(/\D/g, "")}
             />
           </Field>
@@ -188,6 +194,7 @@ export function EmployeeFormFields({
             <NumericInput
               id={`${prefix}sssNo`}
               name="sssNo"
+              maxLength={GOVERNMENT_ID_MAX_LENGTH}
               defaultValue={employee?.sssNo?.replace(/\D/g, "")}
             />
           </Field>
@@ -196,6 +203,7 @@ export function EmployeeFormFields({
             <NumericInput
               id={`${prefix}phicNo`}
               name="phicNo"
+              maxLength={GOVERNMENT_ID_MAX_LENGTH}
               defaultValue={employee?.phicNo?.replace(/\D/g, "")}
             />
           </Field>
@@ -204,6 +212,7 @@ export function EmployeeFormFields({
             <NumericInput
               id={`${prefix}hdmfNo`}
               name="hdmfNo"
+              maxLength={GOVERNMENT_ID_MAX_LENGTH}
               defaultValue={employee?.hdmfNo?.replace(/\D/g, "")}
             />
           </Field>

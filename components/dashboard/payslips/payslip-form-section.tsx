@@ -2,6 +2,7 @@
 
 import { DecimalInput } from "@/components/dashboard/shared/decimal-input"
 import { Field, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field"
+import { getPayslipFieldMaxLength } from "@/lib/input-limits"
 import type { PayslipFieldDefinition } from "@/lib/payslip-fields"
 import type { PayslipPayrollInputs } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -54,6 +55,7 @@ export function PayslipFormSection({
               <DecimalInput
                 id={field.key}
                 name={field.key}
+                maxLength={getPayslipFieldMaxLength(field.inputKind)}
                 value={displayValue}
                 readOnly={isReadOnly}
                 aria-readonly={isReadOnly}

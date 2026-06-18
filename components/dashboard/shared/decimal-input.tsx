@@ -14,14 +14,19 @@ function sanitizeDecimal(value: string): string {
 }
 
 export function DecimalInput({
+  maxLength,
   onChange,
   ...props
 }: React.ComponentProps<typeof Input>) {
   return (
     <Input
       inputMode="decimal"
+      maxLength={maxLength}
       onChange={(event) => {
-        const sanitized = sanitizeDecimal(event.target.value)
+        let sanitized = sanitizeDecimal(event.target.value)
+        if (maxLength !== undefined) {
+          sanitized = sanitized.slice(0, maxLength)
+        }
         if (sanitized !== event.target.value) {
           event.target.value = sanitized
         }
