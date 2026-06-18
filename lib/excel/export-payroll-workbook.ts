@@ -16,6 +16,7 @@ import {
 } from "@/lib/excel/columns"
 import type { ExcelCellStyleKind } from "@/lib/excel/styles"
 import { formatScheduleTimeForExcel } from "@/lib/schedule-time"
+import { buildListValidationSheet } from "@/lib/excel/list-validations"
 import { safeWorkbookFilename } from "@/lib/excel/workbook-utils"
 import { getEmployees } from "@/lib/employees"
 import { getEmployeeSchedulesByPayrollId } from "@/lib/employee-schedules"
@@ -118,6 +119,8 @@ export async function buildPayrollExportWorkbook(payrollId: string) {
   workbook.creator = "Helport Payslip"
   workbook.created = new Date()
 
+  const listValidationRanges = buildListValidationSheet(workbook)
+
   await buildInstructionsWorksheet(workbook, payroll)
 
   await buildStyledDataSheet({
@@ -134,6 +137,7 @@ export async function buildPayrollExportWorkbook(payrollId: string) {
         payoutDate: payroll.payoutDate,
       },
     ],
+    listValidationRanges,
   })
 
   await buildStyledDataSheet({
@@ -145,6 +149,7 @@ export async function buildPayrollExportWorkbook(payrollId: string) {
       status: day.status,
       holidayName: day.holidayName,
     })),
+    listValidationRanges,
   })
 
   await buildStyledDataSheet({
@@ -152,6 +157,7 @@ export async function buildPayrollExportWorkbook(payrollId: string) {
     sheetName: EXCEL_SHEET_NAMES.payslips,
     columns: PAYSLIPS_COLUMNS,
     rows: payslipRows.map(payslipRowForExport),
+    listValidationRanges,
   })
 
   await buildStyledDataSheet({
@@ -160,6 +166,7 @@ export async function buildPayrollExportWorkbook(payrollId: string) {
     columns: SCHEDULE_COLUMNS,
     rows: scheduleRows.map(scheduleRowForExport),
     resolveCellStyle: resolveScheduleCellStyle,
+    listValidationRanges,
   })
 
   const filename = `helport-payroll-${safeWorkbookFilename(payroll.payrollPeriodLabel)}.xlsx`

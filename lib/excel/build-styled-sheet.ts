@@ -1,6 +1,7 @@
 import ExcelJS from "exceljs"
 
-import { SCHEDULE_TIME_KEYS, type ExcelColumnDef } from "@/lib/excel/columns"
+import { SCHEDULE_TIME_KEYS, type ExcelColumnDef, type ExcelListValidationKey } from "@/lib/excel/columns"
+import { applyListValidation, type ExcelListValidationRanges } from "@/lib/excel/list-validations"
 import {
   isLockedStyleKind,
   protectWorksheet,
@@ -23,6 +24,7 @@ export type BuildStyledDataSheetOptions = {
     column: ExcelColumnDef
   ) => ExcelCellStyleKind
   protectSheet?: boolean
+  listValidationRanges?: ExcelListValidationRanges
 }
 
 function isNumericColumn(column: ExcelColumnDef, value: unknown): boolean {
@@ -69,6 +71,10 @@ function defaultCellStyle(column: ExcelColumnDef): ExcelCellStyleKind {
   return column.editable ? "editable" : "readonly"
 }
 
+function listValidationAllowBlank(key: ExcelListValidationKey): boolean {
+  return key !== "shiftType"
+}
+
 export async function buildStyledDataSheet({
   workbook,
   sheetName,
@@ -76,6 +82,7 @@ export async function buildStyledDataSheet({
   rows,
   resolveCellStyle,
   protectSheet = true,
+  listValidationRanges,
 }: BuildStyledDataSheetOptions): Promise<ExcelJS.Worksheet> {
   const worksheet = workbook.addWorksheet(sheetName)
 
@@ -119,6 +126,23 @@ export async function buildStyledDataSheet({
   }))
 
   worksheet.views = [{ state: "frozen", ySplit: 1, activeCell: "A2" }]
+
+  if (listValidationRanges) {
+    columns.forEach((column, columnIndex) => {
+      if (!column.listValidation) {
+        return
+      }
+
+      const rangeFormula = listValidationRanges[column.listValidation]
+      if (!rangeFormula) {
+        return
+      }
+
+      applyListValidation(worksheet, columnIndex, rows.length, rangeFormula, {
+        allowBlank: listValidationAllowBlank(column.listValidation),
+      })
+    })
+  }
 
   if (protectSheet) {
     await protectWorksheet(worksheet)

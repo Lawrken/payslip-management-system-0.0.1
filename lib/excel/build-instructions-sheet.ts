@@ -60,8 +60,9 @@ export async function buildInstructionsWorksheet(
   const steps = [
     "1. Edit only the Payslips and Schedule sheets.",
     "2. Do not rename sheets or change column order.",
-    "3. In Excel, gray cells are locked. If using Google Sheets, only edit white cells — the app validates on import.",
-    "4. Upload this file from Payslips or Schedule in the dashboard.",
+    "3. Use the dropdown arrows on Shift Type (and DTR status for reference).",
+    "4. In Excel, gray cells are locked. If using Google Sheets, only edit white cells — the app validates on import.",
+    "5. Upload this file from Payslips or Schedule in the dashboard.",
   ]
   for (const step of steps) {
     worksheet.addRow([step])
