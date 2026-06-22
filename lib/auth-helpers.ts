@@ -18,7 +18,7 @@ export function normalizeEmail(email: string): string {
 
 export function getHomePath(role: Role): string {
   if (role === "employee") {
-    return "/payslips"
+    return "/employee"
   }
   return "/dashboard"
 }

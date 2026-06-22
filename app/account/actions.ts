@@ -43,7 +43,9 @@ export async function changePasswordAction(
   }
 
   revalidatePath("/dashboard/account/password")
-  revalidatePath("/payslips")
+  revalidatePath("/employee")
+  revalidatePath("/employee/payslips")
+  revalidatePath("/employee/year-to-date")
   return { success: true }
 }
 

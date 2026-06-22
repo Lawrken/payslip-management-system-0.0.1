@@ -2,26 +2,18 @@
 
 import * as React from "react"
 
-import { getEmployeePayslipDetailAction } from "@/app/payslips/actions"
+import { getEmployeePayslipDetailAction } from "@/app/employee/payslips/actions"
 import { EmployeePayslipPeriodSelector } from "@/components/payslips/employee-payslip-period-selector"
 import { EmployeePayslipViewer } from "@/components/payslips/employee-payslip-viewer"
 import type { EmployeePayslipPreviewItem } from "@/components/payslips/employee-payslip-viewer"
-import { EmployeeYtdSummaryCard } from "@/components/payslips/employee-ytd-summary"
-import { Separator } from "@/components/ui/separator"
-import type { EmployeePayslipListItem, EmployeeYtdOverview } from "@/lib/types"
+import type { EmployeePayslipListItem } from "@/lib/types"
 
 type EmployeePayslipsWorkspaceProps = {
   payslipPeriods: EmployeePayslipListItem[]
-  ytdOverview: EmployeeYtdOverview
-  signedInLabel: string
-  headerActions: React.ReactNode
 }
 
 export function EmployeePayslipsWorkspace({
   payslipPeriods,
-  ytdOverview,
-  signedInLabel,
-  headerActions,
 }: EmployeePayslipsWorkspaceProps) {
   const [selectedId, setSelectedId] = React.useState(payslipPeriods[0]?.id ?? "")
   const [selectedPayslip, setSelectedPayslip] =
@@ -89,30 +81,23 @@ export function EmployeePayslipsWorkspace({
             Your Payslips
           </h1>
           <p className="text-sm text-muted-foreground">
-            Signed in as {signedInLabel}.
+            Select a payroll period to view your payslip.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {payslipPeriods.length > 0 ? (
-            <EmployeePayslipPeriodSelector
-              payslips={payslipPeriods}
-              value={selectedId}
-              onChange={setSelectedId}
-              className="w-full sm:w-auto"
-            />
-          ) : null}
-          {headerActions}
-        </div>
+        {payslipPeriods.length > 0 ? (
+          <EmployeePayslipPeriodSelector
+            payslips={payslipPeriods}
+            value={selectedId}
+            onChange={setSelectedId}
+            className="w-full sm:w-auto"
+          />
+        ) : null}
       </div>
 
       <EmployeePayslipViewer
         payslip={selectedPayslip}
         isLoading={isLoading}
       />
-
-      <Separator />
-
-      <EmployeeYtdSummaryCard overview={ytdOverview} />
     </>
   )
 }

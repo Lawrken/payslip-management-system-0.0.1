@@ -87,7 +87,7 @@ export function EmployeePayslipViewer({
 
     try {
       const response = await fetch(
-        `/payslips/${encodeURIComponent(payslip.id)}/pdf`,
+        `/employee/payslips/${encodeURIComponent(payslip.id)}/pdf`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
