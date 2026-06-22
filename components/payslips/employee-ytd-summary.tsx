@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import type { CSSProperties } from "react"
 
 import {
   Select,
@@ -9,6 +10,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  PAYROLL_TOTALS_BACKGROUNDS,
+  PAYROLL_TOTALS_COLORS,
+} from "@/lib/dashboard-chart-colors"
 import type {
   EmployeeYtdBreakdownItem,
   EmployeeYtdOverview,
@@ -86,6 +91,71 @@ function BreakdownSection({
   )
 }
 
+function YtdThirteenthMonthSection({ summary }: { summary: EmployeeYtdSummary }) {
+  const payslipCountLabel = summary.includedPayslipCount.toLocaleString("en-PH")
+
+  return (
+    <section className="flex flex-col gap-4 rounded-xl border bg-muted/20 p-4 sm:p-5">
+      <div className="space-y-1">
+        <h3 className="text-sm font-semibold tracking-tight">
+          13th Month Pay Estimate
+        </h3>
+        <p className="text-sm text-pretty text-muted-foreground">
+          This estimate uses your year-to-date adjusted basic pay from{" "}
+          {payslipCountLabel} released{" "}
+          {summary.includedPayslipCount === 1 ? "payslip" : "payslips"} in{" "}
+          {summary.year}. For each period, we start with basic pay and subtract
+          absences, tardiness, and undertime, then add those amounts together.
+        </p>
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_auto_minmax(0,1fr)] lg:items-stretch">
+        <div className="dashboard-metric-card dashboard-chart-card rounded-xl p-4 ring-1 ring-foreground/10">
+          <dt className="text-xs font-medium text-muted-foreground">
+            Adjusted Basic Pay Basis
+          </dt>
+          <dd className="metric-value mt-2 text-2xl font-semibold tabular-nums tracking-tight">
+            {formatMoney(summary.adjustedBasicPayBasis)}
+          </dd>
+          <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+            Year-to-date total of{" "}
+            <span className="font-medium text-foreground">
+              basic pay − absences − tardiness − undertime
+            </span>
+            . This is the amount used before dividing by 12.
+          </p>
+        </div>
+
+        <div className="flex items-center justify-center px-1 text-sm font-medium text-muted-foreground lg:py-4">
+          <span className="rounded-full border bg-background px-3 py-1 tabular-nums">
+            ÷ 12
+          </span>
+        </div>
+
+        <div
+          className="dashboard-metric-card rounded-xl p-4"
+          style={
+            {
+              "--metric-bg": PAYROLL_TOTALS_BACKGROUNDS.gross,
+              "--metric-chart": PAYROLL_TOTALS_COLORS.gross,
+            } as CSSProperties
+          }
+        >
+          <dt className="text-xs font-medium text-muted-foreground">
+            Estimated 13th Month Pay
+          </dt>
+          <dd className="metric-value mt-2 text-2xl font-semibold tabular-nums tracking-tight">
+            {formatMoney(summary.estimated13thMonthPay)}
+          </dd>
+          <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+            Projected amount based on the adjusted basic pay basis above.
+          </p>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 function YtdMetricGrid({ summary }: { summary: EmployeeYtdSummary }) {
   const totalsRows = [
     { label: "Taxable Earnings", value: summary.totals.taxableEarnings },
@@ -93,48 +163,79 @@ function YtdMetricGrid({ summary }: { summary: EmployeeYtdSummary }) {
     { label: "Non-Taxable Earnings", value: summary.totals.nonTaxableEarnings },
     { label: "Gross Pay", value: summary.totals.grossPay },
     { label: "Net Pay", value: summary.totals.netPay },
-  ]
+  ] as const
+
+  const metricStyles: Partial<
+    Record<(typeof totalsRows)[number]["label"], { bg: string; chart: string }>
+  > = {
+    "Gross Pay": {
+      bg: PAYROLL_TOTALS_BACKGROUNDS.gross,
+      chart: PAYROLL_TOTALS_COLORS.gross,
+    },
+    "Total Deductions": {
+      bg: PAYROLL_TOTALS_BACKGROUNDS.deductions,
+      chart: PAYROLL_TOTALS_COLORS.deductions,
+    },
+    "Net Pay": {
+      bg: PAYROLL_TOTALS_BACKGROUNDS.net,
+      chart: PAYROLL_TOTALS_COLORS.net,
+    },
+  }
 
   return (
     <div className="space-y-4">
       <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-        {totalsRows.map((row) => (
-          <div
-            key={row.label}
-            className="dashboard-chart-card rounded-xl p-3.5"
-          >
-            <dt className="text-xs text-muted-foreground">{row.label}</dt>
-            <dd className="mt-1 text-lg font-semibold tabular-nums">
-              {formatMoney(row.value)}
-            </dd>
-          </div>
-        ))}
+        {totalsRows.map((row) => {
+          const metric = metricStyles[row.label]
+          const isZero = row.value === 0
+
+          if (!metric) {
+            return (
+              <div
+                key={row.label}
+                data-zero={isZero ? "true" : "false"}
+                className="dashboard-metric-card dashboard-chart-card rounded-xl p-3.5"
+              >
+                <dt className="text-xs text-muted-foreground">{row.label}</dt>
+                <dd
+                  className={cn(
+                    "metric-value mt-1 text-lg font-semibold tabular-nums",
+                    isZero && "font-medium"
+                  )}
+                >
+                  {formatMoney(row.value)}
+                </dd>
+              </div>
+            )
+          }
+
+          return (
+            <div
+              key={row.label}
+              data-zero={isZero ? "true" : "false"}
+              className="dashboard-metric-card rounded-xl p-3.5"
+              style={
+                {
+                  "--metric-bg": metric.bg,
+                  "--metric-chart": metric.chart,
+                } as CSSProperties
+              }
+            >
+              <dt className="text-xs text-muted-foreground">{row.label}</dt>
+              <dd
+                className={cn(
+                  "metric-value mt-1 text-lg font-semibold tabular-nums",
+                  isZero && "font-medium"
+                )}
+              >
+                {formatMoney(row.value)}
+              </dd>
+            </div>
+          )
+        })}
       </dl>
 
-      <dl className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <div className="dashboard-chart-card rounded-xl p-3.5">
-          <dt className="text-xs text-muted-foreground">
-            Adjusted Basic Pay Basis
-          </dt>
-          <dd className="mt-1 text-lg font-semibold tabular-nums">
-            {formatMoney(summary.adjustedBasicPayBasis)}
-          </dd>
-        </div>
-        <div className="dashboard-chart-card rounded-xl p-3.5">
-          <dt className="text-xs text-muted-foreground">
-            Estimated 13th Month Pay
-          </dt>
-          <dd className="mt-1 text-lg font-semibold tabular-nums">
-            {formatMoney(summary.estimated13thMonthPay)}
-          </dd>
-        </div>
-        <div className="dashboard-chart-card rounded-xl p-3.5">
-          <dt className="text-xs text-muted-foreground">Included Payslips</dt>
-          <dd className="mt-1 text-lg font-semibold tabular-nums">
-            {summary.includedPayslipCount.toLocaleString("en-PH")}
-          </dd>
-        </div>
-      </dl>
+      <YtdThirteenthMonthSection summary={summary} />
     </div>
   )
 }

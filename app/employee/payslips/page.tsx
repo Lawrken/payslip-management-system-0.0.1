@@ -1,8 +1,8 @@
-import Link from "next/link"
 import { redirect } from "next/navigation"
 
 import { EmployeePayslipsWorkspace } from "@/components/payslips/employee-payslips-workspace"
 import { EmployeePortalBackLink } from "@/components/payslips/employee-portal-back-link"
+import { EmployeePortalSiblingLink } from "@/components/payslips/employee-portal-sibling-link"
 import { requireEmployeeSession } from "@/lib/authorization"
 import { getVisibleEmployeePayslipListItems } from "@/lib/payslips"
 
@@ -22,12 +22,9 @@ export default async function EmployeePayslipsPage() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <EmployeePortalBackLink />
-        <Link
-          href="/employee/year-to-date"
-          className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
+        <EmployeePortalSiblingLink href="/employee/year-to-date">
           View Year to Date
-        </Link>
+        </EmployeePortalSiblingLink>
       </div>
 
       <EmployeePayslipsWorkspace payslipPeriods={payslipPeriods} />

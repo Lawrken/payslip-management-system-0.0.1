@@ -1,7 +1,7 @@
-import Link from "next/link"
 import { redirect } from "next/navigation"
 
 import { EmployeePortalBackLink } from "@/components/payslips/employee-portal-back-link"
+import { EmployeePortalSiblingLink } from "@/components/payslips/employee-portal-sibling-link"
 import { EmployeeYtdSummaryCard } from "@/components/payslips/employee-ytd-summary"
 import { requireEmployeeSession } from "@/lib/authorization"
 import { getEmployeeYtdOverview } from "@/lib/payslips"
@@ -20,12 +20,9 @@ export default async function EmployeeYearToDatePage() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <EmployeePortalBackLink />
-        <Link
-          href="/employee/payslips"
-          className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
+        <EmployeePortalSiblingLink href="/employee/payslips">
           View Payslips
-        </Link>
+        </EmployeePortalSiblingLink>
       </div>
 
       <EmployeeYtdSummaryCard overview={ytdOverview} />
