@@ -207,6 +207,32 @@ export type PayslipAttendanceDisplay = {
   undertimeMinutes: number
 }
 
+export type EmployeeYtdBreakdownItem = {
+  key: string
+  label: string
+  amount: number
+}
+
+export type EmployeeYtdBreakdown = {
+  payDetails: EmployeeYtdBreakdownItem[]
+  deductions: EmployeeYtdBreakdownItem[]
+  nonTaxableEarnings: EmployeeYtdBreakdownItem[]
+}
+
+export type EmployeeYtdSummary = {
+  year: number
+  includedPayslipCount: number
+  totals: PayslipTotals
+  adjustedBasicPayBasis: number
+  estimated13thMonthPay: number
+  breakdown: EmployeeYtdBreakdown
+}
+
+export type EmployeeYtdOverview = {
+  availableYears: number[]
+  summaries: EmployeeYtdSummary[]
+}
+
 export type Payslip = {
   id: string
   payrollId: string
