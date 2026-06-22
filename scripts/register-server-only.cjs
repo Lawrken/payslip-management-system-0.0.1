@@ -5,10 +5,11 @@ const Module = require("node:module")
 const originalLoad = Module._load
 
 function isServerOnlyModule(request) {
+  const normalized = request.replace(/\\/g, "/")
   return (
-    request === "server-only" ||
-    request.endsWith("/server-only") ||
-    request.includes("/server-only/")
+    normalized === "server-only" ||
+    normalized.endsWith("/server-only") ||
+    normalized.includes("/server-only/")
   )
 }
 
