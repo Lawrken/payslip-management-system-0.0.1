@@ -12,7 +12,12 @@ import {
 } from "@/db/schema"
 import { normalizeEmployeeId } from "@/lib/auth-helpers"
 import { getScheduleByPayrollAndEmployee } from "@/lib/employee-schedules"
+import {
+  buildEmployeeYtdSummary,
+  type EmployeeYtdPayslipSource,
+} from "@/lib/employee-ytd"
 import { findEmployeeByEmployeeId, getEmployees } from "@/lib/employees"
+import { parseIsoDate } from "@/lib/payroll-dates"
 import {
   buildPaginatedResult,
   normalizePagination,
@@ -32,6 +37,7 @@ import type {
   EmployeePayslip,
   EmployeePayslipListItem,
   EmployeeScheduleDay,
+  EmployeeYtdOverview,
   Payroll,
   Payslip,
   PayslipListItem,
@@ -580,6 +586,55 @@ export async function getVisiblePayslipsByEmployeeId(
   return rows.map(mapEmployeePayslipRow).sort((a, b) => {
     return b.payrollPeriodEnd.localeCompare(a.payrollPeriodEnd)
   })
+}
+
+/**
+ * Builds the employee-facing year-to-date money summary for every year that
+ * has visible payslips. Only statuses the employee can already see
+ * (`approved`, `sent`) are included, mirroring the rest of the employee flow.
+ *
+ * A summary is produced per year so the UI can switch between years without an
+ * extra round-trip. Years are derived from each payslip's payout date.
+ */
+export async function getEmployeeYtdOverview(
+  employeeId: string,
+  client: DatabaseClient = db
+): Promise<EmployeeYtdOverview> {
+  const normalizedId = normalizeEmployeeId(employeeId)
+  const employee = await findEmployeeByEmployeeId(normalizedId, client)
+  const rows = await client
+    .select({
+      inputs: payslipInputs.inputs,
+      payoutDate: payrollsTable.payoutDate,
+    })
+    .from(payslips)
+    .innerJoin(payrollsTable, eq(payrollsTable.id, payslips.payrollId))
+    .leftJoin(payslipInputs, eq(payslipInputs.payslipId, payslips.id))
+    .where(
+      and(
+        eq(payslips.employeeId, normalizedId),
+        inArray(payslips.status, VISIBLE_EMPLOYEE_PAYSLIP_STATUSES)
+      )
+    )
+
+  const sourcesByYear = new Map<number, EmployeeYtdPayslipSource[]>()
+  for (const row of rows) {
+    const year = parseIsoDate(row.payoutDate).getFullYear()
+    const inputs = {
+      ...createEmptyPayslipInputs(),
+      ...(row.inputs ?? {}),
+    }
+    const list = sourcesByYear.get(year) ?? []
+    list.push({ inputs })
+    sourcesByYear.set(year, list)
+  }
+
+  const availableYears = [...sourcesByYear.keys()].sort((a, b) => b - a)
+  const summaries = availableYears.map((year) =>
+    buildEmployeeYtdSummary(year, sourcesByYear.get(year) ?? [], employee?.divisor)
+  )
+
+  return { availableYears, summaries }
 }
 
 export async function getVisibleEmployeePayslipListItems(

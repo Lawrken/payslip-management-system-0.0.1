@@ -6,16 +6,20 @@ import { getEmployeePayslipDetailAction } from "@/app/payslips/actions"
 import { EmployeePayslipPeriodSelector } from "@/components/payslips/employee-payslip-period-selector"
 import { EmployeePayslipViewer } from "@/components/payslips/employee-payslip-viewer"
 import type { EmployeePayslipPreviewItem } from "@/components/payslips/employee-payslip-viewer"
-import type { EmployeePayslipListItem } from "@/lib/types"
+import { EmployeeYtdSummaryCard } from "@/components/payslips/employee-ytd-summary"
+import { Separator } from "@/components/ui/separator"
+import type { EmployeePayslipListItem, EmployeeYtdOverview } from "@/lib/types"
 
 type EmployeePayslipsWorkspaceProps = {
   payslipPeriods: EmployeePayslipListItem[]
+  ytdOverview: EmployeeYtdOverview
   signedInLabel: string
   headerActions: React.ReactNode
 }
 
 export function EmployeePayslipsWorkspace({
   payslipPeriods,
+  ytdOverview,
   signedInLabel,
   headerActions,
 }: EmployeePayslipsWorkspaceProps) {
@@ -105,6 +109,10 @@ export function EmployeePayslipsWorkspace({
         payslip={selectedPayslip}
         isLoading={isLoading}
       />
+
+      <Separator />
+
+      <EmployeeYtdSummaryCard overview={ytdOverview} />
     </>
   )
 }
