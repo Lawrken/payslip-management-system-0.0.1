@@ -7,7 +7,10 @@ import { EmployeePayslipsWorkspace } from "@/components/payslips/employee-paysli
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { requireEmployeeSession } from "@/lib/authorization"
-import { getVisibleEmployeePayslipListItems } from "@/lib/payslips"
+import {
+  getEmployeeYtdOverview,
+  getVisibleEmployeePayslipListItems,
+} from "@/lib/payslips"
 import { getUserAccount } from "@/lib/users"
 
 export const dynamic = "force-dynamic"
@@ -18,8 +21,9 @@ export default async function EmployeePayslipsPage() {
     redirect("/login")
   }
 
-  const [payslipPeriods, account] = await Promise.all([
+  const [payslipPeriods, ytdOverview, account] = await Promise.all([
     getVisibleEmployeePayslipListItems(session.employeeId),
+    getEmployeeYtdOverview(session.employeeId),
     getUserAccount(session.employeeId),
   ])
   const shouldChangePassword = account?.passwordChangedAt === null
@@ -38,6 +42,7 @@ export default async function EmployeePayslipsPage() {
 
       <EmployeePayslipsWorkspace
         payslipPeriods={payslipPeriods}
+        ytdOverview={ytdOverview}
         signedInLabel={account?.email ?? session.employeeId}
         headerActions={
           <>
