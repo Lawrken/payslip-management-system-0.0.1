@@ -2,7 +2,7 @@ import "server-only"
 
 import { revalidatePath } from "next/cache"
 
-import { db } from "@/db"
+import { db, transaction } from "@/db"
 import { createAuditLog } from "@/lib/audit-logs"
 import type { Session } from "@/lib/types"
 import { getPayrollById } from "@/lib/payrolls"
@@ -44,7 +44,7 @@ export async function bulkSavePayslipRows(
   const errors: BulkSaveResult["errors"] = []
   let updatedCount = 0
 
-  await db.transaction(async (tx) => {
+  await transaction(async (tx) => {
     for (const payslipRow of rows) {
       const rowId = String(payslipRow.rowId ?? payslipRow.id ?? "")
       const inputs = spreadsheetRowToPayslipInputs(payslipRow)
@@ -114,7 +114,7 @@ export async function bulkSaveScheduleRows(
   const errors: BulkSaveResult["errors"] = []
   let updatedCount = 0
 
-  await db.transaction(async (tx) => {
+  await transaction(async (tx) => {
     for (const employeeId of input.dirtyEmployeeIds) {
       const employeeRows = grouped.get(employeeId) ?? []
       if (employeeRows.length === 0) {

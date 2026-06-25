@@ -1,6 +1,8 @@
 import { DERIVED_PAYSLIP_FIELD_KEYS, parseDecimalInput } from "@/lib/payroll-calculator"
 import {
+  PAYSLIPS_COLUMNS,
   PAYSLIPS_EDITABLE_KEYS,
+  SCHEDULE_COLUMNS,
   SCHEDULE_HOLIDAY_LOCKED_KEYS,
 } from "@/lib/excel/columns"
 import type {
@@ -28,6 +30,17 @@ const VALID_SHIFT_TYPES = new Set(
 )
 
 const derivedFieldKeys = new Set<string>(DERIVED_PAYSLIP_FIELD_KEYS)
+
+const payslipLabelByKey = new Map(PAYSLIPS_COLUMNS.map((c) => [c.key, c.label]))
+const scheduleLabelByKey = new Map(SCHEDULE_COLUMNS.map((c) => [c.key, c.label]))
+
+function getPayslipLabel(key: string): string {
+  return payslipLabelByKey.get(key) ?? key
+}
+
+function getScheduleLabel(key: string): string {
+  return scheduleLabelByKey.get(key) ?? key
+}
 
 export type PayrollImportError = {
   sheet: string
@@ -144,7 +157,7 @@ export function validatePayrollImport(input: {
 
   for (const row of input.parsed.payslipRows) {
     if (!row.employeeId) {
-      pushPayslipError(errors, row, "employeeId", "Employee ID is required.")
+      pushPayslipError(errors, row, "employeeId", `Row ${row.rowNumber}: 'Employee ID' is required.`)
       continue
     }
 
@@ -153,7 +166,7 @@ export function validatePayrollImport(input: {
         errors,
         row,
         "employeeId",
-        `Duplicate employee ID ${row.employeeId}.`
+        `Row ${row.rowNumber}: Duplicate Employee ID '${row.employeeId}'.`
       )
       continue
     }
@@ -165,7 +178,7 @@ export function validatePayrollImport(input: {
         errors,
         row,
         "employeeId",
-        `Employee ${row.employeeId} is not part of this payroll.`
+        `Row ${row.rowNumber}: Employee '${row.employeeId}' is not part of this payroll.`
       )
       continue
     }
@@ -175,13 +188,13 @@ export function validatePayrollImport(input: {
         errors,
         row,
         "payslipId",
-        `Payslip ID does not match employee ${row.employeeId}.`
+        `Row ${row.rowNumber}: Payslip ID does not match employee '${row.employeeId}'.`
       )
       continue
     }
 
     if (row.payslipId && !payslipById.has(row.payslipId)) {
-      pushPayslipError(errors, row, "payslipId", "Unknown payslip ID.")
+      pushPayslipError(errors, row, "payslipId", `Row ${row.rowNumber}: Unknown Payslip ID.`)
       continue
     }
 
@@ -203,7 +216,7 @@ export function validatePayrollImport(input: {
 
       const parsed = parseDecimalInput(String(rawValue))
       if (Number.isNaN(parsed)) {
-        pushPayslipError(errors, row, key, `Invalid number for ${key}.`)
+        pushPayslipError(errors, row, key, `Row ${row.rowNumber}: Invalid value for '${getPayslipLabel(key)}' — must be a number.`)
         continue
       }
       mergedRow[key as keyof PayslipSpreadsheetRow] = parsed as never
@@ -215,7 +228,7 @@ export function validatePayrollImport(input: {
           sheet: "Payslips",
           row: row.rowNumber,
           column: key,
-          message: `${key} is derived from schedule and will be recalculated on import.`,
+          message: `Row ${row.rowNumber}: '${getPayslipLabel(key)}' is derived from schedule and will be recalculated on import.`,
         })
       }
     }
@@ -234,7 +247,7 @@ export function validatePayrollImport(input: {
 
   for (const row of input.parsed.scheduleRows) {
     if (!row.employeeId) {
-      pushScheduleError(errors, row, "employeeId", "Employee ID is required.")
+      pushScheduleError(errors, row, "employeeId", `Row ${row.rowNumber}: 'Employee ID' is required.`)
       continue
     }
 
@@ -243,13 +256,13 @@ export function validatePayrollImport(input: {
         errors,
         row,
         "employeeId",
-        `Employee ${row.employeeId} is not part of this payroll.`
+        `Row ${row.rowNumber}: Employee '${row.employeeId}' is not part of this payroll.`
       )
       continue
     }
 
     if (!row.date) {
-      pushScheduleError(errors, row, "date", "Date is required.")
+      pushScheduleError(errors, row, "date", `Row ${row.rowNumber}: 'Date' is required.`)
       continue
     }
 
@@ -258,13 +271,18 @@ export function validatePayrollImport(input: {
         errors,
         row,
         "date",
-        `Date ${row.date} is outside the payroll DTR range.`
+        `Row ${row.rowNumber}: Date '${row.date}' is outside the payroll DTR range.`
       )
       continue
     }
 
     if (!row.shiftType) {
-      pushScheduleError(errors, row, "shiftType", "Shift type is required.")
+      warnings.push({
+        sheet: "Schedule",
+        row: row.rowNumber,
+        column: "shiftType",
+        message: `Schedule row ${row.rowNumber}: Shift type is missing — set it in the Schedule page after import.`,
+      })
       continue
     }
 
@@ -273,7 +291,7 @@ export function validatePayrollImport(input: {
         errors,
         row,
         "shiftType",
-        `Invalid shift type "${row.shiftType}".`
+        `Row ${row.rowNumber}: Invalid value for 'Shift Type' — must be one of the allowed shift types.`
       )
       continue
     }
@@ -284,7 +302,7 @@ export function validatePayrollImport(input: {
         errors,
         row,
         "date",
-        `No schedule row exists for ${row.employeeId} on ${row.date}.`
+        `Row ${row.rowNumber}: No schedule row exists for employee '${row.employeeId}' on ${row.date}.`
       )
       continue
     }
@@ -303,7 +321,7 @@ export function validatePayrollImport(input: {
             errors,
             row,
             key,
-            "Holiday-locked rows cannot change shift type or shift times."
+            `Row ${row.rowNumber}: Holiday dates cannot be changed — '${getScheduleLabel(key)}' is locked.`
           )
         }
       }
@@ -319,7 +337,7 @@ export function validatePayrollImport(input: {
           errors,
           row,
           field,
-          `Invalid ${field}. Use 9:30 AM format.`
+          `Row ${row.rowNumber}: Invalid value for '${getScheduleLabel(field)}' — use format like 9:30 AM.`
         )
       }
     }
