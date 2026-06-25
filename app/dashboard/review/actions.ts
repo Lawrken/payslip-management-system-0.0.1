@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
-import { db } from "@/db"
+import { db, transaction } from "@/db"
 import { createAuditLog } from "@/lib/audit-logs"
 import {
   requireAdminSession,
@@ -30,7 +30,7 @@ export async function adminApprovePayslipAction(
     return session
   }
 
-  const result = await db.transaction(async (tx) => {
+  const result = await transaction(async (tx) => {
     const payslip = await approvePayslipByAdmin(id, tx)
     if ("error" in payslip) {
       return { error: payslip.error }
@@ -67,7 +67,7 @@ export async function superAdminApprovePayslipAction(
     return session
   }
 
-  const result = await db.transaction(async (tx) => {
+  const result = await transaction(async (tx) => {
     const payslip = await approvePayslipBySuperAdmin(id, tx)
     if ("error" in payslip) {
       return { error: payslip.error }
@@ -104,7 +104,7 @@ export async function returnPayslipAction(
     return session
   }
 
-  const result = await db.transaction(async (tx) => {
+  const result = await transaction(async (tx) => {
     const payslip =
       session.role === "admin"
         ? await returnPayslipByAdmin(id, tx)

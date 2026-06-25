@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
-import { db } from "@/db"
+import { db, transaction } from "@/db"
 import { createAuditLog } from "@/lib/audit-logs"
 import { requireDashboardSession } from "@/lib/authorization"
 import { findEmployeeByEmployeeId } from "@/lib/employees"
@@ -43,7 +43,7 @@ export async function addPayslipAction(
     return { error: parsedInputs.error }
   }
 
-  const result = await db.transaction(async (tx) => {
+  const result = await transaction(async (tx) => {
     const payslip = await addPayslip(
       {
         payrollId,
@@ -105,7 +105,7 @@ export async function updatePayslipAction(
     return { error: parsedInputs.error }
   }
 
-  const result = await db.transaction(async (tx) => {
+  const result = await transaction(async (tx) => {
     const payslip = await updatePayslip(
       {
         id,
@@ -177,7 +177,7 @@ export async function deletePayslipAction(id: string) {
     return session
   }
 
-  const result = await db.transaction(async (tx) => {
+  const result = await transaction(async (tx) => {
     const payslip = await getPayslipById(id, tx)
     const deleted = await deletePayslip(id, tx)
 

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
-import { db } from "@/db"
+import { db, transaction } from "@/db"
 import { parseDtrDaysFromFormData } from "@/lib/dtr-days"
 import {
   addPayroll,
@@ -51,7 +51,7 @@ export async function addPayrollAction(
     return { error: fields.error }
   }
 
-  const result = await db.transaction(async (tx) => {
+  const result = await transaction(async (tx) => {
     const payroll = await addPayroll(fields, tx)
 
     if ("error" in payroll) {
@@ -102,7 +102,7 @@ export async function updatePayrollAction(
     return { error: fields.error }
   }
 
-  const result = await db.transaction(async (tx) => {
+  const result = await transaction(async (tx) => {
     const payroll = await updatePayroll({ id, ...fields }, tx)
 
     if ("error" in payroll) {
@@ -139,7 +139,7 @@ export async function deletePayrollAction(id: string) {
     return session
   }
 
-  const result = await db.transaction(async (tx) => {
+  const result = await transaction(async (tx) => {
     const payroll = await getPayrollById(id, tx)
     const deleted = await deletePayroll(id, tx)
 

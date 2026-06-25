@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs"
 import { eq } from "drizzle-orm"
 
-import { db } from "@/db"
+import { db, withDbRetry } from "@/db"
 import { users } from "@/db/schema"
 import { isRole, normalizeEmail } from "@/lib/auth-helpers"
 import type { User } from "@/lib/types"
@@ -11,11 +11,9 @@ export function validateCredentials(
   password: string
 ): Promise<User | null> {
   const normalizedEmail = normalizeEmail(email)
-  return db.query.users
-    .findFirst({
-      where: eq(users.email, normalizedEmail),
-    })
-    .then(async (user) => {
+  return withDbRetry(() =>
+    db.query.users.findFirst({ where: eq(users.email, normalizedEmail) })
+  ).then(async (user) => {
       if (!user) {
         return null
       }

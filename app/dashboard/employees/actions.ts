@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
-import { db } from "@/db"
+import { db, transaction } from "@/db"
 import {
   addEmployee,
   deleteEmployee,
@@ -45,7 +45,7 @@ export async function addEmployeeAction(
   }
   const employeeInput = toNewEmployeeInput(fields)
 
-  const result = await db.transaction(async (tx) => {
+  const result = await transaction(async (tx) => {
     const employee = await addEmployee(employeeInput, tx)
 
     if ("error" in employee) {
@@ -125,7 +125,7 @@ export async function updateEmployeeAction(
   }
   const employeeInput = toNewEmployeeInput(fields)
 
-  const result = await db.transaction(async (tx) => {
+  const result = await transaction(async (tx) => {
     const previousEmployee = await getEmployeeById(id, tx)
     const employee = await updateEmployee({ id, ...employeeInput }, tx)
 
@@ -174,7 +174,7 @@ export async function deleteEmployeeAction(id: string) {
     return session
   }
 
-  const result = await db.transaction(async (tx) => {
+  const result = await transaction(async (tx) => {
     const employee = await getEmployeeById(id, tx)
     const deleted = await deleteEmployee(id, tx)
 
