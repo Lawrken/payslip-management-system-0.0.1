@@ -35,3 +35,10 @@ pnpm-debug.log*
 *.tsbuildinfo
 next-env.d.ts
 .vercel
+
+# development artifacts
+*.log
+*.csv
+.cursor/*
+!.cursor/settings.json
+.kiro/

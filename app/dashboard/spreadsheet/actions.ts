@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
-import { db } from "@/db"
+import { db, transaction } from "@/db"
 import { createAuditLog } from "@/lib/audit-logs"
 import { requireDashboardSession, requireSuperAdminSession } from "@/lib/authorization"
 import {
@@ -158,7 +158,7 @@ export async function bulkUpdateEmployeesAction(
     const errors: BulkSaveResult["errors"] = []
     let updatedCount = 0
 
-    await db.transaction(async (tx) => {
+    await transaction(async (tx) => {
       for (const row of rows) {
         const rowId = String(row.rowId ?? row.id ?? "")
         const id = String(row.id ?? rowId)
@@ -246,7 +246,7 @@ export async function bulkUpdatePayrollsAction(
     const errors: BulkSaveResult["errors"] = []
     let updatedCount = 0
 
-    await db.transaction(async (tx) => {
+    await transaction(async (tx) => {
       for (const row of rows) {
         const rowId = String(row.rowId ?? row.id ?? "")
         const id = String(row.id ?? rowId)
@@ -379,7 +379,7 @@ export async function bulkUpdateUsersAction(
     const errors: BulkSaveResult["errors"] = []
     let updatedCount = 0
 
-    await db.transaction(async (tx) => {
+    await transaction(async (tx) => {
       for (const row of rows) {
         const rowId = String(row.rowId ?? row.employeeId ?? "")
         const employeeId = String(row.employeeId ?? rowId)

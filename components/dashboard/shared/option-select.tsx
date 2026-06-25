@@ -92,7 +92,7 @@ export function OptionSelect({
             </Button>
           </PopoverTrigger>
           <PopoverContent
-            className="z-[60] w-[var(--radix-popover-trigger-width)] p-0"
+            className="w-[var(--radix-popover-trigger-width)] p-0"
             align="start"
             onWheel={(event) => event.stopPropagation()}
           >

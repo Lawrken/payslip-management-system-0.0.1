@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
-import { db } from "@/db"
+import { db, transaction } from "@/db"
 import { createAuditLog } from "@/lib/audit-logs"
 import { requireDashboardSession } from "@/lib/authorization"
 import {
@@ -54,7 +54,7 @@ export async function saveEmployeeScheduleAction(
 
   const existing = await getScheduleByPayrollAndEmployee(payrollId, employeeId)
 
-  const result = await db.transaction(async (tx) => {
+  const result = await transaction(async (tx) => {
     const schedule = await upsertEmployeeSchedule(
       { payrollId, employeeId, days },
       tx

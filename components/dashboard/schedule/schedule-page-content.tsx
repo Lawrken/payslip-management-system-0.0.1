@@ -79,11 +79,7 @@ export function SchedulePageContent({
     }
 
     let cancelled = false
-    queueMicrotask(() => {
-      if (!cancelled) {
-        setIsLoadingSchedule(true)
-      }
-    })
+    setIsLoadingSchedule(true)
     void getEmployeeScheduleAction(
       selectedPayroll.id,
       activeEmployeeId
@@ -162,6 +158,7 @@ export function SchedulePageContent({
   function handleEdit(row: EmployeeScheduleRow) {
     setActiveEmployeeId(row.employeeId)
     setActiveSchedule(null)
+    setIsLoadingSchedule(true)
     setDialogOpen(true)
   }
 
@@ -249,6 +246,7 @@ export function SchedulePageContent({
           employeeId={activeRow.employeeId}
           employeeName={activeRow.employeeName}
           schedule={isLoadingSchedule ? null : activeSchedule}
+          isLoading={isLoadingSchedule}
           open={dialogOpen}
           onOpenChange={setDialogOpen}
         />

@@ -14,7 +14,6 @@
     "db:seed": "tsx -r ./scripts/register-server-only.cjs -r tsconfig-paths/register scripts/seed.ts",
     "db:backfill-employee-users": "tsx -r ./scripts/register-server-only.cjs -r tsconfig-paths/register scripts/backfill-employee-users.ts",
     "db:reset": "tsx -r ./scripts/register-server-only.cjs -r tsconfig-paths/register scripts/reset.ts && pnpm db:push && tsx -r ./scripts/register-server-only.cjs -r tsconfig-paths/register scripts/seed.ts",
-    "db:import-april-xlsx-fixture": "tsx -r ./scripts/register-server-only.cjs -r tsconfig-paths/register scripts/import-april-xlsx-payroll-fixture.ts",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit"
   },

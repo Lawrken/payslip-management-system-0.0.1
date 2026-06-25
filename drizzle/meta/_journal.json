@@ -71,6 +71,13 @@
       "when": 1781592125559,
       "tag": "0009_performance_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1782000000000,
+      "tag": "0010_employee_filter_indexes",
+      "breakpoints": true
     }
   ]
 }

@@ -72,7 +72,7 @@ export function FilterTableHead({
           </button>
         </PopoverTrigger>
         <PopoverContent
-            className="z-[60] w-56 p-0"
+            className="w-56 p-0"
             align="start"
             onWheel={(event) => event.stopPropagation()}
           >

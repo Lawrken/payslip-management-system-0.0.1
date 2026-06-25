@@ -19,6 +19,7 @@ import {
   getEmployeeByEmployeeIdAction,
   getPayslipByIdAction,
 } from "@/app/dashboard/payslips/actions"
+import { getEmployeeScheduleAction } from "@/app/dashboard/schedule/actions"
 import { EmployeeCombobox } from "@/components/dashboard/shared/employee-combobox"
 import { PayslipBreakdown } from "@/components/dashboard/shared/payslip-breakdown"
 import { PayslipSummary } from "@/components/dashboard/payslips/payslip-summary"
@@ -31,9 +32,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import type { EmployeeOption } from "@/lib/employees"
 import type { EmployeeDivisor } from "@/lib/employee-options"
-import type { Payslip, PayslipListItem, PayslipPayrollInputs, Role } from "@/lib/types"
+import { formatDayOfWeek, formatLongDisplayDate } from "@/lib/payroll-dates"
+import type { EmployeeScheduleDay, Payslip, PayslipListItem, PayslipPayrollInputs, Role } from "@/lib/types"
 
 function payslipHasData(inputs: PayslipPayrollInputs): boolean {
   return Object.values(inputs).some(
@@ -84,6 +94,8 @@ export function ReviewPayslipDialog({
   const [error, setError] = React.useState<string | null>(null)
   const [isPending, startTransition] = React.useTransition()
   const [isLoadingPayslip, setIsLoadingPayslip] = React.useState(false)
+  const [schedule, setSchedule] = React.useState<EmployeeScheduleDay[] | null>(null)
+  const [isLoadingSchedule, setIsLoadingSchedule] = React.useState(false)
 
   const canGoPrev = activeIndex > 0
   const canGoNext = activeIndex >= 0 && activeIndex < payslipListItems.length - 1
@@ -130,6 +142,40 @@ export function ReviewPayslipDialog({
       cancelled = true
     }
   }, [open, activePayslipId])
+
+  // Clear schedule when navigating between payslips; fetch after payslip loads
+  React.useEffect(() => {
+    setSchedule(null)
+    setIsLoadingSchedule(false)
+  }, [activePayslipId])
+
+  React.useEffect(() => {
+    if (!activePayslip) {
+      return
+    }
+
+    let cancelled = false
+    setIsLoadingSchedule(true)
+
+    void getEmployeeScheduleAction(
+      activePayslip.payrollId,
+      activePayslip.employeeId
+    ).then((result) => {
+      if (cancelled) {
+        return
+      }
+      setIsLoadingSchedule(false)
+      if ("error" in result) {
+        setSchedule(null)
+        return
+      }
+      setSchedule(result.schedule?.days ?? null)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [activePayslip])
 
   const viewOnlyMessage = React.useMemo(() => {
     if (!activePayslip || hasActions) {
@@ -342,11 +388,51 @@ export function ReviewPayslipDialog({
           {isLoadingPayslip || !activePayslip ? (
             <p className="text-sm text-muted-foreground">Loading payslip…</p>
           ) : (
-            <PayslipBreakdown
-              inputs={activePayslip.inputs}
-              divisor={employeeDivisor}
-              attendance={activePayslip.attendance}
-            />
+            <>
+              <PayslipBreakdown
+                inputs={activePayslip.inputs}
+                divisor={employeeDivisor}
+                attendance={activePayslip.attendance}
+              />
+
+              <div className="mt-6">
+                <h3 className="mb-2 text-sm font-medium">Schedule</h3>
+                {isLoadingSchedule ? (
+                  <p className="text-sm text-muted-foreground">Loading schedule…</p>
+                ) : !schedule || schedule.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No schedule data available.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Day</TableHead>
+                          <TableHead>Shift Type</TableHead>
+                          <TableHead>Shift-In</TableHead>
+                          <TableHead>Shift-Out</TableHead>
+                          <TableHead>Log-In</TableHead>
+                          <TableHead>Log-Out</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {schedule.map((day) => (
+                          <TableRow key={day.date}>
+                            <TableCell className="font-medium">{formatLongDisplayDate(day.date)}</TableCell>
+                            <TableCell>{formatDayOfWeek(day.date)}</TableCell>
+                            <TableCell>{day.shiftType || "—"}</TableCell>
+                            <TableCell>{day.shiftIn || "—"}</TableCell>
+                            <TableCell>{day.shiftOut || "—"}</TableCell>
+                            <TableCell>{day.logIn || "—"}</TableCell>
+                            <TableCell>{day.logOut || "—"}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
 

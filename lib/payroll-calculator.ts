@@ -40,6 +40,9 @@ export const DERIVED_PAYSLIP_FIELD_KEYS = [
   "spclOver8",
   "lglNd",
   "spclNd",
+  // ponytail: spclRd/spclRdOver8 not derivable from schedule — no way to
+  // distinguish "special holiday on rest day" vs normal special holiday from
+  // shift type alone. These are manual-entry or CSV-import only.
   "spclRd",
   "spclRdOver8",
   "clothAdj",
@@ -52,6 +55,14 @@ export const DERIVED_PAYSLIP_FIELD_KEYS = [
   "riceSubsidyAdj",
   "dmbAdj",
 ] as const satisfies readonly (keyof PayslipPayrollInputs)[]
+
+// ponytail: fields in DERIVED_PAYSLIP_FIELD_KEYS that cannot actually be
+// derived from the schedule and should be preserved across schedule saves.
+// They are still "derived" for UI read-only purposes but won't be zeroed.
+const PRESERVED_DERIVED_FIELDS = new Set<keyof PayslipPayrollInputs>([
+  "spclRd",
+  "spclRdOver8",
+])
 
 const NIGHT_DIFFERENTIAL_START_MINUTE = 22 * 60
 const NIGHT_DIFFERENTIAL_END_MINUTE = 6 * 60
@@ -388,6 +399,38 @@ function countOvertimeHours(day: EmployeeScheduleDay): number {
   return floorToHalfHour(overtimeMinutes)
 }
 
+// ponytail: night differential during overtime — minutes after shiftOut that
+// also fall within the 22:00–06:00 night window.
+function countNightDifferentialOvertimeHours(
+  day: EmployeeScheduleDay
+): number {
+  const timeline = getShiftLogTimeline(day)
+  if (!timeline) {
+    return 0
+  }
+
+  const otStart = timeline.shiftOut
+  const otEnd = timeline.logOut
+  if (otEnd <= otStart) {
+    return 0
+  }
+
+  const nightWindows: [number, number][] = [
+    [-24 * 60, NIGHT_DIFFERENTIAL_END_MINUTE - 24 * 60],
+    [NIGHT_DIFFERENTIAL_START_MINUTE - 24 * 60, 0],
+    [0, NIGHT_DIFFERENTIAL_END_MINUTE],
+    [NIGHT_DIFFERENTIAL_START_MINUTE, 24 * 60 + NIGHT_DIFFERENTIAL_END_MINUTE],
+  ]
+
+  const nightMinutes = nightWindows.reduce((sum, [windowStart, windowEnd]) => {
+    const overlapStart = Math.max(otStart, windowStart)
+    const overlapEnd = Math.min(otEnd, windowEnd)
+    return sum + Math.max(0, overlapEnd - overlapStart)
+  }, 0)
+
+  return roundHours(nightMinutes / 60)
+}
+
 function countWorkedHolidayHours(day: EmployeeScheduleDay): number {
   if (!hasLogPair(day)) {
     return 0
@@ -526,7 +569,9 @@ export function derivePayslipInputsFromSchedule({
   const hasScheduleAttendanceSource = scheduleDays.some(isWorkRequired)
 
   for (const key of DERIVED_PAYSLIP_FIELDS) {
-    inputs[key] = 0
+    if (!PRESERVED_DERIVED_FIELDS.has(key)) {
+      inputs[key] = 0
+    }
   }
 
   inputs.basicPay = roundMoney(employee.basicPay)
@@ -561,6 +606,12 @@ export function derivePayslipInputsFromSchedule({
     if (day.shiftType === "scheduledShift") {
       inputs.nd += countNightDifferentialHours(day)
       inputs.regOt += countOvertimeHours(day)
+      inputs.ndOt += countNightDifferentialOvertimeHours(day)
+    } else if (day.shiftType === "restDay") {
+      // ponytail: rest day with logs — all worked hours are RD OT
+      inputs.rdOt += countWorkedHolidayHours(day)
+      inputs.rdOtOver8 += countHolidayOver8Hours(day)
+      inputs.rdotNd += countNightDifferentialHours(day)
     } else if (day.shiftType === "legalHoliday") {
       inputs.legal += countWorkedHolidayHours(day)
       inputs.legalOver8 += countHolidayOver8Hours(day)
@@ -593,6 +644,9 @@ export function derivePayslipInputsFromSchedule({
   inputs.nd = roundHours(inputs.nd)
   inputs.ndOt = roundHours(inputs.ndOt)
   inputs.regOt = roundHours(inputs.regOt)
+  inputs.rdOt = roundHours(inputs.rdOt)
+  inputs.rdOtOver8 = roundHours(inputs.rdOtOver8)
+  inputs.rdotNd = roundHours(inputs.rdotNd)
   inputs.legal = roundHours(inputs.legal)
   inputs.legalOver8 = roundHours(inputs.legalOver8)
   inputs.lglNd = roundHours(inputs.lglNd)
@@ -617,8 +671,16 @@ export function parseDecimalInput(value: string | null | undefined): number {
   if (!trimmed) {
     return 0
   }
-  const parsed = Number(trimmed)
-  if (!Number.isFinite(parsed) || parsed < 0) {
+  // ponytail: strip thousands-separator commas and currency symbols so Excel
+  // round-trip values like "₱1,234.50" or "1,234.50" parse correctly.
+  // Also handle accounting-style negatives "(500.00)" → "-500.00".
+  // Ceiling: assumes period decimal separator.
+  let cleaned = trimmed.replace(/[₱$,\s]/g, "")
+  if (cleaned.startsWith("(") && cleaned.endsWith(")")) {
+    cleaned = "-" + cleaned.slice(1, -1)
+  }
+  const parsed = Number(cleaned)
+  if (!Number.isFinite(parsed)) {
     return NaN
   }
   return parsed
@@ -643,6 +705,9 @@ export function parsePayslipInputsFromFormData(
     const parsed = parseDecimalInput(rawValue)
     if (Number.isNaN(parsed)) {
       return { error: `Invalid number for ${key}.` }
+    }
+    if (parsed < 0) {
+      return { error: `${key} cannot be negative.` }
     }
     inputs[key as keyof PayslipPayrollInputs] = parsed
   }

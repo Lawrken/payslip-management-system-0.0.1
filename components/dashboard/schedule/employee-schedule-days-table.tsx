@@ -62,7 +62,7 @@ function ShiftTypeSelect({
       >
         <SelectValue placeholder="Select shift type" />
       </SelectTrigger>
-      <SelectContent position="popper" className="z-[60]">
+      <SelectContent position="popper">
         <SelectGroup>
           {options.map((option) => (
             <SelectItem key={option.value} value={option.value}>

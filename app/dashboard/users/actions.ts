@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
-import { db } from "@/db"
+import { db, transaction } from "@/db"
 import { createAuditLog } from "@/lib/audit-logs"
 import { requireDashboardSession } from "@/lib/authorization"
 import type { Role } from "@/lib/types"
@@ -81,7 +81,7 @@ export async function deleteUserAction(
     return session
   }
 
-  const result = await db.transaction(async (tx) => {
+  const result = await transaction(async (tx) => {
     const user = await getUserAccount(employeeId, tx)
     if (!user) {
       return { error: "User account not found." }

@@ -21,7 +21,14 @@ export async function loginAction(
     return { error: "Email and password are required." }
   }
 
-  const user = await validateCredentials(email, password)
+  let user: Awaited<ReturnType<typeof validateCredentials>>
+  try {
+    user = await validateCredentials(email, password)
+  } catch {
+    return {
+      error: "Service is temporarily unavailable. Please try again in a moment.",
+    }
+  }
   if (!user) {
     return { error: "Invalid email or password." }
   }
