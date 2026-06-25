@@ -14,7 +14,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 
 type ImportError = {
@@ -54,6 +53,8 @@ export function PayrollExcelImportDialog({
   const [requestError, setRequestError] = React.useState<string | null>(null)
   const [isValidating, setIsValidating] = React.useState(false)
   const [isApplying, setIsApplying] = React.useState(false)
+  const [isDragOver, setIsDragOver] = React.useState(false)
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
 
   function resetState() {
     setSelectedFile(null)
@@ -61,6 +62,7 @@ export function PayrollExcelImportDialog({
     setRequestError(null)
     setIsValidating(false)
     setIsApplying(false)
+    setIsDragOver(false)
   }
 
   function handleOpenChange(nextOpen: boolean) {
@@ -111,6 +113,27 @@ export function PayrollExcelImportDialog({
     if (file) {
       await runDryRun(file)
     }
+  }
+
+  function handleDrop(event: React.DragEvent<HTMLDivElement>) {
+    event.preventDefault()
+    setIsDragOver(false)
+    const file = event.dataTransfer.files?.[0] ?? null
+    if (file && file.name.endsWith(".xlsx")) {
+      setSelectedFile(file)
+      setDryRunResult(null)
+      setRequestError(null)
+      void runDryRun(file)
+    }
+  }
+
+  function handleDragOver(event: React.DragEvent<HTMLDivElement>) {
+    event.preventDefault()
+    setIsDragOver(true)
+  }
+
+  function handleDragLeave() {
+    setIsDragOver(false)
   }
 
   async function handleApply() {
@@ -165,6 +188,9 @@ export function PayrollExcelImportDialog({
     }
   }
 
+  const errorCount = dryRunResult?.errors.length ?? 0
+  const warningCount = dryRunResult?.warnings?.length ?? 0
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
@@ -178,12 +204,57 @@ export function PayrollExcelImportDialog({
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
-          <Input
-            type="file"
-            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            onChange={handleFileChange}
-            disabled={isValidating || isApplying}
-          />
+          <div
+            className={cn(
+              "relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 text-center transition-colors",
+              isDragOver
+                ? "border-primary bg-primary/5"
+                : "border-muted-foreground/25 hover:border-primary/50",
+              (isValidating || isApplying) && "pointer-events-none opacity-50"
+            )}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onClick={() => fileInputRef.current?.click()}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click()
+            }}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-muted-foreground"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            {selectedFile ? (
+              <p className="text-sm font-medium">{selectedFile.name}</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Drag and drop an .xlsx file here, or click to browse
+              </p>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              onChange={handleFileChange}
+              disabled={isValidating || isApplying}
+              className="sr-only"
+              aria-label="Upload Excel file"
+            />
+          </div>
 
           {isValidating ? (
             <p className="text-sm text-muted-foreground">Validating workbook…</p>
@@ -191,6 +262,18 @@ export function PayrollExcelImportDialog({
 
           {requestError ? (
             <p className="text-sm text-destructive">{requestError}</p>
+          ) : null}
+
+          {dryRunResult && (errorCount > 0 || warningCount > 0) ? (
+            <p className="text-sm font-medium">
+              {errorCount > 0 ? (
+                <span className="text-destructive">{errorCount} error{errorCount !== 1 ? "s" : ""}</span>
+              ) : null}
+              {errorCount > 0 && warningCount > 0 ? ", " : ""}
+              {warningCount > 0 ? (
+                <span className="text-amber-600 dark:text-amber-400">{warningCount} warning{warningCount !== 1 ? "s" : ""}</span>
+              ) : null}
+            </p>
           ) : null}
 
           {dryRunResult?.valid ? (
@@ -201,14 +284,13 @@ export function PayrollExcelImportDialog({
           ) : null}
 
           {dryRunResult && !dryRunResult.valid && dryRunResult.errors.length > 0 ? (
-            <div className="max-h-56 overflow-y-auto rounded-md border p-3">
+            <div className="max-h-48 overflow-y-auto rounded-md border border-destructive/30 bg-destructive/5 p-3">
               <ul className="space-y-2 text-sm">
                 {dryRunResult.errors.map((error, index) => (
-                  <li key={`${error.sheet}-${error.row}-${error.column}-${index}`}>
+                  <li key={`${error.sheet}-${error.row}-${error.column}-${index}`} className="text-destructive">
                     <span className="font-medium">
                       {error.sheet}
                       {error.row > 0 ? ` row ${error.row}` : ""}
-                      {error.column ? ` · ${error.column}` : ""}
                     </span>
                     {": "}
                     {error.message}
@@ -219,12 +301,11 @@ export function PayrollExcelImportDialog({
           ) : null}
 
           {dryRunResult?.warnings && dryRunResult.warnings.length > 0 ? (
-            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
-              <p className="font-medium">Warnings</p>
-              <ul className="mt-2 space-y-1">
-                {dryRunResult.warnings.slice(0, 5).map((warning, index) => (
+            <div className="max-h-40 overflow-y-auto rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+              <ul className="space-y-1">
+                {dryRunResult.warnings.map((warning, index) => (
                   <li key={`${warning.sheet}-${warning.row}-${index}`}>
-                    {warning.sheet} row {warning.row}: {warning.message}
+                    {warning.message}
                   </li>
                 ))}
               </ul>

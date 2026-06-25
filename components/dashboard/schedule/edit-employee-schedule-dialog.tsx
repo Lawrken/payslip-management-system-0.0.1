@@ -30,6 +30,7 @@ type EditEmployeeScheduleDialogProps = {
   employeeId: string
   employeeName: string
   schedule: EmployeeSchedule | null
+  isLoading?: boolean
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -48,6 +49,17 @@ function EditEmployeeScheduleDialogContent({
     mergeScheduleDays(payroll, schedule?.days)
   )
   const [isPending, startTransition] = React.useTransition()
+
+  // ponytail: re-sync days if schedule prop arrives after initial mount
+  // (handles case where component mounts before fetch resolves)
+  const scheduleIdRef = React.useRef(schedule?.id ?? null)
+  React.useEffect(() => {
+    const currentId = schedule?.id ?? null
+    if (currentId !== scheduleIdRef.current) {
+      scheduleIdRef.current = currentId
+      setDays(mergeScheduleDays(payroll, schedule?.days))
+    }
+  }, [schedule, payroll])
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -78,15 +90,6 @@ function EditEmployeeScheduleDialogContent({
 
   return (
     <>
-      <DialogHeader>
-        <DialogTitle>{employeeName}</DialogTitle>
-        <DialogDescription>
-          Employee schedule for {payroll.payrollPeriodLabel}. Holiday shift types
-          are set from the payroll DTR calendar. Scheduled shifts and legal holidays
-          require shift-in and shift-out. Log times are optional but must be entered
-          in pairs when used.
-        </DialogDescription>
-      </DialogHeader>
       <form onSubmit={handleSubmit}>
         <input type="hidden" name="payrollId" value={payroll.id} />
         <input type="hidden" name="employeeId" value={employeeId} />
@@ -124,6 +127,7 @@ export function EditEmployeeScheduleDialog({
   employeeId,
   employeeName,
   schedule,
+  isLoading,
   open,
   onOpenChange,
 }: EditEmployeeScheduleDialogProps) {
@@ -134,7 +138,15 @@ export function EditEmployeeScheduleDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="flex max-h-[min(92vh,48rem)] flex-col sm:max-w-5xl">
-        {open ? (
+        <DialogHeader>
+          <DialogTitle>{employeeName}</DialogTitle>
+          <DialogDescription>
+            {isLoading
+              ? "Loading schedule…"
+              : `Employee schedule for ${payroll.payrollPeriodLabel}. Holiday shift types are set from the payroll DTR calendar. Scheduled shifts and legal holidays require shift-in and shift-out. Log times are optional but must be entered in pairs when used.`}
+          </DialogDescription>
+        </DialogHeader>
+        {open && !isLoading ? (
           <EditEmployeeScheduleDialogContent
             key={`${payroll.id}-${employeeId}-${schedule?.id ?? "new"}`}
             payroll={payroll}

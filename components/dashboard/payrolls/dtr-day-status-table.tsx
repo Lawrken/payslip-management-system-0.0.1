@@ -49,7 +49,7 @@ function DtrDayStatusSelect({
       >
         <SelectValue />
       </SelectTrigger>
-      <SelectContent position="popper" className="z-[60]">
+      <SelectContent position="popper">
         <SelectGroup>
           {DTR_DAY_STATUS_OPTIONS.map((option) => (
             <SelectItem key={option.value} value={option.value}>
