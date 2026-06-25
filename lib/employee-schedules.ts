@@ -72,6 +72,17 @@ export async function getEmployeeSchedulesByPayrollId(
   return rows.map(mapScheduleRow)
 }
 
+export async function getScheduleRecordCount(
+  payrollId: string,
+  client: DatabaseClient = db
+): Promise<number> {
+  const [row] = await client
+    .select({ count: count() })
+    .from(employeeSchedules)
+    .where(eq(employeeSchedules.payrollId, payrollId))
+  return row?.count ?? 0
+}
+
 export type ScheduleStatusFilter = EmployeeScheduleRow["status"]
 export type ScheduleRowSort = "employeeName" | "employeeNumber" | "status"
 

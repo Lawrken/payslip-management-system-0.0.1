@@ -50,15 +50,8 @@ function EditEmployeeScheduleDialogContent({
   )
   const [isPending, startTransition] = React.useTransition()
 
-  // ponytail: re-sync days if schedule prop arrives after initial mount
-  // (handles case where component mounts before fetch resolves)
-  const scheduleIdRef = React.useRef(schedule?.id ?? null)
   React.useEffect(() => {
-    const currentId = schedule?.id ?? null
-    if (currentId !== scheduleIdRef.current) {
-      scheduleIdRef.current = currentId
-      setDays(mergeScheduleDays(payroll, schedule?.days))
-    }
+    setDays(mergeScheduleDays(payroll, schedule?.days))
   }, [schedule, payroll])
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {

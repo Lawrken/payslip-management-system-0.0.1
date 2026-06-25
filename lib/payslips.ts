@@ -710,6 +710,46 @@ function resolveStatusAfterSave(
   return existingStatus
 }
 
+export async function backfillPayslipDraftStatuses(
+  payrollId?: string,
+  client: DatabaseClient = db
+): Promise<number> {
+  const conditions = [eq(payslips.status, "draft")]
+  if (payrollId) {
+    conditions.push(eq(payslips.payrollId, payrollId))
+  }
+
+  const rows = await client
+    .select({
+      id: payslips.id,
+      inputs: payslipInputs.inputs,
+    })
+    .from(payslips)
+    .innerJoin(payslipInputs, eq(payslipInputs.payslipId, payslips.id))
+    .where(and(...conditions))
+
+  let updated = 0
+
+  for (const row of rows) {
+    const inputs = {
+      ...createEmptyPayslipInputs(),
+      ...(row.inputs ?? {}),
+    }
+
+    if (!hasPayslipData(inputs)) {
+      continue
+    }
+
+    await client
+      .update(payslips)
+      .set({ status: "pending", updatedAt: new Date() })
+      .where(eq(payslips.id, row.id))
+    updated += 1
+  }
+
+  return updated
+}
+
 export async function createPayslipsForPayroll(
   payrollId: string,
   client: DatabaseClient = db

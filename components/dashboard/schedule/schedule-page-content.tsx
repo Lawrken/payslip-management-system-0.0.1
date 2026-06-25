@@ -13,6 +13,7 @@ import { EmployeeCombobox } from "@/components/dashboard/shared/employee-combobo
 import { PaginationControls } from "@/components/dashboard/shared/pagination-controls"
 import { PayrollPeriodCombobox } from "@/components/dashboard/shared/payroll-period-combobox"
 import { PayrollPeriodStrip } from "@/components/dashboard/shared/payroll-period-strip"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import type { EmployeeOption } from "@/lib/employees"
 import type { ScheduleRowSort } from "@/lib/employee-schedules"
@@ -39,6 +40,7 @@ type SchedulePageContentProps = {
   scheduleRows: PaginatedResult<EmployeeScheduleRow>
   payrolls: PayrollSummary[]
   selectedPayroll: Payroll | null
+  scheduleRecordCount: number
   employeeOptions: EmployeeOption[]
   selectedPayrollId: string
   employeeId: string
@@ -51,6 +53,7 @@ export function SchedulePageContent({
   scheduleRows,
   payrolls,
   selectedPayroll,
+  scheduleRecordCount,
   employeeOptions,
   selectedPayrollId,
   employeeId,
@@ -87,12 +90,13 @@ export function SchedulePageContent({
       if (cancelled) {
         return
       }
-      setIsLoadingSchedule(false)
       if ("error" in result) {
         setActiveSchedule(null)
+        setIsLoadingSchedule(false)
         return
       }
       setActiveSchedule(result.schedule)
+      setIsLoadingSchedule(false)
     })
 
     return () => {
@@ -215,6 +219,17 @@ export function SchedulePageContent({
 
         {selectedPayroll ? (
           <PayrollPeriodStrip payroll={selectedPayroll} />
+        ) : null}
+
+        {selectedPayroll && scheduleRecordCount === 0 ? (
+          <Alert>
+            <AlertDescription>
+              No saved schedules exist for {selectedPayroll.payrollPeriodLabel}.
+              Schedules are stored per payroll period — switch to an earlier
+              period if you imported data there, or enter schedules for this
+              period below.
+            </AlertDescription>
+          </Alert>
         ) : null}
       </div>
 

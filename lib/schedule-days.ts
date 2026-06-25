@@ -43,6 +43,19 @@ function isHolidayShiftType(shiftType: ShiftType | ""): boolean {
   return shiftType === "specialHoliday" || shiftType === "legalHoliday"
 }
 
+const NON_WORKED_HOLIDAY_SHIFT_TYPES = new Set<ShiftType>([
+  "restDay",
+  "vacationLeave",
+  "sickLeave",
+  "vacationLeaveWithoutPay",
+  "notYetHired",
+  "float",
+])
+
+function isNonWorkedHolidayShift(shiftType: ShiftType): boolean {
+  return NON_WORKED_HOLIDAY_SHIFT_TYPES.has(shiftType)
+}
+
 export function isTimesRequired(shiftType: ShiftType | ""): boolean {
   return shiftType === "scheduledShift"
 }
@@ -181,6 +194,21 @@ function normalizeScheduleDay(
     : null
 
   if (holidayShiftType) {
+    const existingShift = isValidShiftType(String(day.shiftType ?? ""))
+      ? (day.shiftType as ShiftType)
+      : null
+
+    if (existingShift && isNonWorkedHolidayShift(existingShift)) {
+      const times = isTimesAllowed(existingShift)
+        ? normalizeDayTimes(day)
+        : { ...EMPTY_SCHEDULE_DAY_TIMES }
+      return {
+        date: day.date,
+        shiftType: existingShift,
+        ...times,
+      }
+    }
+
     return {
       date: day.date,
       shiftType: holidayShiftType,
@@ -192,7 +220,7 @@ function normalizeScheduleDay(
     ? (day.shiftType as ShiftType)
     : ""
 
-  const times = isTimesRequired(shiftType)
+  const times = isTimesAllowed(shiftType)
     ? normalizeDayTimes(day)
     : { ...EMPTY_SCHEDULE_DAY_TIMES }
 
@@ -316,11 +344,30 @@ export function validateScheduleDays(
 
     if (expectedHolidayShift) {
       const dateLabel = formatLongDisplayDate(date)
-      if (day.shiftType !== expectedHolidayShift) {
+
+      if (
+        !isNonWorkedHolidayShift(day.shiftType) &&
+        day.shiftType !== expectedHolidayShift
+      ) {
         return {
           error: `Holiday shift type must match payroll for ${dateLabel}.`,
         }
       }
+
+      if (isNonWorkedHolidayShift(day.shiftType)) {
+        if (
+          day.shiftIn ||
+          day.shiftOut ||
+          day.logIn ||
+          day.logOut
+        ) {
+          return {
+            error: `Time fields must be empty when shift type is not Scheduled Shift (${dateLabel}).`,
+          }
+        }
+        continue
+      }
+
       if (day.shiftType === "legalHoliday") {
         const shiftRequiredError = validateRequiredShiftTimes(day, dateLabel)
         if (shiftRequiredError) {

@@ -164,12 +164,13 @@ export function ReviewPayslipDialog({
       if (cancelled) {
         return
       }
-      setIsLoadingSchedule(false)
       if ("error" in result) {
         setSchedule(null)
+        setIsLoadingSchedule(false)
         return
       }
       setSchedule(result.schedule?.days ?? null)
+      setIsLoadingSchedule(false)
     })
 
     return () => {

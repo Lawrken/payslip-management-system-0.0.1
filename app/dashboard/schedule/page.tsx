@@ -6,6 +6,7 @@ import { requireDashboardSession } from "@/lib/authorization"
 import { redirectWithDefaultPayrollId } from "@/lib/dashboard-routing"
 import {
   getPaginatedScheduleRows,
+  getScheduleRecordCount,
   type ScheduleRowSort,
   type ScheduleStatusFilter,
 } from "@/lib/employee-schedules"
@@ -68,7 +69,8 @@ async function SchedulePageInner({ searchParams }: SchedulePageProps) {
     payrolls.find((payroll) => payroll.id === params.payrollId) ??
     payrolls[0] ??
     null
-  const [employeeOptions, scheduleRows, selectedPayroll] = await Promise.all([
+  const [employeeOptions, scheduleRows, selectedPayroll, scheduleRecordCount] =
+    await Promise.all([
     getEmployeeOptions(),
     selectedPayrollSummary
       ? getPaginatedScheduleRows({
@@ -90,6 +92,9 @@ async function SchedulePageInner({ searchParams }: SchedulePageProps) {
     selectedPayrollSummary
       ? getPayrollById(selectedPayrollSummary.id)
       : Promise.resolve(null),
+    selectedPayrollSummary
+      ? getScheduleRecordCount(selectedPayrollSummary.id)
+      : Promise.resolve(0),
   ])
 
   return (
@@ -97,6 +102,7 @@ async function SchedulePageInner({ searchParams }: SchedulePageProps) {
       scheduleRows={scheduleRows}
       payrolls={payrolls}
       selectedPayroll={selectedPayroll}
+      scheduleRecordCount={scheduleRecordCount}
       employeeOptions={employeeOptions}
       selectedPayrollId={selectedPayrollSummary?.id ?? ""}
       employeeId={params.employeeId ?? ""}
