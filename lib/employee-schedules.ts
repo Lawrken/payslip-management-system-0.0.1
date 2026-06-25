@@ -13,7 +13,7 @@ import {
   type SQL,
 } from "drizzle-orm"
 
-import { db, type DatabaseClient } from "@/db"
+import { db, withDbRetry, type DatabaseClient } from "@/db"
 import {
   employeeSchedules,
   employees as employeesTable,
@@ -131,59 +131,61 @@ export async function getPaginatedScheduleRows(
   query: ScheduleRowListQuery,
   client: DatabaseClient = db
 ): Promise<PaginatedResult<EmployeeScheduleRow>> {
-  const pagination = normalizePagination(query)
-  const where = buildScheduleRowWhere(query)
-  const sort = query.sort ?? "employeeName"
-  const direction = query.direction === "desc" ? "desc" : "asc"
-  const orderBy =
-    direction === "desc"
-      ? desc(getScheduleSortColumn(sort))
-      : asc(getScheduleSortColumn(sort))
+  return withDbRetry(async () => {
+    const pagination = normalizePagination(query)
+    const where = buildScheduleRowWhere(query)
+    const sort = query.sort ?? "employeeName"
+    const direction = query.direction === "desc" ? "desc" : "asc"
+    const orderBy =
+      direction === "desc"
+        ? desc(getScheduleSortColumn(sort))
+        : asc(getScheduleSortColumn(sort))
 
-  const [totalRow] = await client
-    .select({ count: count() })
-    .from(payslips)
-    .leftJoin(
-      employeesTable,
-      eq(employeesTable.employeeId, payslips.employeeId)
-    )
-    .leftJoin(
-      employeeSchedules,
-      and(
-        eq(employeeSchedules.payrollId, payslips.payrollId),
-        eq(employeeSchedules.employeeId, payslips.employeeId)
+    const [totalRow] = await client
+      .select({ count: count() })
+      .from(payslips)
+      .leftJoin(
+        employeesTable,
+        eq(employeesTable.employeeId, payslips.employeeId)
       )
-    )
-    .where(where)
-
-  const rows = await client
-    .select({
-      employeeId: payslips.employeeId,
-      employeeName: employeesTable.name,
-      scheduleIsComplete: employeeSchedules.isComplete,
-    })
-    .from(payslips)
-    .leftJoin(
-      employeesTable,
-      eq(employeesTable.employeeId, payslips.employeeId)
-    )
-    .leftJoin(
-      employeeSchedules,
-      and(
-        eq(employeeSchedules.payrollId, payslips.payrollId),
-        eq(employeeSchedules.employeeId, payslips.employeeId)
+      .leftJoin(
+        employeeSchedules,
+        and(
+          eq(employeeSchedules.payrollId, payslips.payrollId),
+          eq(employeeSchedules.employeeId, payslips.employeeId)
+        )
       )
-    )
-    .where(where)
-    .orderBy(orderBy, asc(payslips.employeeId))
-    .limit(pagination.pageSize)
-    .offset(pagination.offset)
+      .where(where)
 
-  return buildPaginatedResult(
-    rows.map(mapScheduleListRow),
-    totalRow?.count ?? 0,
-    pagination
-  )
+    const rows = await client
+      .select({
+        employeeId: payslips.employeeId,
+        employeeName: employeesTable.name,
+        scheduleIsComplete: employeeSchedules.isComplete,
+      })
+      .from(payslips)
+      .leftJoin(
+        employeesTable,
+        eq(employeesTable.employeeId, payslips.employeeId)
+      )
+      .leftJoin(
+        employeeSchedules,
+        and(
+          eq(employeeSchedules.payrollId, payslips.payrollId),
+          eq(employeeSchedules.employeeId, payslips.employeeId)
+        )
+      )
+      .where(where)
+      .orderBy(orderBy, asc(payslips.employeeId))
+      .limit(pagination.pageSize)
+      .offset(pagination.offset)
+
+    return buildPaginatedResult(
+      rows.map(mapScheduleListRow),
+      totalRow?.count ?? 0,
+      pagination
+    )
+  })
 }
 
 export async function getScheduleByPayrollAndEmployee(

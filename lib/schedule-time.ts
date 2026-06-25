@@ -73,6 +73,15 @@ function combine12HourTimeValue(
 export function formatTimeDisplay(value: string): string {
   const { hour, minute, period } = split12HourTimeValue(value)
   if (!hour || !minute || !period) {
+    // ponytail: handle values already in 12-hour display format (e.g. "9:00 PM")
+    // stored by the spreadsheet bulk-save path. Convert to 24h then back.
+    const parsed24h = parseDisplayTime(value)
+    if (parsed24h) {
+      const retry = split12HourTimeValue(parsed24h)
+      if (retry.hour && retry.minute && retry.period) {
+        return `${retry.hour}:${retry.minute} ${retry.period}`
+      }
+    }
     return ""
   }
   return `${hour}:${minute} ${period}`

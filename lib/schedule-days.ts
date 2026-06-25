@@ -1,6 +1,6 @@
 import { isHolidayStatus, resolveDtrDays } from "@/lib/dtr-days"
 import { enumerateIsoDates, formatLongDisplayDate } from "@/lib/payroll-dates"
-import { isValidTimeValue, normalizeTimeValue } from "@/lib/schedule-time"
+import { isValidTimeValue, normalizeTimeValue, parseDisplayTime } from "@/lib/schedule-time"
 import type {
   DtrDayStatus,
   EmployeeScheduleDay,
@@ -59,12 +59,23 @@ function hasTimeValue(value: string): boolean {
   return value.trim().length > 0
 }
 
+// ponytail: coerce 12h display values ("9:00 PM") stored by the spreadsheet
+// bulk-save path into canonical 24h format ("21:00") that the rest of the
+// codebase expects. Ceiling: O(n) regex per day-field; upgrade to a migration
+// that normalizes all stored rows if this becomes a hot path.
+function coerceTimeToCanonical(raw: string): string {
+  const trimmed = normalizeTimeValue(raw)
+  if (!trimmed) return ""
+  if (isValidTimeValue(trimmed)) return trimmed
+  return parseDisplayTime(trimmed) ?? trimmed
+}
+
 function normalizeDayTimes(day: Partial<EmployeeScheduleDay>) {
   return {
-    shiftIn: normalizeTimeValue(String(day.shiftIn ?? "")),
-    shiftOut: normalizeTimeValue(String(day.shiftOut ?? "")),
-    logIn: normalizeTimeValue(String(day.logIn ?? "")),
-    logOut: normalizeTimeValue(String(day.logOut ?? "")),
+    shiftIn: coerceTimeToCanonical(String(day.shiftIn ?? "")),
+    shiftOut: coerceTimeToCanonical(String(day.shiftOut ?? "")),
+    logIn: coerceTimeToCanonical(String(day.logIn ?? "")),
+    logOut: coerceTimeToCanonical(String(day.logOut ?? "")),
   }
 }
 

@@ -3,7 +3,7 @@ import "server-only"
 import { and, eq, gte, lte, ne } from "drizzle-orm"
 import { cache } from "react"
 
-import { db, type DatabaseClient } from "@/db"
+import { db, withDbRetry, type DatabaseClient } from "@/db"
 import { payrolls } from "@/db/schema"
 import { resolveDtrDays, validateDtrDays } from "@/lib/dtr-days"
 import {
@@ -43,19 +43,21 @@ function toPayrollSummary(payroll: {
 async function getPayrollSummariesUncached(
   client: DatabaseClient = db
 ): Promise<PayrollSummary[]> {
-  const rows = await client.query.payrolls.findMany({
-    columns: {
-      id: true,
-      payrollPeriodLabel: true,
-      payrollPeriodStart: true,
-      payrollPeriodEnd: true,
-      dtrCutOffStart: true,
-      dtrCutOffEnd: true,
-      payoutDate: true,
-    },
-    orderBy: (table, { desc }) => [desc(table.payrollPeriodEnd)],
+  return withDbRetry(async () => {
+    const rows = await client.query.payrolls.findMany({
+      columns: {
+        id: true,
+        payrollPeriodLabel: true,
+        payrollPeriodStart: true,
+        payrollPeriodEnd: true,
+        dtrCutOffStart: true,
+        dtrCutOffEnd: true,
+        payoutDate: true,
+      },
+      orderBy: (table, { desc }) => [desc(table.payrollPeriodEnd)],
+    })
+    return rows.map(toPayrollSummary)
   })
-  return rows.map(toPayrollSummary)
 }
 
 export const getPayrollSummaries = cache(getPayrollSummariesUncached)

@@ -2,7 +2,7 @@ import "server-only"
 
 import { and, asc, count, desc, eq, inArray, ne, sql } from "drizzle-orm"
 
-import { db, type DatabaseClient } from "@/db"
+import { db, withDbRetry, type DatabaseClient } from "@/db"
 import {
   employeeSchedules,
   employees as employeesTable,
@@ -342,58 +342,60 @@ export async function getPayrollPayslipMetrics(
   payrollId: string,
   client: DatabaseClient = db
 ): Promise<PayrollPayslipMetrics> {
-  const statusRows = await client
-    .select({
-      status: payslips.status,
-      count: count(),
-    })
-    .from(payslips)
-    .where(eq(payslips.payrollId, payrollId))
-    .groupBy(payslips.status)
-  const [totalsRow] = await client
-    .select({
-      grossPay:
-        sql<number>`coalesce(sum((${payslipInputs.totals}->>'grossPay')::numeric), 0)`.mapWith(
-          Number
-        ),
-      totalDeductions:
-        sql<number>`coalesce(sum((${payslipInputs.totals}->>'totalDeductions')::numeric), 0)`.mapWith(
-          Number
-        ),
-      netPay:
-        sql<number>`coalesce(sum((${payslipInputs.totals}->>'netPay')::numeric), 0)`.mapWith(
-          Number
-        ),
-      taxableEarnings:
-        sql<number>`coalesce(sum((${payslipInputs.totals}->>'taxableEarnings')::numeric), 0)`.mapWith(
-          Number
-        ),
-      nonTaxableEarnings:
-        sql<number>`coalesce(sum((${payslipInputs.totals}->>'nonTaxableEarnings')::numeric), 0)`.mapWith(
-          Number
-        ),
-    })
-    .from(payslips)
-    .leftJoin(payslipInputs, eq(payslipInputs.payslipId, payslips.id))
-    .where(eq(payslips.payrollId, payrollId))
-  const statusCounts = Object.fromEntries(
-    PAYSLIP_STATUSES.map((status) => [status, 0])
-  ) as Record<PayslipStatus, number>
+  return withDbRetry(async () => {
+    const statusRows = await client
+      .select({
+        status: payslips.status,
+        count: count(),
+      })
+      .from(payslips)
+      .where(eq(payslips.payrollId, payrollId))
+      .groupBy(payslips.status)
+    const [totalsRow] = await client
+      .select({
+        grossPay:
+          sql<number>`coalesce(sum((${payslipInputs.totals}->>'grossPay')::numeric), 0)`.mapWith(
+            Number
+          ),
+        totalDeductions:
+          sql<number>`coalesce(sum((${payslipInputs.totals}->>'totalDeductions')::numeric), 0)`.mapWith(
+            Number
+          ),
+        netPay:
+          sql<number>`coalesce(sum((${payslipInputs.totals}->>'netPay')::numeric), 0)`.mapWith(
+            Number
+          ),
+        taxableEarnings:
+          sql<number>`coalesce(sum((${payslipInputs.totals}->>'taxableEarnings')::numeric), 0)`.mapWith(
+            Number
+          ),
+        nonTaxableEarnings:
+          sql<number>`coalesce(sum((${payslipInputs.totals}->>'nonTaxableEarnings')::numeric), 0)`.mapWith(
+            Number
+          ),
+      })
+      .from(payslips)
+      .leftJoin(payslipInputs, eq(payslipInputs.payslipId, payslips.id))
+      .where(eq(payslips.payrollId, payrollId))
+    const statusCounts = Object.fromEntries(
+      PAYSLIP_STATUSES.map((status) => [status, 0])
+    ) as Record<PayslipStatus, number>
 
-  for (const row of statusRows) {
-    statusCounts[row.status] = row.count
-  }
+    for (const row of statusRows) {
+      statusCounts[row.status] = row.count
+    }
 
-  return {
-    statusCounts,
-    totals: {
-      grossPay: totalsRow?.grossPay ?? 0,
-      totalDeductions: totalsRow?.totalDeductions ?? 0,
-      netPay: totalsRow?.netPay ?? 0,
-      taxableEarnings: totalsRow?.taxableEarnings ?? 0,
-      nonTaxableEarnings: totalsRow?.nonTaxableEarnings ?? 0,
-    },
-  }
+    return {
+      statusCounts,
+      totals: {
+        grossPay: totalsRow?.grossPay ?? 0,
+        totalDeductions: totalsRow?.totalDeductions ?? 0,
+        netPay: totalsRow?.netPay ?? 0,
+        taxableEarnings: totalsRow?.taxableEarnings ?? 0,
+        nonTaxableEarnings: totalsRow?.nonTaxableEarnings ?? 0,
+      },
+    }
+  })
 }
 
 export async function getPayrollPayslipMetricsByPayrollIds(
@@ -641,39 +643,41 @@ export async function getVisibleEmployeePayslipListItems(
   employeeId: string,
   client: DatabaseClient = db
 ): Promise<EmployeePayslipListItem[]> {
-  const normalizedId = normalizeEmployeeId(employeeId)
-  const rows = await client
-    .select({
-      payslipId: payslips.id,
-      status: payslips.status,
-      payrollPeriodLabel: payrollsTable.payrollPeriodLabel,
-      payrollPeriodStart: payrollsTable.payrollPeriodStart,
-      payrollPeriodEnd: payrollsTable.payrollPeriodEnd,
-      dtrCutOffStart: payrollsTable.dtrCutOffStart,
-      dtrCutOffEnd: payrollsTable.dtrCutOffEnd,
-      payoutDate: payrollsTable.payoutDate,
-    })
-    .from(payslips)
-    .innerJoin(payrollsTable, eq(payrollsTable.id, payslips.payrollId))
-    .where(
-      and(
-        eq(payslips.employeeId, normalizedId),
-        inArray(payslips.status, VISIBLE_EMPLOYEE_PAYSLIP_STATUSES)
+  return withDbRetry(async () => {
+    const normalizedId = normalizeEmployeeId(employeeId)
+    const rows = await client
+      .select({
+        payslipId: payslips.id,
+        status: payslips.status,
+        payrollPeriodLabel: payrollsTable.payrollPeriodLabel,
+        payrollPeriodStart: payrollsTable.payrollPeriodStart,
+        payrollPeriodEnd: payrollsTable.payrollPeriodEnd,
+        dtrCutOffStart: payrollsTable.dtrCutOffStart,
+        dtrCutOffEnd: payrollsTable.dtrCutOffEnd,
+        payoutDate: payrollsTable.payoutDate,
+      })
+      .from(payslips)
+      .innerJoin(payrollsTable, eq(payrollsTable.id, payslips.payrollId))
+      .where(
+        and(
+          eq(payslips.employeeId, normalizedId),
+          inArray(payslips.status, VISIBLE_EMPLOYEE_PAYSLIP_STATUSES)
+        )
       )
-    )
 
-  return rows
-    .map((row) => ({
-      id: row.payslipId,
-      payrollPeriodLabel: row.payrollPeriodLabel,
-      payrollPeriodStart: row.payrollPeriodStart,
-      payrollPeriodEnd: row.payrollPeriodEnd,
-      dtrCutOffStart: row.dtrCutOffStart,
-      dtrCutOffEnd: row.dtrCutOffEnd,
-      payoutDate: row.payoutDate,
-      status: row.status,
-    }))
-    .sort((a, b) => b.payrollPeriodEnd.localeCompare(a.payrollPeriodEnd))
+    return rows
+      .map((row) => ({
+        id: row.payslipId,
+        payrollPeriodLabel: row.payrollPeriodLabel,
+        payrollPeriodStart: row.payrollPeriodStart,
+        payrollPeriodEnd: row.payrollPeriodEnd,
+        dtrCutOffStart: row.dtrCutOffStart,
+        dtrCutOffEnd: row.dtrCutOffEnd,
+        payoutDate: row.payoutDate,
+        status: row.status,
+      }))
+      .sort((a, b) => b.payrollPeriodEnd.localeCompare(a.payrollPeriodEnd))
+  })
 }
 
 function hasPayslipData(inputs: PayslipPayrollInputs): boolean {
